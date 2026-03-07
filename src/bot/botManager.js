@@ -199,6 +199,27 @@ class BotManager {
 
       const lowerText = text.toLowerCase().trim();
 
+      // Check for order states first - handle name/phone/address collection
+      const orderState = await redis.get(`order_state:${shopId}:${customerPhone}`);
+      
+      if (orderState === 'waiting_for_name') {
+        // User is providing their name
+        await this.handleNameInput(sock, from, shopId, customerPhone, shop, text.trim());
+        return;
+      } else if (orderState === 'waiting_for_phone') {
+        // Check if it's a valid Egyptian phone number
+        const phone = text.replace(/\s/g, '');
+        if (/^0?1\d{9}$/.test(phone)) {
+          await this.handlePhoneInput(sock, from, shopId, customerPhone, shop, phone);
+        } else {
+          await this.safeSendMessage(sock, from, "❌ رقم تليفون مش صحيح. جرب تاني بالشكل ده: 01012345678", shop.name);
+        }
+        return;
+      } else if (orderState === 'waiting_for_address' || lowerText.startsWith('عنوان:') || lowerText.startsWith('العنوان:')) {
+        await this.handleAddressInput(sock, from, shopId, customerPhone, shop, text);
+        return;
+      }
+
       // Handle text commands first - NO greeting prefix for commands
       if (lowerText === 'قائمة' || lowerText === 'menu') {
         await this.sendProductsList(sock, from, shop, customerPhone, 1);
@@ -432,96 +453,8 @@ class BotManager {
   }
 
   async confirmOrder(sock, from, shopId, customerPhone, shop) {
-    try {
-      console.log(`🛒 Processing order for ${customerPhone} at ${shop.name}`);
-      
-      const cartKey = `cart:${shopId}:${customerPhone}`;
-      let cart;
-      try {
-        cart = await redis.get(cartKey);
-        console.log(`🛒 Cart data for order:`, typeof cart, cart);
-      } catch (e) {
-        cart = null;
-      }
-      
-      let items = [];
-      if (cart) {
-        try {
-          if (typeof cart === 'string') {
-            items = JSON.parse(cart);
-          } else if (typeof cart === 'object') {
-            items = cart;
-          }
-        } catch (e) {
-          console.log(`⚠️ JSON parse error in order: ${e.message}`);
-          items = [];
-        }
-      }
-
-      console.log(`🛒 Cart items: ${items.length}`);
-
-      if (items.length === 0) {
-        console.log(`❌ Cart is empty for ${customerPhone}`);
-        await this.safeSendMessage(sock, from, "❌ السلة فارغة. أرسل قائمة لعرض المنتجات ثم أضف منتجات للسلة.", shop.name);
-        return;
-      }
-
-      const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
-      console.log(`💰 Order total: ${total}`);
-
-      const order = await prisma.order.create({
-        data: {
-          shopId,
-          customerPhone,
-          customerName: `عميل ${customerPhone}`,
-          status: "PENDING",
-          totalPrice: total,
-          orderItems: {
-            create: items.map(i => ({
-              productId: i.productId,
-              quantity: i.quantity,
-              price: i.price
-            }))
-          }
-        }
-      });
-
-      console.log(`✅ Order created: ${order.id.slice(-8)}`);
-
-      let msg = `تم تأكيد طلبك رقم ${order.id.slice(-8)} ✅\n\n`;
-      msg += `تفاصيل الطلب:\n`;
-      items.forEach((i, idx) => {
-        msg += `${idx + 1}. ${i.name}\n`;
-        msg += `الكمية: ${i.quantity}\n`;
-        msg += `السعر: ${i.price} جنيه\n`;
-        msg += `الإجمالي: ${i.price * i.quantity} جنيه\n\n`;
-      });
-      msg += `المجموع الكلي: ${total} جنيه\n\n`;
-      msg += `سيتم التواصل معك قريباً لتأكيد التوصيل.\n`;
-      msg += `شكراً لاختيارك ${shop.name}!`;
-
-      await this.safeSendMessage(sock, from, msg, shop.name);
-      await redis.del(cartKey);
-
-      console.log(`📤 Order confirmation sent to ${customerPhone}`);
-
-      // Notify owner
-      if (shop.whatsappNumber) {
-        const ownerMsg = `طلب جديد من ${shop.name}\n\n` +
-                        `رقم الطلب: ${order.id.slice(-8)}\n` +
-                        `العميل: ${customerPhone}\n` +
-                        `المبلغ: ${total} جنيه\n` +
-                        `عدد المنتجات: ${items.length}\n\n` +
-                        `يرجى التحقق من لوحة التحكم.`;
-        
-        await this.safeSendMessage(sock, `${shop.whatsappNumber}@s.whatsapp.net`, ownerMsg, shop.name);
-        console.log(`📤 Owner notified at ${shop.whatsappNumber}`);
-      }
-
-    } catch (error) {
-      console.error(`❌ Error in confirmOrder:`, error);
-      await this.safeSendMessage(sock, from, "❌ حدث خطأ أثناء تأكيد الطلب. يرجى المحاولة مرة أخرى.", shop.name);
-    }
+    // This is the OLD method - redirect to details collection
+    await this.askForCustomerDetails(sock, from, shopId, customerPhone, shop);
   }
 
   async getAIResponse(text, shop) {
@@ -555,17 +488,20 @@ If greeting, be welcoming and mention the shop name.`;
   getSmartResponse(text, shop) {
     const lowerText = text.toLowerCase();
     
-    // Smart intent detection
+    // Smart intent detection with more keywords
     const intents = {
-      greeting: ['مرحبا', 'سلام', 'اهلا', 'هلا', 'صباح', 'مساء', 'هاي', 'hello', 'hi'],
-      price: ['سعر', 'بكم', 'كام', 'price', 'cost', 'فلوس', 'جنيه', 'بكام'],
-      order: ['اطلب', 'order', 'شراء', 'اشتري', 'حاجز'],
-      products: ['منتج', 'عندك', 'products', 'items', 'حاجات', 'اكل', 'مشروبات'],
-      help: ['مساعدة', 'help', 'ازاي', 'كيف', 'شلون', 'ازي'],
-      location: ['فين', 'مكان', 'location', 'address', 'عنوان', 'وين'],
-      time: ['ساعة', 'وقت', 'time', 'امتى', 'متى', 'دقيقة'],
-      cancel: ['الغاء', 'cancel', 'stop', 'مش عايز', 'غير'],
-      thanks: ['شكرا', 'thank', 'merci', 'تسلم', 'دومت'],
+      greeting: ['مرحبا', 'سلام', 'اهلا', 'هلا', 'صباح', 'مساء', 'هاي', 'hello', 'hi', 'السلام', 'السلام عليكم', 'عليكم', 'ازيك', 'اخبارك', 'كيف حالك'],
+      price: ['سعر', 'بكم', 'كام', 'price', 'cost', 'فلوس', 'جنيه', 'بكام', 'قيمة', 'فلوس', 'تكلفة'],
+      order: ['اطلب', 'order', 'شراء', 'اشتري', 'حاجز', 'احجز', ' book', 'حجز', 'ابغى', 'ابغي', 'عايز', 'عاوز', 'نفسي في'],
+      products: ['منتج', 'عندك', 'products', 'items', 'حاجات', 'اكل', 'مشروبات', 'عندكم', 'شو عندكم', 'شو عندك', 'ايش عندكم'],
+      help: ['مساعدة', 'help', 'ازاي', 'كيف', 'شلون', 'ازي', 'كيف', 'كيفك', 'مساعده', 'ساعدني'],
+      location: ['فين', 'مكان', 'location', 'address', 'عنوان', 'وين', 'المكان', 'الموقع'],
+      time: ['ساعة', 'وقت', 'time', 'امتى', 'متى', 'دقيقة', 'متي', 'الوقت', 'الساعه', 'الساعة'],
+      cancel: ['الغاء', 'cancel', 'stop', 'مش عايز', 'غير', 'ما ابغى', 'لا ابغى', 'مش عاوز', 'مش عايز'],
+      thanks: ['شكرا', 'thank', 'merci', 'تسلم', 'دومت', 'شكر', 'شكراً', 'thanks', 'thx'],
+      goodbye: ['مع السلامة', 'باي', 'bye', 'معسلامه', 'الى اللقاء', 'بشوفك', 'اشوفك', 'نشوفك'],
+      joke: ['نكتة', 'نكته', ' joke', 'ضحك', 'هظحك', 'فرفش', 'فرشني'],
+      hours: ['ساعات العمل', 'متى تفتحون', 'متى تفتحو', 'مواعيد', 'مواعيد العمل', 'افتح', 'افتحو', 'مفتوحين'],
     };
 
     // Find matching intent
@@ -573,7 +509,7 @@ If greeting, be welcoming and mention the shop name.`;
       if (keywords.some(k => lowerText.includes(k))) {
         const responses = {
           greeting: `أهلاً بيك يا فندم في ${shop.name}! 😊\n\nعايز تشوف منتجاتنا؟ اكتب "قائمة"`,
-          price: `الأسعار عندنا حلوة يا فندم! 😍\n\nاكتب "قائمة" تشوف كل المنتجات مع أسعارها`,
+          price: `الأسعار عندنا حلوة يا فندم! �\n\nاكتب "قائمة" تشوف كل المنتجات مع أسعارها`,
           order: `عظمة! 👏\n\nاكتب "قائمة" تشوف المنتجات، ثم اكتب رقم المنتج اللي عايزه`,
           products: `عندنا منتجات لذيذة ومميزة! 🤤\n\nاكتب "قائمة" تشوف كل اللي عندنا`,
           help: `أقدر أساعدك يا فندم! 💪\n\n📋 "قائمة" - تشوف المنتجات\n🛒 "كارت" - تشوف طلبك\n✅ "اطلب" - تطلب`,
@@ -581,6 +517,9 @@ If greeting, be welcoming and mention the shop name.`;
           time: `⏰ بنعمل دليفري سريع جداً!\n\nاكتب "اطلب" ونوصلك في أسرع وقت`,
           cancel: `ماشي يا فندم، لو غيرت رأيك اكتب "قائمة" في أي وقت 😊`,
           thanks: `العفو يا فندم! 🙏\n\nفي خدمتك دايماً! اكتب "قائمة" لو عايز حاجة`,
+          goodbye: `مع السلامة يا فندم! 👋\n\nنورتنا! ارجع في أي وقت تحب.`,
+          joke: `😂 لو عايز نكتة، اطلب من صاحبك!\n\nأنا بوت شغال مش بوت فرفوش 😜\n\nاكتب "قائمة" لو عايز تشوف منتجاتنا!`,
+          hours: `⏰ بنشتغل يومياً!\n\nاكتب "قائمة" تشوف المنتجات المتاحة دلوقتي`,
         };
         return responses[intent] || null;
       }
@@ -638,14 +577,31 @@ If greeting, be welcoming and mention the shop name.`;
 
   async askForCustomerDetails(sock, from, shopId, customerPhone, shop) {
     try {
-      // Set state to waiting for phone
-      await redis.set(`order_state:${shopId}:${customerPhone}`, 'waiting_for_phone', { ex: 600 });
+      // Set state to waiting for name first
+      await redis.set(`order_state:${shopId}:${customerPhone}`, 'waiting_for_name', { ex: 600 });
       
       await this.safeSendMessage(sock, from, 
-        `عشان نتوصل معاك ونوصل الطلب، محتاج رقم تليفونك 📱\n\n` +
-        `اكتب رقمك بالشكل ده: 01012345678`, shop.name);
+        `عشان نتوصل معاك ونوصل الطلب، محتاج بياناتك 📝\n\n` +
+        `اكتب اسمك الأول:`, shop.name);
     } catch (error) {
       console.error(`❌ Error asking for details:`, error);
+    }
+  }
+
+  async handleNameInput(sock, from, shopId, customerPhone, shop, name) {
+    try {
+      // Store name
+      await redis.set(`customer_name:${shopId}:${customerPhone}`, name, { ex: 600 });
+      
+      // Update state to waiting for phone
+      await redis.set(`order_state:${shopId}:${customerPhone}`, 'waiting_for_phone', { ex: 600 });
+      
+      await this.safeSendMessage(sock, from,
+        `تمام يا ${name}! ✅\n\n` +
+        `دلوقتي محتاج رقم تليفونك 📱\n` +
+        `اكتب رقمك بالشكل ده: 01012345678`, shop.name);
+    } catch (error) {
+      console.error(`❌ Error handling name:`, error);
     }
   }
 
@@ -710,9 +666,9 @@ If greeting, be welcoming and mention the shop name.`;
       }
 
       // Get customer details
+      const customerName = await redis.get(`customer_name:${shopId}:${customerPhone}`) || `عميل ${customerPhone.slice(-4)}`;
       const customerPhoneNumber = await redis.get(`customer_phone:${shopId}:${customerPhone}`) || customerPhone;
       const customerAddress = await redis.get(`customer_address:${shopId}:${customerPhone}`) || 'غير محدد';
-      const customerName = `عميل ${customerPhoneNumber.slice(-4)}`;
 
       const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
 
@@ -749,6 +705,7 @@ If greeting, be welcoming and mention the shop name.`;
       
       // Clear cart and temp data
       await redis.del(cartKey);
+      await redis.del(`customer_name:${shopId}:${customerPhone}`);
       await redis.del(`customer_phone:${shopId}:${customerPhone}`);
       await redis.del(`customer_address:${shopId}:${customerPhone}`);
 
@@ -807,13 +764,13 @@ If greeting, be welcoming and mention the shop name.`;
     } else if (lowerText.includes('سعر') || lowerText.includes('بكم') || lowerText.includes('كام') || lowerText.includes('price')) {
       await this.safeSendMessage(sock, from, `الأسعار مختلفة يا فندم! 💰\n\nاكتب "قائمة" تشوف كل المنتجات مع أسعارها.`, shop.name);
     } else if (lowerText.includes('طلب') || lowerText.includes('order')) {
-      await this.safeSendMessage(sock, from, `عشان تطلب سهل جداً:\n\n1️⃣ اكتب "قائمة"\n2️⃣ اختار رقم المنتج\n3️⃣ اكتب "اطلب"\n\nجرب دلوقتي! 👍`, shop.name);
+      await this.safeSendMessage(sock, from, `عشان تطلب سهل جداً يا فندم! 👍\n\nاكتب "قائمة" تشوف المنتجات\nاختار رقم المنتج اللي عايزه\nاكتب "اطلب" لتأكيد الطلب`, shop.name);
     } else if (lowerText.includes('منتج') || lowerText.includes('عندك') || lowerText.includes('products')) {
       await this.safeSendMessage(sock, from, `عندنا منتجات كتيرة ومميزة! 🤩\n\nاكتب "قائمة" تشوف كل اللي عندنا.`, shop.name);
     } else if (lowerText.includes('مساعدة') || lowerText.includes('help')) {
       await this.sendHelpMessage(sock, from, shop);
     } else if (lowerText.includes('شكرا') || lowerText.includes('thank')) {
-      await this.safeSendMessage(sock, from, `العفو يا فندم! �\n\nفي خدمتك دايماً! اكتب "قائمة" لو عايز حاجة تانية.`, shop.name);
+      await this.safeSendMessage(sock, from, `العفو يا فندم! 🙏\n\nفي خدمتك دايماً! اكتب "قائمة" لو عايز حاجة تانية.`, shop.name);
     } else {
       // Default - show menu with greeting only for unknown input
       const greeting = `👋 أهلاً بيك في ${shop.name}!\n\n`;

@@ -8,6 +8,10 @@ const path = require("path");
 const fs = require("fs");
 const databaseService = require("../services/databaseService");
 const redis = require("../db/redis");
+const { HfInference } = require("@huggingface/inference");
+
+const HF_TOKEN = process.env.HUGGINGFACE_TOKEN;
+const hf = HF_TOKEN ? new HfInference(HF_TOKEN) : null;
 
 const prisma = databaseService.getClient();
 
@@ -206,9 +210,26 @@ class BotManager {
       } else if (lowerText === 'اطلب' || lowerText === 'order') {
         await this.askForMoreItems(sock, from, shop.id, customerPhone, shop);
       } else if (lowerText === 'لا' || lowerText === 'no' || lowerText === 'تمام') {
-        await this.confirmOrder(sock, from, shop.id, customerPhone, shop);
+        // Check if we need to collect customer details first
+        const orderState = await redis.get(`order_state:${shopId}:${customerPhone}`);
+        if (orderState === 'waiting_for_details') {
+          await this.askForCustomerDetails(sock, from, shopId, customerPhone, shop);
+        } else {
+          await this.confirmOrder(sock, from, shop.id, customerPhone, shop);
+        }
       } else if (lowerText === 'ايوه' || lowerText === 'yes' || lowerText === 'أيوه') {
-        await this.safeSendMessage(sock, from, friendlyGreeting + `عظمة! اكتب رقم المنتج اللي عايزه أو اكتب "قائمة" لو عايز تشوف القائمة.`, shop.name);
+        const orderState = await redis.get(`order_state:${shopId}:${customerPhone}`);
+        if (orderState === 'waiting_for_details') {
+          await this.askForCustomerDetails(sock, from, shopId, customerPhone, shop);
+        } else {
+          await this.safeSendMessage(sock, from, friendlyGreeting + `عظمة! اكتب رقم المنتج اللي عايزه أو اكتب "قائمة" لو عايز تشوف القائمة.`, shop.name);
+        }
+      } else if (lowerText.startsWith('عنوان:') || lowerText.startsWith('العنوان:') || lowerText.startsWith('address:')) {
+        // User is providing address
+        await this.handleAddressInput(sock, from, shopId, customerPhone, shop, text);
+      } else if (/^0?1\d{9}$/.test(text.replace(/\s/g, ''))) {
+        // Egyptian phone number format
+        await this.handlePhoneInput(sock, from, shopId, customerPhone, shop, text.replace(/\s/g, ''));
       } else if (lowerText.startsWith('صفحة ') || lowerText.startsWith('page ')) {
         const pageNum = parseInt(text.split(' ')[1]) || 1;
         await this.sendProductsList(sock, from, shop, customerPhone, pageNum);
@@ -220,8 +241,13 @@ class BotManager {
         // ANY number adds product to cart (no conflict with commands)
         await this.addToCart(sock, from, shop.id, customerPhone, parseInt(text), shop);
       } else {
-        // Egyptian style fallback response
-        await this.sendEgyptianResponse(sock, from, text, shop);
+        // Try AI response first, fallback to Egyptian response
+        const aiResponse = await this.getAIResponse(text, shop);
+        if (aiResponse) {
+          await this.safeSendMessage(sock, from, friendlyGreeting + aiResponse, shop.name);
+        } else {
+          await this.sendEgyptianResponse(sock, from, text, shop);
+        }
       }
 
     } catch (error) {
@@ -495,6 +521,71 @@ class BotManager {
     }
   }
 
+  async getAIResponse(text, shop) {
+    try {
+      // If no HF token, use smart rule-based responses
+      if (!hf) {
+        return this.getSmartResponse(text, shop);
+      }
+
+      // Use Hugging Face for AI responses
+      const prompt = `You are a friendly Egyptian Arabic WhatsApp bot for ${shop.name}. 
+User message: "${text}"
+Respond naturally in Egyptian Arabic (like "يا فندم", "عظمة", "ماشي", "تمام"). Keep it short (1-2 sentences) and friendly.
+If asking about products, tell them to type "قائمة".
+If asking about prices, tell them to check the product list.
+If greeting, be welcoming and mention the shop name.`;
+
+      const response = await hf.textGeneration({
+        model: 'google/flan-t5-base',
+        inputs: prompt,
+        parameters: { max_new_tokens: 100, temperature: 0.7 }
+      });
+
+      return response.generated_text;
+    } catch (error) {
+      console.log('AI fallback to rule-based:', error.message);
+      return this.getSmartResponse(text, shop);
+    }
+  }
+
+  getSmartResponse(text, shop) {
+    const lowerText = text.toLowerCase();
+    
+    // Smart intent detection
+    const intents = {
+      greeting: ['مرحبا', 'سلام', 'اهلا', 'هلا', 'صباح', 'مساء', 'هاي', 'hello', 'hi'],
+      price: ['سعر', 'بكم', 'كام', 'price', 'cost', 'فلوس', 'جنيه', 'بكام'],
+      order: ['اطلب', 'order', 'شراء', 'اشتري', 'حاجز'],
+      products: ['منتج', 'عندك', 'products', 'items', 'حاجات', 'اكل', 'مشروبات'],
+      help: ['مساعدة', 'help', 'ازاي', 'كيف', 'شلون', 'ازي'],
+      location: ['فين', 'مكان', 'location', 'address', 'عنوان', 'وين'],
+      time: ['ساعة', 'وقت', 'time', 'امتى', 'متى', 'دقيقة'],
+      cancel: ['الغاء', 'cancel', 'stop', 'مش عايز', 'غير'],
+      thanks: ['شكرا', 'thank', 'merci', 'تسلم', 'دومت'],
+    };
+
+    // Find matching intent
+    for (const [intent, keywords] of Object.entries(intents)) {
+      if (keywords.some(k => lowerText.includes(k))) {
+        const responses = {
+          greeting: `أهلاً بيك يا فندم في ${shop.name}! 😊\n\nعايز تشوف منتجاتنا؟ اكتب "قائمة"`,
+          price: `الأسعار عندنا حلوة يا فندم! 😍\n\nاكتب "قائمة" تشوف كل المنتجات مع أسعارها`,
+          order: `عظمة! 👏\n\nاكتب "قائمة" تشوف المنتجات، ثم اكتب رقم المنتج اللي عايزه`,
+          products: `عندنا منتجات لذيذة ومميزة! 🤤\n\nاكتب "قائمة" تشوف كل اللي عندنا`,
+          help: `أقدر أساعدك يا فندم! 💪\n\n📋 "قائمة" - تشوف المنتجات\n🛒 "كارت" - تشوف طلبك\n✅ "اطلب" - تطلب`,
+          location: `📍 ${shop.name} موجودة وبتخدمك بأحسن جودة!\n\nاكتب "قائمة" تشوف المنتجات المتاحة`,
+          time: `⏰ بنعمل دليفري سريع جداً!\n\nاكتب "اطلب" ونوصلك في أسرع وقت`,
+          cancel: `ماشي يا فندم، لو غيرت رأيك اكتب "قائمة" في أي وقت 😊`,
+          thanks: `العفو يا فندم! 🙏\n\nفي خدمتك دايماً! اكتب "قائمة" لو عايز حاجة`,
+        };
+        return responses[intent] || null;
+      }
+    }
+
+    return null;
+  }
+
   async askForMoreItems(sock, from, shopId, customerPhone, shop) {
     try {
       const cartKey = `cart:${shopId}:${customerPhone}`;
@@ -514,16 +605,13 @@ class BotManager {
       }
 
       if (items.length === 0) {
-        await this.safeSendMessage(sock, from, "السلة فاضية يا معلم! 😅\n\nاكتب \"قائمة\" الأول واختار منتج.", shop.name);
+        await this.safeSendMessage(sock, from, "السلة فاضية يا فندم! 😅\n\nاكتب \"قائمة\" الأول واختار منتج.", shop.name);
         return;
       }
 
-      // Store the state that we're waiting for user's response
-      await redis.set(`order_state:${shopId}:${customerPhone}`, 'waiting_for_more', { ex: 300 }); // 5 minutes
-      
       const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
       
-      let message = `🛒 السلة بتاعتك:\n\n`;
+      let message = `🛒 سلة التسوق:\n\n`;
       items.forEach((item, i) => {
         message += `${i + 1}. ${item.name}\n`;
         message += `   الكمية: ${item.quantity} × ${item.price} = ${item.price * item.quantity} جنيه\n\n`;
@@ -531,18 +619,153 @@ class BotManager {
       message += `💰 الإجمالي: ${total} جنيه\n\n`;
       message += `━━━━━━━━━━━━━━━━━━━━━\n\n`;
       message += `عايز تضيف حاجة تانية؟ 🤔\n\n`;
-      message += `✨ إزاي أقدر أساعدك النهاردة؟\n\n`;
-      message += `1️⃣ عرض المنتجات\n`;
-      message += `2️⃣ سلة التسوق\n`;
-      message += `3️⃣ اطلب دلوقتي\n`;
-      message += `4️⃣ مساعدة\n\n`;
-      message += `💡 اكتب رقم (1-4) أو سألني أي سؤال!`;
+      message += `👍 اكتب "ايوه" لو عايز تضيف منتج تاني\n`;
+      message += `✅ اكتب "لا" لو كده تمام وعايز تكمل الطلب`;
+      
+      // Set state for tracking
+      await redis.set(`order_state:${shopId}:${customerPhone}`, 'waiting_for_more', { ex: 300 });
       
       await this.safeSendMessage(sock, from, message, shop.name);
       
     } catch (error) {
       console.error(`❌ Error in askForMoreItems:`, error);
       await this.safeSendMessage(sock, from, "حصل مشكلة صغيرة! جرب تاني.", shop.name);
+    }
+  }
+
+  async askForCustomerDetails(sock, from, shopId, customerPhone, shop) {
+    try {
+      // Set state to waiting for phone
+      await redis.set(`order_state:${shopId}:${customerPhone}`, 'waiting_for_phone', { ex: 600 });
+      
+      await this.safeSendMessage(sock, from, 
+        `عشان نتوصل معاك ونوصل الطلب، محتاج رقم تليفونك 📱\n\n` +
+        `اكتب رقمك بالشكل ده: 01012345678`, shop.name);
+    } catch (error) {
+      console.error(`❌ Error asking for details:`, error);
+    }
+  }
+
+  async handlePhoneInput(sock, from, shopId, customerPhone, shop, phone) {
+    try {
+      // Store phone number
+      await redis.set(`customer_phone:${shopId}:${customerPhone}`, phone, { ex: 600 });
+      
+      // Update state to waiting for address
+      await redis.set(`order_state:${shopId}:${customerPhone}`, 'waiting_for_address', { ex: 600 });
+      
+      await this.safeSendMessage(sock, from,
+        `تمام! رقمك: ${phone} ✅\n\n` +
+        `دلوقتي محتاج عنوان التوصيل 🏠\n\n` +
+        `اكتب العنوان بالشكل ده:\n` +
+        `عنوان: شارع التحرير، مدينة نصر، القاهرة\n\n` +
+        `أو أي تفاصيل توصلك بيها`, shop.name);
+    } catch (error) {
+      console.error(`❌ Error handling phone:`, error);
+    }
+  }
+
+  async handleAddressInput(sock, from, shopId, customerPhone, shop, text) {
+    try {
+      // Extract address (remove "عنوان:" prefix)
+      let address = text.replace(/^عنوان[:\s]*/i, '').replace(/^العنوان[:\s]*/i, '').replace(/^address[:\s]*/i, '').trim();
+      
+      // Store address
+      await redis.set(`customer_address:${shopId}:${customerPhone}`, address, { ex: 600 });
+      
+      // Clear the order state
+      await redis.del(`order_state:${shopId}:${customerPhone}`);
+      
+      // Now confirm the order with details
+      await this.confirmOrderWithDetails(sock, from, shopId, customerPhone, shop);
+    } catch (error) {
+      console.error(`❌ Error handling address:`, error);
+    }
+  }
+
+  async confirmOrderWithDetails(sock, from, shopId, customerPhone, shop) {
+    try {
+      const cartKey = `cart:${shopId}:${customerPhone}`;
+      let cart = await redis.get(cartKey);
+      
+      let items = [];
+      if (cart) {
+        try {
+          if (typeof cart === 'string') {
+            items = JSON.parse(cart);
+          } else if (typeof cart === 'object') {
+            items = cart;
+          }
+        } catch (e) {
+          items = [];
+        }
+      }
+
+      if (items.length === 0) {
+        await this.safeSendMessage(sock, from, "❌ السلة فارغة. أرسل قائمة لعرض المنتجات.", shop.name);
+        return;
+      }
+
+      // Get customer details
+      const customerPhoneNumber = await redis.get(`customer_phone:${shopId}:${customerPhone}`) || customerPhone;
+      const customerAddress = await redis.get(`customer_address:${shopId}:${customerPhone}`) || 'غير محدد';
+      const customerName = `عميل ${customerPhoneNumber.slice(-4)}`;
+
+      const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+
+      const order = await prisma.order.create({
+        data: {
+          shopId,
+          customerPhone: customerPhoneNumber,
+          customerName,
+          customerAddress,
+          status: "PENDING",
+          totalPrice: total,
+          orderItems: {
+            create: items.map(i => ({
+              productId: i.productId,
+              quantity: i.quantity,
+              price: i.price
+            }))
+          }
+        }
+      });
+
+      let msg = `🎉 تم تأكيد طلبك رقم ${order.id.slice(-8)} ✅\n\n`;
+      msg += `📱 رقم التليفون: ${customerPhoneNumber}\n`;
+      msg += `📍 عنوان التوصيل: ${customerAddress}\n\n`;
+      msg += `🛒 تفاصيل الطلب:\n`;
+      items.forEach((i, idx) => {
+        msg += `${idx + 1}. ${i.name} × ${i.quantity} = ${i.price * i.quantity} جنيه\n`;
+      });
+      msg += `\n💰 المجموع الكلي: ${total} جنيه\n\n`;
+      msg += `⏰ هنتوصل معاك خلال شوية لتأكيد التوصيل\n`;
+      msg += `شكراً لاختيارك ${shop.name}! 🙏`;
+
+      await this.safeSendMessage(sock, from, msg, shop.name);
+      
+      // Clear cart and temp data
+      await redis.del(cartKey);
+      await redis.del(`customer_phone:${shopId}:${customerPhone}`);
+      await redis.del(`customer_address:${shopId}:${customerPhone}`);
+
+      // Notify owner
+      if (shop.whatsappNumber) {
+        const ownerMsg = `� طلب جديد من ${shop.name}\n\n` +
+                        `رقم الطلب: ${order.id.slice(-8)}\n` +
+                        `العميل: ${customerName}\n` +
+                        `📱 ${customerPhoneNumber}\n` +
+                        `📍 ${customerAddress}\n` +
+                        `💰 المبلغ: ${total} جنيه\n` +
+                        `🛒 عدد المنتجات: ${items.length}\n\n` +
+                        `افحص لوحة التحكم للتفاصيل.`;
+        
+        await this.safeSendMessage(sock, `${shop.whatsappNumber}@s.whatsapp.net`, ownerMsg, shop.name);
+      }
+
+    } catch (error) {
+      console.error(`❌ Error in confirmOrderWithDetails:`, error);
+      await this.safeSendMessage(sock, from, "❌ حدث خطأ أثناء تأكيد الطلب. جرب تاني.", shop.name);
     }
   }
 

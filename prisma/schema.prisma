@@ -46,18 +46,19 @@ model Product {
 }
 
 model Order {
-  id            String      @id @default(cuid())
-  shopId        String
-  customerPhone String
-  customerName  String
-  status        OrderStatus @default(PENDING)
-  totalPrice    Float
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  id             String      @id @default(cuid())
+  shopId         String
+  customerPhone  String
+  customerName   String
+  customerAddress String?
+  status         OrderStatus @default(PENDING)
+  totalPrice     Float
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
 
   // Relations
-  shop          Shop        @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  orderItems    OrderItem[]
+  shop           Shop        @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  orderItems     OrderItem[]
 
   @@map("orders")
 }

@@ -200,23 +200,23 @@ class BotManager {
       const lowerText = text.toLowerCase().trim();
 
       // Check for order states first - handle name/phone/address collection
-      const orderState = await redis.get(`order_state:${shopId}:${customerPhone}`);
+      const orderState = await redis.get(`order_state:${shop.id}:${customerPhone}`);
       
       if (orderState === 'waiting_for_name') {
         // User is providing their name
-        await this.handleNameInput(sock, from, shopId, customerPhone, shop, text.trim());
+        await this.handleNameInput(sock, from, shop.id, customerPhone, shop, text.trim());
         return;
       } else if (orderState === 'waiting_for_phone') {
         // Check if it's a valid Egyptian phone number
         const phone = text.replace(/\s/g, '');
         if (/^0?1\d{9}$/.test(phone)) {
-          await this.handlePhoneInput(sock, from, shopId, customerPhone, shop, phone);
+          await this.handlePhoneInput(sock, from, shop.id, customerPhone, shop, phone);
         } else {
           await this.safeSendMessage(sock, from, "❌ رقم تليفون مش صحيح. جرب تاني بالشكل ده: 01012345678", shop.name);
         }
         return;
       } else if (orderState === 'waiting_for_address' || lowerText.startsWith('عنوان:') || lowerText.startsWith('العنوان:')) {
-        await this.handleAddressInput(sock, from, shopId, customerPhone, shop, text);
+        await this.handleAddressInput(sock, from, shop.id, customerPhone, shop, text);
         return;
       }
 
@@ -229,7 +229,7 @@ class BotManager {
         await this.askForMoreItems(sock, from, shop.id, customerPhone, shop);
       } else if (lowerText === 'لا' || lowerText === 'no' || lowerText === 'تمام') {
         // Always collect customer details before confirming
-        const cartKey = `cart:${shopId}:${customerPhone}`;
+        const cartKey = `cart:${shop.id}:${customerPhone}`;
         let cart = await redis.get(cartKey);
         let items = [];
         if (cart) {
@@ -242,16 +242,16 @@ class BotManager {
           await this.safeSendMessage(sock, from, "🛒 السلة فاضية! اكتب \"قائمة\" الأول.", shop.name);
         } else {
           // Always ask for phone/address before confirming
-          await this.askForCustomerDetails(sock, from, shopId, customerPhone, shop);
+          await this.askForCustomerDetails(sock, from, shop.id, customerPhone, shop);
         }
       } else if (lowerText === 'ايوه' || lowerText === 'yes' || lowerText === 'أيوه') {
         await this.safeSendMessage(sock, from, `عظمة! 👏\n\nاكتب رقم المنتج اللي عايزه أو اكتب "قائمة" لو عايز تشوف القائمة.`, shop.name);
       } else if (lowerText.startsWith('عنوان:') || lowerText.startsWith('العنوان:') || lowerText.startsWith('address:')) {
         // User is providing address
-        await this.handleAddressInput(sock, from, shopId, customerPhone, shop, text);
+        await this.handleAddressInput(sock, from, shop.id, customerPhone, shop, text);
       } else if (/^0?1\d{9}$/.test(text.replace(/\s/g, ''))) {
         // Egyptian phone number format
-        await this.handlePhoneInput(sock, from, shopId, customerPhone, shop, text.replace(/\s/g, ''));
+        await this.handlePhoneInput(sock, from, shop.id, customerPhone, shop, text.replace(/\s/g, ''));
       } else if (lowerText.startsWith('صفحة ') || lowerText.startsWith('page ')) {
         const pageNum = parseInt(text.split(' ')[1]) || 1;
         await this.sendProductsList(sock, from, shop, customerPhone, pageNum);
@@ -509,7 +509,7 @@ If greeting, be welcoming and mention the shop name.`;
       if (keywords.some(k => lowerText.includes(k))) {
         const responses = {
           greeting: `أهلاً بيك يا فندم في ${shop.name}! 😊\n\nعايز تشوف منتجاتنا؟ اكتب "قائمة"`,
-          price: `الأسعار عندنا حلوة يا فندم! �\n\nاكتب "قائمة" تشوف كل المنتجات مع أسعارها`,
+          price: `الأسعار عندنا حلوة يا فندم! 💰\n\nاكتب "قائمة" تشوف كل المنتجات مع أسعارها`,
           order: `عظمة! 👏\n\nاكتب "قائمة" تشوف المنتجات، ثم اكتب رقم المنتج اللي عايزه`,
           products: `عندنا منتجات لذيذة ومميزة! 🤤\n\nاكتب "قائمة" تشوف كل اللي عندنا`,
           help: `أقدر أساعدك يا فندم! 💪\n\n📋 "قائمة" - تشوف المنتجات\n🛒 "كارت" - تشوف طلبك\n✅ "اطلب" - تطلب`,

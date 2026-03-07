@@ -1,0 +1,6 @@
+// Check real connection status via API
+                const response = await fetch(`${API_BASE}/shop/qr?shopId=${shopId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });

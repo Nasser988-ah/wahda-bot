@@ -1,0 +1,133 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Shop {
+  id                String              @id @default(cuid())
+  name              String
+  ownerName         String
+  phone             String              @unique
+  whatsappNumber    String
+  subscriptionStatus SubscriptionStatus @default(TRIAL)
+  subscriptionEnd   DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  // Relations
+  products          Product[]
+  orders            Order[]
+  sessions          BotSession[]
+  messages          Message[]
+
+  @@map("shops")
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  shopId      String
+  name        String
+  price       Float
+  description String?
+  isAvailable Boolean  @default(true)
+  category    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  shop        Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  orderItems  OrderItem[]
+
+  @@map("products")
+}
+
+model Order {
+  id            String      @id @default(cuid())
+  shopId        String
+  customerPhone String
+  customerName  String
+  status        OrderStatus @default(PENDING)
+  totalPrice    Float
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  // Relations
+  shop          Shop        @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  orderItems    OrderItem[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  productId String
+  quantity  Int
+  price     Float
+
+  // Relations
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("order_items")
+}
+
+model Admin {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String   // Will be hashed
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("admins")
+}
+
+model BotSession {
+  id        String   @id @default(cuid())
+  shopId    String
+  sessionId String   @unique
+  status    String   @default("disconnected")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@map("bot_sessions")
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  shopId    String
+  from      String
+  to        String
+  body      String
+  type      String   @default("text")
+  direction Direction
+  createdAt DateTime @default(now())
+
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@map("messages")
+}
+
+enum SubscriptionStatus {
+  TRIAL
+  ACTIVE
+  EXPIRED
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  DELIVERED
+}
+
+enum Direction {
+  INCOMING
+  OUTGOING
+}

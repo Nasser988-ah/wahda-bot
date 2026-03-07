@@ -199,10 +199,7 @@ class BotManager {
 
       const lowerText = text.toLowerCase().trim();
 
-      // Add friendly greeting header to all responses
-      const friendlyGreeting = `👋 أهلاً بيك في ${shop.name}!\n\n`;
-      
-      // Handle text commands first
+      // Handle text commands first - NO greeting prefix for commands
       if (lowerText === 'قائمة' || lowerText === 'menu') {
         await this.sendProductsList(sock, from, shop, customerPhone, 1);
       } else if (lowerText === 'كارت' || lowerText === 'cart') {
@@ -210,20 +207,24 @@ class BotManager {
       } else if (lowerText === 'اطلب' || lowerText === 'order') {
         await this.askForMoreItems(sock, from, shop.id, customerPhone, shop);
       } else if (lowerText === 'لا' || lowerText === 'no' || lowerText === 'تمام') {
-        // Check if we need to collect customer details first
-        const orderState = await redis.get(`order_state:${shopId}:${customerPhone}`);
-        if (orderState === 'waiting_for_details') {
-          await this.askForCustomerDetails(sock, from, shopId, customerPhone, shop);
+        // Always collect customer details before confirming
+        const cartKey = `cart:${shopId}:${customerPhone}`;
+        let cart = await redis.get(cartKey);
+        let items = [];
+        if (cart) {
+          try {
+            items = typeof cart === 'string' ? JSON.parse(cart) : cart;
+          } catch (e) { items = []; }
+        }
+        
+        if (items.length === 0) {
+          await this.safeSendMessage(sock, from, "🛒 السلة فاضية! اكتب \"قائمة\" الأول.", shop.name);
         } else {
-          await this.confirmOrder(sock, from, shop.id, customerPhone, shop);
+          // Always ask for phone/address before confirming
+          await this.askForCustomerDetails(sock, from, shopId, customerPhone, shop);
         }
       } else if (lowerText === 'ايوه' || lowerText === 'yes' || lowerText === 'أيوه') {
-        const orderState = await redis.get(`order_state:${shopId}:${customerPhone}`);
-        if (orderState === 'waiting_for_details') {
-          await this.askForCustomerDetails(sock, from, shopId, customerPhone, shop);
-        } else {
-          await this.safeSendMessage(sock, from, friendlyGreeting + `عظمة! اكتب رقم المنتج اللي عايزه أو اكتب "قائمة" لو عايز تشوف القائمة.`, shop.name);
-        }
+        await this.safeSendMessage(sock, from, `عظمة! 👏\n\nاكتب رقم المنتج اللي عايزه أو اكتب "قائمة" لو عايز تشوف القائمة.`, shop.name);
       } else if (lowerText.startsWith('عنوان:') || lowerText.startsWith('العنوان:') || lowerText.startsWith('address:')) {
         // User is providing address
         await this.handleAddressInput(sock, from, shopId, customerPhone, shop, text);
@@ -241,12 +242,14 @@ class BotManager {
         // ANY number adds product to cart (no conflict with commands)
         await this.addToCart(sock, from, shop.id, customerPhone, parseInt(text), shop);
       } else {
-        // Try AI response first, fallback to Egyptian response
+        // Try AI/smart response - add greeting only for unknown/fallback messages
         const aiResponse = await this.getAIResponse(text, shop);
         if (aiResponse) {
-          await this.safeSendMessage(sock, from, friendlyGreeting + aiResponse, shop.name);
+          await this.safeSendMessage(sock, from, aiResponse, shop.name);
         } else {
-          await this.sendEgyptianResponse(sock, from, text, shop);
+          // Only for completely unknown input, show greeting + menu
+          const greeting = `👋 أهلاً بيك في ${shop.name}!\n\n`;
+          await this.sendNumberedMenu(sock, from, shop, greeting);
         }
       }
 
@@ -751,7 +754,7 @@ If greeting, be welcoming and mention the shop name.`;
 
       // Notify owner
       if (shop.whatsappNumber) {
-        const ownerMsg = `� طلب جديد من ${shop.name}\n\n` +
+        const ownerMsg = `🔔 طلب جديد من ${shop.name}\n\n` +
                         `رقم الطلب: ${order.id.slice(-8)}\n` +
                         `العميل: ${customerName}\n` +
                         `📱 ${customerPhoneNumber}\n` +
@@ -769,9 +772,9 @@ If greeting, be welcoming and mention the shop name.`;
     }
   }
 
-  async sendNumberedMenu(sock, from, shop) {
-    const menu = `👋 أهلاً بيك في ${shop.name}!\n\n` +
-                 `✨ إزاي أقدر أساعدك النهاردة؟\n\n` +
+  async sendNumberedMenu(sock, from, shop, greetingPrefix = '') {
+    const menu = greetingPrefix +
+                 `✨ إزاي أقدر أساعدك؟\n\n` +
                  `📋 اكتب "قائمة" - عرض المنتجات\n` +
                  `🛒 اكتب "كارت" - تشوف طلبك\n` +
                  `✅ اكتب "اطلب" - اطلب دلوقتي\n` +
@@ -795,26 +798,26 @@ If greeting, be welcoming and mention the shop name.`;
 
   async sendEgyptianResponse(sock, from, text, shop) {
     const lowerText = text.toLowerCase();
-    const greeting = `👋 أهلاً بيك في ${shop.name}!\n\n`;
     
-    // Egyptian style responses for common questions
+    // Egyptian style responses - NO confusing numbered options
     if (lowerText.includes('مرحبا') || lowerText.includes('سلام') || lowerText.includes('اهلا') || lowerText.includes('هلا')) {
-      await this.safeSendMessage(sock, from, greeting + `أهلاً بيك يا فندم! 😊\n\n1️⃣ عرض المنتجات\n2️⃣ سلة التسوق\n3️⃣ اطلب دلوقتي\n4️⃣ مساعدة\n\nاكتب رقم 1-4`, shop.name);
+      await this.safeSendMessage(sock, from, `أهلاً بيك يا فندم في ${shop.name}! 😊\n\nاكتب "قائمة" تشوف منتجاتنا.`, shop.name);
     } else if (lowerText.includes('مين') || lowerText.includes('who') || lowerText.includes('انت مين')) {
-      await this.safeSendMessage(sock, from, greeting + `أنا بوت ${shop.name} يا معلم! 🤖\n\n1️⃣ عرض المنتجات\n2️⃣ سلة التسوق\n3️⃣ اطلب دلوقتي\n4️⃣ مساعدة\n\nاختار رقم وابدأ طلبك!`, shop.name);
+      await this.safeSendMessage(sock, from, `أنا بوت ${shop.name} يا فندم! 🤖\n\nاكتب "مساعدة" عشان تعرف الأوامر.`, shop.name);
     } else if (lowerText.includes('سعر') || lowerText.includes('بكم') || lowerText.includes('كام') || lowerText.includes('price')) {
-      await this.safeSendMessage(sock, from, greeting + `الأسعار مختلفة يا فندم!\n\n1️⃣ اكتب "1" تشوف المنتجات\n2️⃣ كل منتج مع سعره واضح\n\nاختار 1 �`, shop.name);
+      await this.safeSendMessage(sock, from, `الأسعار مختلفة يا فندم! 💰\n\nاكتب "قائمة" تشوف كل المنتجات مع أسعارها.`, shop.name);
     } else if (lowerText.includes('طلب') || lowerText.includes('order')) {
-      await this.safeSendMessage(sock, from, greeting + `عشان تطلب سهل جداً:\n\n1️⃣ اكتب "1" تشوف المنتجات\n2️⃣ اختار رقم المنتج\n3️⃣ اكتب "3" تطلب\n\nجرب دلوقتي! 👍`, shop.name);
+      await this.safeSendMessage(sock, from, `عشان تطلب سهل جداً:\n\n1️⃣ اكتب "قائمة"\n2️⃣ اختار رقم المنتج\n3️⃣ اكتب "اطلب"\n\nجرب دلوقتي! 👍`, shop.name);
     } else if (lowerText.includes('منتج') || lowerText.includes('عندك') || lowerText.includes('products')) {
-      await this.safeSendMessage(sock, from, greeting + `عندنا منتجات كتيرة!\n\n1️⃣ اكتب "1" تشوف القائمة\n2️⃣ اختار اللي نفسك فيه\n\nاكتب 1 👇`, shop.name);
+      await this.safeSendMessage(sock, from, `عندنا منتجات كتيرة ومميزة! 🤩\n\nاكتب "قائمة" تشوف كل اللي عندنا.`, shop.name);
     } else if (lowerText.includes('مساعدة') || lowerText.includes('help')) {
-      await this.safeSendMessage(sock, from, greeting + `أقدر أساعدك! 🤔\n\n1️⃣ منتجات\n2️⃣ سلة التسوق\n3️⃣ اطلب\n4️⃣ مساعدة\n\nاكتب رقم 1-4`, shop.name);
+      await this.sendHelpMessage(sock, from, shop);
     } else if (lowerText.includes('شكرا') || lowerText.includes('thank')) {
-      await this.safeSendMessage(sock, from, greeting + `العفو يا فندم! 😊\n\n1️⃣ عرض المنتجات\n2️⃣ سلة التسوق\n3️⃣ اطلب دلوقتي\n4️⃣ مساعدة\n\nفي خدمتك!`, shop.name);
+      await this.safeSendMessage(sock, from, `العفو يا فندم! �\n\nفي خدمتك دايماً! اكتب "قائمة" لو عايز حاجة تانية.`, shop.name);
     } else {
-      // Default numbered menu
-      await this.sendNumberedMenu(sock, from, shop);
+      // Default - show menu with greeting only for unknown input
+      const greeting = `👋 أهلاً بيك في ${shop.name}!\n\n`;
+      await this.sendNumberedMenu(sock, from, shop, greeting);
     }
   }
 

@@ -199,20 +199,26 @@ class BotManager {
 
       const lowerText = text.toLowerCase().trim();
 
+      // Get conversation context for smarter responses
+      const context = await this.getConversationContext(shop.id, customerPhone);
+      
+      // Update message history for context awareness
+      await this.updateMessageHistory(shop.id, customerPhone, text, 'user');
+
       // Check for order states first - handle name/phone/address collection
       const orderState = await redis.get(`order_state:${shop.id}:${customerPhone}`);
       
       if (orderState === 'waiting_for_name') {
-        // User is providing their name
         await this.handleNameInput(sock, from, shop.id, customerPhone, shop, text.trim());
         return;
       } else if (orderState === 'waiting_for_phone') {
-        // Check if it's a valid Egyptian phone number
         const phone = text.replace(/\s/g, '');
         if (/^0?1\d{9}$/.test(phone)) {
           await this.handlePhoneInput(sock, from, shop.id, customerPhone, shop, phone);
         } else {
-          await this.safeSendMessage(sock, from, "❌ رقم تليفون مش صحيح. جرب تاني بالشكل ده: 01012345678", shop.name);
+          await this.safeSendMessage(sock, from, 
+            `⚠️ يا فندم، الرقم ده مش صحيح \n\n` +
+            `اكتب رقمك بالشكل الصحيح زي: 01012345678 📱`, shop.name);
         }
         return;
       } else if (orderState === 'waiting_for_address' || lowerText.startsWith('عنوان:') || lowerText.startsWith('العنوان:')) {
@@ -220,7 +226,7 @@ class BotManager {
         return;
       }
 
-      // Handle text commands first - NO greeting prefix for commands
+      // Handle text commands with context awareness
       if (lowerText === 'قائمة' || lowerText === 'menu') {
         await this.sendProductsList(sock, from, shop, customerPhone, 1);
       } else if (lowerText === 'كارت' || lowerText === 'cart') {
@@ -228,54 +234,90 @@ class BotManager {
       } else if (lowerText === 'اطلب' || lowerText === 'order') {
         await this.askForMoreItems(sock, from, shop.id, customerPhone, shop);
       } else if (lowerText === 'لا' || lowerText === 'no' || lowerText === 'تمام') {
-        // Always collect customer details before confirming
-        const cartKey = `cart:${shop.id}:${customerPhone}`;
-        let cart = await redis.get(cartKey);
-        let items = [];
-        if (cart) {
-          try {
-            items = typeof cart === 'string' ? JSON.parse(cart) : cart;
-          } catch (e) { items = []; }
-        }
-        
-        if (items.length === 0) {
-          await this.safeSendMessage(sock, from, "🛒 السلة فاضية! اكتب \"قائمة\" الأول.", shop.name);
-        } else {
-          // Always ask for phone/address before confirming
-          await this.askForCustomerDetails(sock, from, shop.id, customerPhone, shop);
-        }
+        await this.handleNoResponse(sock, from, shop, customerPhone);
       } else if (lowerText === 'ايوه' || lowerText === 'yes' || lowerText === 'أيوه') {
-        await this.safeSendMessage(sock, from, `عظمة! 👏\n\nاكتب رقم المنتج اللي عايزه أو اكتب "قائمة" لو عايز تشوف القائمة.`, shop.name);
+        await this.handleYesResponse(sock, from, shop, customerPhone, context);
       } else if (lowerText.startsWith('عنوان:') || lowerText.startsWith('العنوان:') || lowerText.startsWith('address:')) {
-        // User is providing address
         await this.handleAddressInput(sock, from, shop.id, customerPhone, shop, text);
       } else if (/^0?1\d{9}$/.test(text.replace(/\s/g, ''))) {
-        // Egyptian phone number format
         await this.handlePhoneInput(sock, from, shop.id, customerPhone, shop, text.replace(/\s/g, ''));
       } else if (lowerText.startsWith('صفحة ') || lowerText.startsWith('page ')) {
         const pageNum = parseInt(text.split(' ')[1]) || 1;
         await this.sendProductsList(sock, from, shop, customerPhone, pageNum);
       } else if (lowerText === 'الغاء' || lowerText === 'cancel') {
-        await this.clearCart(sock, from, shop.id, customerPhone, shop.name);
+        await this.handleCancelCommand(sock, from, shop, customerPhone);
       } else if (lowerText === 'مساعدة' || lowerText === 'help') {
-        await this.sendHelpMessage(sock, from, shop);
+        await this.sendHelpMessage(sock, from, shop, context);
       } else if (/^\d+$/.test(text)) {
-        // ANY number adds product to cart (no conflict with commands)
         await this.addToCart(sock, from, shop.id, customerPhone, parseInt(text), shop);
       } else {
-        // Try AI/smart response - add greeting only for unknown/fallback messages
-        const aiResponse = await this.getAIResponse(text, shop);
-        if (aiResponse) {
-          await this.safeSendMessage(sock, from, aiResponse, shop.name);
-        } else {
-          // Only for completely unknown input, show greeting + menu
-          const greeting = `👋 أهلاً بيك في ${shop.name}!\n\n`;
-          await this.sendNumberedMenu(sock, from, shop, greeting);
-        }
+        // Smart AI response with context
+        await this.handleSmartResponse(sock, from, shop, customerPhone, text, context);
       }
 
     } catch (error) {
       console.error(`❌ Error handling message:`, error.message);
+    }
+  }
+
+  // Get conversation context for smarter responses
+  async getConversationContext(shopId, customerPhone) {
+    try {
+      const historyKey = `chat_history:${shopId}:${customerPhone}`;
+      const cartKey = `cart:${shopId}:${customerPhone}`;
+      const nameKey = `customer_name:${shopId}:${customerPhone}`;
+      
+      const [history, cart, name] = await Promise.all([
+        redis.get(historyKey),
+        redis.get(cartKey),
+        redis.get(nameKey)
+      ]);
+      
+      let items = [];
+      if (cart) {
+        try {
+          items = typeof cart === 'string' ? JSON.parse(cart) : cart;
+        } catch (e) { items = []; }
+      }
+      
+      const messages = history ? JSON.parse(history) : [];
+      const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
+      
+      return {
+        name: name || null,
+        hasItems: items.length > 0,
+        itemCount: items.length,
+        totalValue: items.reduce((sum, i) => sum + i.price * i.quantity, 0),
+        messageCount: messages.length,
+        lastMessageTime: lastMessage?.time || null,
+        isReturningCustomer: messages.length > 3,
+        lastIntent: lastMessage?.intent || null
+      };
+    } catch (error) {
+      return { hasItems: false, itemCount: 0, totalValue: 0, messageCount: 0, isReturningCustomer: false };
+    }
+  }
+
+  // Update message history for context
+  async updateMessageHistory(shopId, customerPhone, text, sender, intent = null) {
+    try {
+      const historyKey = `chat_history:${shopId}:${customerPhone}`;
+      let history = await redis.get(historyKey);
+      let messages = history ? JSON.parse(history) : [];
+      
+      messages.push({
+        text: text.slice(0, 100), // Keep it short
+        sender,
+        time: Date.now(),
+        intent
+      });
+      
+      // Keep only last 10 messages
+      if (messages.length > 10) messages = messages.slice(-10);
+      
+      await redis.set(historyKey, JSON.stringify(messages), { ex: 86400 }); // 24 hours
+    } catch (error) {
+      console.log('History update error:', error.message);
     }
   }
 
@@ -457,74 +499,286 @@ class BotManager {
     await this.askForCustomerDetails(sock, from, shopId, customerPhone, shop);
   }
 
-  async getAIResponse(text, shop) {
-    try {
-      // If no HF token, use smart rule-based responses
-      if (!hf) {
-        return this.getSmartResponse(text, shop);
-      }
-
-      // Use Hugging Face for AI responses
-      const prompt = `You are a friendly Egyptian Arabic WhatsApp bot for ${shop.name}. 
-User message: "${text}"
-Respond naturally in Egyptian Arabic (like "يا فندم", "عظمة", "ماشي", "تمام"). Keep it short (1-2 sentences) and friendly.
-If asking about products, tell them to type "قائمة".
-If asking about prices, tell them to check the product list.
-If greeting, be welcoming and mention the shop name.`;
-
-      const response = await hf.textGeneration({
-        model: 'google/flan-t5-base',
-        inputs: prompt,
-        parameters: { max_new_tokens: 100, temperature: 0.7 }
-      });
-
-      return response.generated_text;
-    } catch (error) {
-      console.log('AI fallback to rule-based:', error.message);
-      return this.getSmartResponse(text, shop);
+  // Handle "لا" response with context awareness
+  async handleNoResponse(sock, from, shop, customerPhone) {
+    const cartKey = `cart:${shop.id}:${customerPhone}`;
+    let cart = await redis.get(cartKey);
+    let items = [];
+    if (cart) {
+      try {
+        items = typeof cart === 'string' ? JSON.parse(cart) : cart;
+      } catch (e) { items = []; }
+    }
+    
+    if (items.length === 0) {
+      await this.safeSendMessage(sock, from, 
+        `🛒 السلة فاضية يا فندم! \n\n` +
+        `عايز تشوف منتجاتنا؟ اكتب "قائمة" واختار اللي يناسبك 😊`, shop.name);
+    } else {
+      const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+      await this.safeSendMessage(sock, from,
+        `💡 تمام يا فندم! عندك ${items.length} منتج في السلة بإجمالي ${total} جنيه\n\n` +
+        `دلوقتي هنسجل بيانات التوصيل... 📝`, shop.name);
+      await this.askForCustomerDetails(sock, from, shop.id, customerPhone, shop);
     }
   }
 
-  getSmartResponse(text, shop) {
-    const lowerText = text.toLowerCase();
+  // Handle "ايوه" response with smart suggestions
+  async handleYesResponse(sock, from, shop, customerPhone, context) {
+    const suggestions = context.hasItems 
+      ? `ممتاز! 👌 عندك ${context.itemCount} منتجات في السلة\n\n`
+      : `عظمة! 👏\n\n`;
     
-    // Smart intent detection with more keywords
-    const intents = {
-      greeting: ['مرحبا', 'سلام', 'اهلا', 'هلا', 'صباح', 'مساء', 'هاي', 'hello', 'hi', 'السلام', 'السلام عليكم', 'عليكم', 'ازيك', 'اخبارك', 'كيف حالك'],
-      price: ['سعر', 'بكم', 'كام', 'price', 'cost', 'فلوس', 'جنيه', 'بكام', 'قيمة', 'فلوس', 'تكلفة'],
-      order: ['اطلب', 'order', 'شراء', 'اشتري', 'حاجز', 'احجز', ' book', 'حجز', 'ابغى', 'ابغي', 'عايز', 'عاوز', 'نفسي في'],
-      products: ['منتج', 'عندك', 'products', 'items', 'حاجات', 'اكل', 'مشروبات', 'عندكم', 'شو عندكم', 'شو عندك', 'ايش عندكم'],
-      help: ['مساعدة', 'help', 'ازاي', 'كيف', 'شلون', 'ازي', 'كيف', 'كيفك', 'مساعده', 'ساعدني'],
-      location: ['فين', 'مكان', 'location', 'address', 'عنوان', 'وين', 'المكان', 'الموقع'],
-      time: ['ساعة', 'وقت', 'time', 'امتى', 'متى', 'دقيقة', 'متي', 'الوقت', 'الساعه', 'الساعة'],
-      cancel: ['الغاء', 'cancel', 'stop', 'مش عايز', 'غير', 'ما ابغى', 'لا ابغى', 'مش عاوز', 'مش عايز'],
-      thanks: ['شكرا', 'thank', 'merci', 'تسلم', 'دومت', 'شكر', 'شكراً', 'thanks', 'thx'],
-      goodbye: ['مع السلامة', 'باي', 'bye', 'معسلامه', 'الى اللقاء', 'بشوفك', 'اشوفك', 'نشوفك'],
-      joke: ['نكتة', 'نكته', ' joke', 'ضحك', 'هظحك', 'فرفش', 'فرشني'],
-      hours: ['ساعات العمل', 'متى تفتحون', 'متى تفتحو', 'مواعيد', 'مواعيد العمل', 'افتح', 'افتحو', 'مفتوحين'],
-    };
+    await this.safeSendMessage(sock, from, 
+      suggestions + 
+      `اكتب رقم المنتج اللي عايزه، أو اكتب "قائمة" لو عايز تشوف كل المنتجات 📋`, shop.name);
+  }
 
-    // Find matching intent
+  // Smart cancel with empathy
+  async handleCancelCommand(sock, from, shop, customerPhone) {
+    const cartKey = `cart:${shop.id}:${customerPhone}`;
+    await redis.del(cartKey);
+    await this.safeSendMessage(sock, from, 
+      `🗑️ تمام يا فندم، فضيت السلة.\n\n` +
+      `لو حابب تطلب حاجة تانية في أي وقت، اكتب "قائمة" وأنا تحت أمرك 😊`, shop.name);
+  }
+
+  // Smart response handler with emotional intelligence
+  async handleSmartResponse(sock, from, shop, customerPhone, text, context) {
+    // Detect emotion and intent
+    const emotion = this.detectEmotion(text);
+    const intent = this.detectAdvancedIntent(text);
+    
+    // Get personalized response
+    const response = await this.getHumanLikeResponse(text, shop, context, emotion, intent);
+    
+    await this.safeSendMessage(sock, from, response, shop.name);
+    await this.updateMessageHistory(shop.id, customerPhone, text, 'user', intent);
+    await this.updateMessageHistory(shop.id, customerPhone, response, 'bot', 'response');
+  }
+
+  // Detect user emotion
+  detectEmotion(text) {
+    const lower = text.toLowerCase();
+    const emotions = {
+      frustrated: ['مش شغال', 'بطل', 'خراب', 'زهق', 'عصب', 'غضبان', 'متضايق', 'مش فاهم', 'مش بيشتغل'],
+      excited: ['عظمة', 'حلو', 'ممتاز', 'جميل', ' perfect', 'رائع', 'لذيذ', 'حلوة'],
+      confused: ['مش فاهم', 'ازاي', 'ازاى', 'ايه', 'مش عارف', 'صعب', 'معقد'],
+      urgent: ['بسرعة', 'عاجل', 'دلوقتي', 'الحين', 'URGENT', 'بسرعه', 'عالسريع'],
+      happy: ['شكرا', 'تسلم', 'دومت', '❤️', '😍', '😊', '🥰'],
+    };
+    
+    for (const [emotion, keywords] of Object.entries(emotions)) {
+      if (keywords.some(k => lower.includes(k))) return emotion;
+    }
+    return 'neutral';
+  }
+
+  // Advanced intent detection
+  detectAdvancedIntent(text) {
+    const lower = text.toLowerCase();
+    
+    const intents = {
+      complaint: ['مش كويس', 'سيئ', 'خراب', 'مش شغال', 'رديء', 'مش لذيذ', 'بارد', 'سخن'],
+      compliment: ['حلو', 'جميل', 'عظمة', 'ممتاز', ' perfect', 'رائع', 'لذيذ', 'طعمه حلو'],
+      question_product: ['عندك', 'فيه', 'موجود', 'متاح'],
+      question_price: ['بكام', 'سعر', 'cost', 'فلوس'],
+      question_time: ['امتى', 'متى', 'ساعة', 'وقت', 'دقيقة'],
+      small_talk: ['اخبارك', 'عمل ايه', 'كيفك', 'ازيك', 'صباح', 'مساء', 'نهارك'],
+    };
+    
     for (const [intent, keywords] of Object.entries(intents)) {
-      if (keywords.some(k => lowerText.includes(k))) {
-        const responses = {
-          greeting: `أهلاً بيك يا فندم في ${shop.name}! 😊\n\nعايز تشوف منتجاتنا؟ اكتب "قائمة"`,
-          price: `الأسعار عندنا حلوة يا فندم! 💰\n\nاكتب "قائمة" تشوف كل المنتجات مع أسعارها`,
-          order: `عظمة! 👏\n\nاكتب "قائمة" تشوف المنتجات، ثم اكتب رقم المنتج اللي عايزه`,
-          products: `عندنا منتجات لذيذة ومميزة! 🤤\n\nاكتب "قائمة" تشوف كل اللي عندنا`,
-          help: `أقدر أساعدك يا فندم! 💪\n\n📋 "قائمة" - تشوف المنتجات\n🛒 "كارت" - تشوف طلبك\n✅ "اطلب" - تطلب`,
-          location: `📍 ${shop.name} موجودة وبتخدمك بأحسن جودة!\n\nاكتب "قائمة" تشوف المنتجات المتاحة`,
-          time: `⏰ بنعمل دليفري سريع جداً!\n\nاكتب "اطلب" ونوصلك في أسرع وقت`,
-          cancel: `ماشي يا فندم، لو غيرت رأيك اكتب "قائمة" في أي وقت 😊`,
-          thanks: `العفو يا فندم! 🙏\n\nفي خدمتك دايماً! اكتب "قائمة" لو عايز حاجة`,
-          goodbye: `مع السلامة يا فندم! 👋\n\nنورتنا! ارجع في أي وقت تحب.`,
-          joke: `😂 لو عايز نكتة، اطلب من صاحبك!\n\nأنا بوت شغال مش بوت فرفوش 😜\n\nاكتب "قائمة" لو عايز تشوف منتجاتنا!`,
-          hours: `⏰ بنشتغل يومياً!\n\nاكتب "قائمة" تشوف المنتجات المتاحة دلوقتي`,
-        };
-        return responses[intent] || null;
+      if (keywords.some(k => lower.includes(k))) return intent;
+    }
+    return 'general';
+  }
+
+  // Human-like smart response with personality
+  async getHumanLikeResponse(text, shop, context, emotion, intent) {
+    const lowerText = text.toLowerCase();
+    const name = context.name ? `يا ${context.name}` : 'يا فندم';
+    
+    // Emotional response adjustments
+    const emotionalPrefix = {
+      frustrated: `🤗 ${name}، أفهم إنك متضايق... خلني أساعدك:`,
+      confused: `💡 ${name}، سهل جداً! خلني أوضحلك:`,
+      urgent: `⚡ ${name}، هتصرف معاك فوراً:`,
+      excited: `🎉 ${name}، شكلك متحمس!`,
+      happy: `😊 ${name}، دايماً في خدمتك!`,
+      neutral: ''
+    };
+    
+    const prefix = emotionalPrefix[emotion] || '';
+    
+    // Context-aware greeting for returning customers
+    const greeting = context.isReturningCustomer && context.messageCount > 5
+      ? `${name}، نورتنا تاني! 🌟\n\n`
+      : context.messageCount === 1
+        ? `👋 أهلاً ${name} في ${shop.name}!\n\n`
+        : '';
+
+    // Advanced intent responses with personality
+    const responses = {
+      greeting: this.getGreetingResponse(name, shop, context),
+      complaint: this.getComplaintResponse(name, shop),
+      compliment: this.getComplimentResponse(name, shop),
+      question_product: this.getProductQuestionResponse(name, shop),
+      question_price: this.getPriceQuestionResponse(name, shop),
+      question_time: this.getTimeQuestionResponse(name, shop),
+      small_talk: this.getSmallTalkResponse(name, shop, context),
+      joke: this.getJokeResponse(name),
+      help: this.getHelpResponse(name, shop, context),
+    };
+    
+    // Check for specific intents first
+    for (const [key, responseFunc] of Object.entries(responses)) {
+      if (this.matchesIntent(lowerText, key)) {
+        const response = await responseFunc;
+        return prefix ? `${prefix}\n\n${response}` : response;
       }
     }
+    
+    // Smart fallback with context
+    return this.getSmartFallback(name, shop, context, greeting);
+  }
 
+  matchesIntent(text, intent) {
+    const patterns = {
+      greeting: ['مرحبا', 'سلام', 'اهلا', 'هلا', 'صباح', 'مساء', 'هاي', 'hello', 'hi', 'السلام', 'ازيك', 'اخبارك'],
+      complaint: ['مش كويس', 'سيئ', 'خراب', 'مش شغال', 'رديء', 'مش لذيذ', 'بارد', 'سخن', 'تأخير', 'بطئ'],
+      compliment: ['حلو', 'جميل', 'عظمة', 'ممتاز', ' perfect', 'رائع', 'لذيذ', 'طعمه حلو', 'احسن'],
+      question_product: ['عندك', 'فيه', 'موجود', 'متاح', 'شو عندك', 'ايش'],
+      question_price: ['بكام', 'سعر', 'cost', 'فلوس', 'قيمة', 'تكلفة'],
+      question_time: ['امتى', 'متى', 'ساعة', 'وقت', 'دقيقة', ' delivery', 'توصيل'],
+      small_talk: ['اخبارك', 'عمل ايه', 'كيفك', 'ازيك', 'صباح', 'مساء', 'نهارك', 'فطور', 'غدا', 'عشا'],
+      joke: ['نكتة', 'نكته', ' joke', 'ضحك', 'هظحك', 'فرفش'],
+      help: ['مساعدة', 'help', 'ازاي', 'كيف', 'شلون'],
+    };
+    
+    return patterns[intent]?.some(p => text.includes(p)) || false;
+  }
+
+  async getGreetingResponse(name, shop, context) {
+    const hour = new Date().getHours();
+    let timeGreeting = '';
+    
+    if (hour >= 5 && hour < 12) timeGreeting = 'صباح الفل ☀️';
+    else if (hour >= 12 && hour < 17) timeGreeting = 'نهارك سعيد 🌤️';
+    else if (hour >= 17 && hour < 21) timeGreeting = 'مساء الخير 🌆';
+    else timeGreeting = 'تصبح على خير 🌙';
+    
+    if (context.hasItems) {
+      return `${timeGreeting} ${name}! 😊\n\n` +
+             `شايف إنك اخترت ${context.itemCount} منتجات (${context.totalValue} جنيه)\n` +
+             `اكتب "كارت" لو عايز تشوف تفاصيل طلبك 🛒`;
+    }
+    
+    return `${timeGreeting} ${name}! 🌟\n\n` +
+           `أهلاً بيك في ${shop.name}! \n` +
+           `عايز تشوف منتجاتنا؟ اكتب "قائمة" 📋`;
+  }
+
+  async getComplaintResponse(name, shop) {
+    return `🙏 آسف جداً ${name} لو فيه أي مشكلة...\n\n` +
+           `احنا هنا عشان نحلها على طول! \n` +
+           `ممكن تتواصل مع صاحب المحل مباشرة على التليفون؟ 📞\n\n` +
+           `أو اكتب "قائمة" لو عايز تشوف المنتجات المتاحة`;
+  }
+
+  async getComplimentResponse(name, shop) {
+    const thanks = ['شكراً جزيلاً!', 'تسلم يا غالي!', 'ربنا يخليك!', 'دايماً في خدمتك!'];
+    const randomThanks = thanks[Math.floor(Math.random() * thanks.length)];
+    
+    return `🥰 ${randomThanks} ${name}!\n\n` +
+           `نورت ${shop.name}! \n` +
+           `لو محتاج حاجة تانية، أنا تحت أمرك 😊`;
+  }
+
+  async getProductQuestionResponse(name, shop) {
+    return `📦 ${name}، عندنا تشكيلة حلوة من المنتجات!\n\n` +
+           `اكتب "قائمة" تشوف كل اللي موجود واختار اللي يناسبك 👌`;
+  }
+
+  async getPriceQuestionResponse(name, shop) {
+    return `💰 ${name}، أسعارنا تنافسية وجودتنا ممتازة!\n\n` +
+           `اكتب "قائمة" تشوف الأسعار مع كل منتج 📋`;
+  }
+
+  async getTimeQuestionResponse(name, shop) {
+    return `⏰ ${name}، بنوصل الطلبات في أسرع وقت!\n\n` +
+           `عادةً التوصيل بياخد من 30-60 دقيقة حسب الموقع\n` +
+           `اكتب "اطلب" وابدأ طلبك دلوقتي! 🚀`;
+  }
+
+  async getSmallTalkResponse(name, shop, context) {
+    const hour = new Date().getHours();
+    let mealSuggestion = '';
+    
+    if (hour >= 7 && hour < 11) mealSuggestion = 'عندنا فطار لذيذ! 🥐';
+    else if (hour >= 11 && hour < 16) mealSuggestion = 'جاهزين لغداء شهي! 🍽️';
+    else if (hour >= 16 && hour < 22) mealSuggestion = 'عشاء لذيذ بيستنك! 🍲';
+    
+    return `😊 ${name}، الحمد لله تمام!\n\n` +
+           (mealSuggestion ? `${mealSuggestion}\n` : '') +
+           `اكتب "قائمة" لو عايز تشوف المنتجات المتاحة 🍽️`;
+  }
+
+  async getJokeResponse(name) {
+    const jokes = [
+      `😂 ${name}، ليه البيضة بتحب الجيم؟ عشان بتحب تتكسر الكرش!`,
+      `🤣 ${name}، ليه السمكة مش بتستخدم الكمبيوتر؟ عشان خايفة من النت!`,
+      `😅 ${name}، اتنين فطر بيتكلموا، واحد قال للتاني: أنت طعمك حلو، قاله: لا ده انت بتضحك!`,
+    ];
+    return jokes[Math.floor(Math.random() * jokes.length)] + '\n\nاكتب "قائمة" لو رجعنا للشغل 😂📋';
+  }
+
+  async getHelpResponse(name, shop, context) {
+    let personalizedHelp = '';
+    
+    if (context.hasItems) {
+      personalizedHelp = `💡 عندك ${context.itemCount} منتج في السلة!\n` +
+                        `اكتب "كارت" تشوفهم أو "اطلب" لتأكيد\n\n`;
+    }
+    
+    return `👋 ${name}، أنا هنا عشان أساعدك!\n\n` +
+           personalizedHelp +
+           `📋 "قائمة" - تشوف المنتجات\n` +
+           `🛒 "كارت" - تشوف طلبك\n` +
+           `✅ "اطلب" - تأكيد الطلب\n` +
+           `💡 اكتب رقم المنتج مباشرة (1, 2, 3...)`;
+  }
+
+  async getSmartFallback(name, shop, context, greeting) {
+    // Smart suggestions based on context
+    let suggestion = '';
+    
+    if (context.hasItems) {
+      suggestion = `💡 اكتب "كارت" تشوف طلبك (${context.totalValue} جنيه) أو "اطلب" لتأكيد ✅`;
+    } else if (context.messageCount > 3) {
+      suggestion = `💡 اكتب "قائمة" تشوف المنتجات المتاحة 📋`;
+    } else {
+      suggestion = `💡 ممكن تكتب "قائمة" أو "مساعدة" لو عايز تعرف الأوامر`;
+    }
+    
+    const confusedResponses = [
+      `🤔 ${name}، مش فاهم كويس...`,
+      `😅 ${name}، ممكن توضح أكتر؟`,
+      `💭 ${name}، عذراً مش قادر أفهم`,
+    ];
+    
+    const randomConfused = confusedResponses[Math.floor(Math.random() * confusedResponses.length)];
+    
+    return greeting + randomConfused + '\n\n' + suggestion;
+  }
+
+  // Keep the original methods but enhanced
+  async getAIResponse(text, shop) {
+    // This is now replaced by getHumanLikeResponse
+    return this.getSmartResponse(text, shop);
+  }
+
+  getSmartResponse(text, shop) {
+    // Legacy method - kept for compatibility
     return null;
   }
 
@@ -740,8 +994,16 @@ If greeting, be welcoming and mention the shop name.`;
     await this.safeSendMessage(sock, from, menu, shop.name);
   }
 
-  async sendHelpMessage(sock, from, shop) {
-    const msg = `👋 أهلاً بيك في ${shop.name}!\n\n` +
+  async sendHelpMessage(sock, from, shop, context = {}) {
+    const name = context.name || 'يا فندم';
+    let personalizedMsg = '';
+    
+    if (context.hasItems) {
+      personalizedMsg = `🛒 عندك ${context.itemCount} منتج في السلة (${context.totalValue} جنيه)\n\n`;
+    }
+    
+    const msg = `👋 ${name}، أنا مساعد ${shop.name}!\n\n` +
+                personalizedMsg +
                 `📱 الأوامر المتاحة:\n\n` +
                 `📋 "قائمة" - عرض كل المنتجات\n` +
                 `🛒 "كارت" - تشوف طلبك\n` +
@@ -749,7 +1011,7 @@ If greeting, be welcoming and mention the shop name.`;
                 `👍 "ايوه" - أضف منتج تاني\n` +
                 `👎 "لا" - كده تمام واطلب\n` +
                 `❌ "الغاء" - فضي السلة\n\n` +
-                `💡 اكتب رقم المنتج مباشرة (1, 2, 3...) لإضافته للسلة`;
+                `💡 أو اكتب رقم المنتج مباشرة (1, 2, 3...)`;
     await this.safeSendMessage(sock, from, msg, shop.name);
   }
 

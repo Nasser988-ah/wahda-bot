@@ -231,30 +231,44 @@ class BotManager {
       }
 
       // Handle text commands with context awareness - using fuzzy matching for spelling tolerance
+      console.log(`🔍 Processing message: "${lowerText}"`);
+      
       if (this.matchesIntent(lowerText, 'menu')) {
+        console.log(`✓ Matched: menu`);
         await this.sendProductsList(sock, from, shop, customerPhone, 1);
       } else if (this.matchesIntent(lowerText, 'cart')) {
+        console.log(`✓ Matched: cart`);
         await this.showCart(sock, from, shop.id, customerPhone, shop);
       } else if (this.matchesIntent(lowerText, 'order')) {
+        console.log(`✓ Matched: order`);
         await this.askForMoreItems(sock, from, shop.id, customerPhone, shop);
       } else if (this.matchesIntent(lowerText, 'no')) {
+        console.log(`✓ Matched: no`);
         await this.handleNoResponse(sock, from, shop, customerPhone);
       } else if (this.matchesIntent(lowerText, 'yes')) {
+        console.log(`✓ Matched: yes`);
         await this.handleYesResponse(sock, from, shop, customerPhone, context);
       } else if (lowerText.startsWith('عنوان:') || lowerText.startsWith('العنوان:') || lowerText.startsWith('address:')) {
+        console.log(`✓ Matched: address input`);
         await this.handleAddressInput(sock, from, shop.id, customerPhone, shop, text);
       } else if (/^0?1\d{9}$/.test(text.replace(/\s/g, ''))) {
+        console.log(`✓ Matched: phone number`);
         await this.handlePhoneInput(sock, from, shop.id, customerPhone, shop, text.replace(/\s/g, ''));
       } else if (lowerText.startsWith('صفحة ') || lowerText.startsWith('page ')) {
+        console.log(`✓ Matched: page navigation`);
         const pageNum = parseInt(text.split(' ')[1]) || 1;
         await this.sendProductsList(sock, from, shop, customerPhone, pageNum);
       } else if (this.matchesIntent(lowerText, 'cancel')) {
+        console.log(`✓ Matched: cancel`);
         await this.handleCancelCommand(sock, from, shop, customerPhone);
       } else if (this.matchesIntent(lowerText, 'help')) {
+        console.log(`✓ Matched: help`);
         await this.sendHelpMessage(sock, from, shop, context);
       } else if (/^\d+$/.test(text)) {
+        console.log(`✓ Matched: product number`);
         await this.addToCart(sock, from, shop.id, customerPhone, parseInt(text), shop);
       } else {
+        console.log(`→ No command match, using AI response`);
         // Smart AI response with context
         await this.handleSmartResponse(sock, from, shop, customerPhone, text, context);
       }
@@ -280,11 +294,24 @@ class BotManager {
       let items = [];
       if (cart) {
         try {
-          items = typeof cart === 'string' ? JSON.parse(cart) : cart;
+          if (typeof cart === 'string') {
+            items = JSON.parse(cart);
+          } else if (typeof cart === 'object') {
+            items = cart;
+          }
         } catch (e) { items = []; }
       }
       
-      const messages = history ? JSON.parse(history) : [];
+      let messages = [];
+      if (history) {
+        try {
+          if (typeof history === 'string') {
+            messages = JSON.parse(history);
+          } else if (typeof history === 'object') {
+            messages = history;
+          }
+        } catch (e) { messages = []; }
+      }
       const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
       
       return {
@@ -307,7 +334,21 @@ class BotManager {
     try {
       const historyKey = `chat_history:${shopId}:${customerPhone}`;
       let history = await redis.get(historyKey);
-      let messages = history ? JSON.parse(history) : [];
+      let messages = [];
+      
+      if (history) {
+        try {
+          // Handle both string and object responses from Redis
+          if (typeof history === 'string') {
+            messages = JSON.parse(history);
+          } else if (typeof history === 'object') {
+            messages = history;
+          }
+        } catch (e) {
+          console.log('⚠️ History parse error, resetting:', e.message);
+          messages = [];
+        }
+      }
       
       messages.push({
         text: text.slice(0, 100), // Keep it short
@@ -328,7 +369,7 @@ class BotManager {
   async safeSendMessage(sock, to, message, shopName) {
     try {
       const result = await sock.sendMessage(to, { text: message });
-      console.log(`✅ Message sent to ${to}`);
+      console.log(`✅ Message sent to ${to}: "${message.slice(0, 50)}${message.length > 50 ? '...' : ''}"`);
       return result;
     } catch (error) {
       console.error(`❌ Failed to send message to ${to}:`, error.message);
@@ -554,7 +595,7 @@ class BotManager {
     const intent = this.detectAdvancedIntent(text);
     
     // Try Groq AI first for natural conversation
-    const groqResponse = await this.getGroqResponse(text, shop, context, emotion, intent);
+    const groqResponse = await this.getGroqResponse(text, shop, context, emotion, intent, customerPhone);
     if (groqResponse) {
       await this.safeSendMessage(sock, from, groqResponse, shop.name);
       await this.updateMessageHistory(shop.id, customerPhone, text, 'user', intent);
@@ -571,7 +612,7 @@ class BotManager {
   }
 
   // Groq AI integration for smart natural responses
-  async getGroqResponse(text, shop, context, emotion, intent) {
+  async getGroqResponse(text, shop, context, emotion, intent, customerPhone) {
     if (!groq) {
       console.log('⚠️ Groq not configured, skipping AI response');
       return null;
@@ -579,9 +620,21 @@ class BotManager {
 
     try {
       // Get conversation history for context
-      const historyKey = `chat_history:${shop.id}:${context.name || 'user'}`;
+      const historyKey = `chat_history:${shop.id}:${customerPhone}`;
       const historyData = await redis.get(historyKey);
-      const messages = historyData ? JSON.parse(historyData) : [];
+      let messages = [];
+      
+      if (historyData) {
+        try {
+          if (typeof historyData === 'string') {
+            messages = JSON.parse(historyData);
+          } else if (typeof historyData === 'object') {
+            messages = historyData;
+          }
+        } catch (e) {
+          messages = [];
+        }
+      }
       
       // Build conversation context for Groq
       const conversationHistory = messages.slice(-5).map(m => ({

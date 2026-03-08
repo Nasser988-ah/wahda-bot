@@ -9,9 +9,13 @@ const fs = require("fs");
 const databaseService = require("../services/databaseService");
 const redis = require("../db/redis");
 const { HfInference } = require("@huggingface/inference");
+const Groq = require("groq-sdk");
 
 const HF_TOKEN = process.env.HUGGINGFACE_TOKEN;
 const hf = HF_TOKEN ? new HfInference(HF_TOKEN) : null;
+
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
+const groq = GROQ_API_KEY ? new Groq({ apiKey: GROQ_API_KEY }) : null;
 
 const prisma = databaseService.getClient();
 
@@ -226,16 +230,16 @@ class BotManager {
         return;
       }
 
-      // Handle text commands with context awareness
-      if (lowerText === 'قائمة' || lowerText === 'menu') {
+      // Handle text commands with context awareness - using fuzzy matching for spelling tolerance
+      if (this.matchesIntent(lowerText, 'menu')) {
         await this.sendProductsList(sock, from, shop, customerPhone, 1);
-      } else if (lowerText === 'كارت' || lowerText === 'cart') {
+      } else if (this.matchesIntent(lowerText, 'cart')) {
         await this.showCart(sock, from, shop.id, customerPhone, shop);
-      } else if (lowerText === 'اطلب' || lowerText === 'order') {
+      } else if (this.matchesIntent(lowerText, 'order')) {
         await this.askForMoreItems(sock, from, shop.id, customerPhone, shop);
-      } else if (lowerText === 'لا' || lowerText === 'no' || lowerText === 'تمام') {
+      } else if (this.matchesIntent(lowerText, 'no')) {
         await this.handleNoResponse(sock, from, shop, customerPhone);
-      } else if (lowerText === 'ايوه' || lowerText === 'yes' || lowerText === 'أيوه') {
+      } else if (this.matchesIntent(lowerText, 'yes')) {
         await this.handleYesResponse(sock, from, shop, customerPhone, context);
       } else if (lowerText.startsWith('عنوان:') || lowerText.startsWith('العنوان:') || lowerText.startsWith('address:')) {
         await this.handleAddressInput(sock, from, shop.id, customerPhone, shop, text);
@@ -244,9 +248,9 @@ class BotManager {
       } else if (lowerText.startsWith('صفحة ') || lowerText.startsWith('page ')) {
         const pageNum = parseInt(text.split(' ')[1]) || 1;
         await this.sendProductsList(sock, from, shop, customerPhone, pageNum);
-      } else if (lowerText === 'الغاء' || lowerText === 'cancel') {
+      } else if (this.matchesIntent(lowerText, 'cancel')) {
         await this.handleCancelCommand(sock, from, shop, customerPhone);
-      } else if (lowerText === 'مساعدة' || lowerText === 'help') {
+      } else if (this.matchesIntent(lowerText, 'help')) {
         await this.sendHelpMessage(sock, from, shop, context);
       } else if (/^\d+$/.test(text)) {
         await this.addToCart(sock, from, shop.id, customerPhone, parseInt(text), shop);
@@ -543,13 +547,22 @@ class BotManager {
       `لو حابب تطلب حاجة تانية في أي وقت، اكتب "قائمة" وأنا تحت أمرك 😊`, shop.name);
   }
 
-  // Smart response handler with emotional intelligence
+  // Smart response handler with emotional intelligence and Groq AI
   async handleSmartResponse(sock, from, shop, customerPhone, text, context) {
     // Detect emotion and intent
     const emotion = this.detectEmotion(text);
     const intent = this.detectAdvancedIntent(text);
     
-    // Get personalized response
+    // Try Groq AI first for natural conversation
+    const groqResponse = await this.getGroqResponse(text, shop, context, emotion, intent);
+    if (groqResponse) {
+      await this.safeSendMessage(sock, from, groqResponse, shop.name);
+      await this.updateMessageHistory(shop.id, customerPhone, text, 'user', intent);
+      await this.updateMessageHistory(shop.id, customerPhone, groqResponse, 'bot', 'groq_response');
+      return;
+    }
+    
+    // Fallback to rule-based human-like response
     const response = await this.getHumanLikeResponse(text, shop, context, emotion, intent);
     
     await this.safeSendMessage(sock, from, response, shop.name);
@@ -557,38 +570,108 @@ class BotManager {
     await this.updateMessageHistory(shop.id, customerPhone, response, 'bot', 'response');
   }
 
-  // Detect user emotion
+  // Groq AI integration for smart natural responses
+  async getGroqResponse(text, shop, context, emotion, intent) {
+    if (!groq) {
+      console.log('⚠️ Groq not configured, skipping AI response');
+      return null;
+    }
+
+    try {
+      // Get conversation history for context
+      const historyKey = `chat_history:${shop.id}:${context.name || 'user'}`;
+      const historyData = await redis.get(historyKey);
+      const messages = historyData ? JSON.parse(historyData) : [];
+      
+      // Build conversation context for Groq
+      const conversationHistory = messages.slice(-5).map(m => ({
+        role: m.sender === 'user' ? 'user' : 'assistant',
+        content: m.text
+      }));
+
+      // Create system prompt with shop context
+      const systemPrompt = `أنت مساعد ذكي وودود لمحل ${shop.name}. 
+المحل يبيع: ${shop.products?.filter(p => p.isAvailable).map(p => p.name).join(', ') || 'منتجات متنوعة'}.
+
+قواعد الرد:
+1. رد باللهجة المصرية العامية (زي "يا فندم", "عظمة", "تمام", "ماشي")
+2. كون ودود ومحترف وإنساني
+3. لو العميل عنده منتجات في السلة (${context.itemCount} منتجات)، شجعه يكمل الطلب
+4. لو العميل جديد، رحب بيه وقوله اكتب "قائمة" 
+5. لو العميل متضايق (${emotion}), طمنه وحل مشكلته
+6. خلي الرد مختصر (2-3 جمل كحد أقصى)
+7. استخدم إيموجي مناسبة
+8. لو مش فاهم حاجة، قوله "ممكن توضح أكتر؟" أو "اكتب مساعدة"
+
+العميل: ${context.name || 'غير معروف'}
+السلة: ${context.hasItems ? `${context.itemCount} منتج (${context.totalValue} جنيه)` : 'فاضية'}
+الحالة المزاجية: ${emotion}
+النواية: ${intent}`;
+
+      // Prepare messages for Groq
+      const groqMessages = [
+        { role: 'system', content: systemPrompt },
+        ...conversationHistory,
+        { role: 'user', content: text }
+      ];
+
+      console.log('🤖 Sending to Groq:', text.slice(0, 50) + '...');
+
+      const chatCompletion = await groq.chat.completions.create({
+        messages: groqMessages,
+        model: 'llama-3.3-70b-versatile',
+        temperature: 0.7,
+        max_tokens: 150,
+        top_p: 0.9,
+        stream: false
+      });
+
+      const aiResponse = chatCompletion.choices[0]?.message?.content?.trim();
+      
+      if (aiResponse) {
+        console.log('✅ Groq response received:', aiResponse.slice(0, 50) + '...');
+        return aiResponse;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('❌ Groq error:', error.message);
+      return null;
+    }
+  }
+
+  // Detect user emotion with spelling tolerance
   detectEmotion(text) {
-    const lower = text.toLowerCase();
+    const normalizedText = this.normalizeText(text);
     const emotions = {
-      frustrated: ['مش شغال', 'بطل', 'خراب', 'زهق', 'عصب', 'غضبان', 'متضايق', 'مش فاهم', 'مش بيشتغل'],
-      excited: ['عظمة', 'حلو', 'ممتاز', 'جميل', ' perfect', 'رائع', 'لذيذ', 'حلوة'],
-      confused: ['مش فاهم', 'ازاي', 'ازاى', 'ايه', 'مش عارف', 'صعب', 'معقد'],
-      urgent: ['بسرعة', 'عاجل', 'دلوقتي', 'الحين', 'URGENT', 'بسرعه', 'عالسريع'],
-      happy: ['شكرا', 'تسلم', 'دومت', '❤️', '😍', '😊', '🥰'],
+      frustrated: ['مش شغال', 'بطل', 'خراب', 'زهق', 'عصب', 'غضبان', 'متضايق', 'مش فاهم', 'مش بيشتغل', 'وحش', 'سيئ'],
+      excited: ['عظمة', 'حلو', 'ممتاز', 'جميل', 'رائع', 'لذيذ', 'حلوة', ' perfect', 'awesome', 'great'],
+      confused: ['مش فاهم', 'ازاي', 'ازاى', 'ايه', 'مش عارف', 'صعب', 'معقد', 'مش فاهم', 'صعبه'],
+      urgent: ['بسرعة', 'عاجل', 'دلوقتي', 'الحين', 'urgent', 'بسرعه', 'عالسريع', 'بسرعه'],
+      happy: ['شكرا', 'تسلم', 'دومت', '❤️', '😍', '😊', '🥰', 'حبيت', 'عجبني'],
     };
     
     for (const [emotion, keywords] of Object.entries(emotions)) {
-      if (keywords.some(k => lower.includes(k))) return emotion;
+      if (keywords.some(k => this.fuzzyMatch(normalizedText, k, 0.8))) return emotion;
     }
     return 'neutral';
   }
 
-  // Advanced intent detection
+  // Advanced intent detection with spelling tolerance
   detectAdvancedIntent(text) {
-    const lower = text.toLowerCase();
+    const normalizedText = this.normalizeText(text);
     
     const intents = {
-      complaint: ['مش كويس', 'سيئ', 'خراب', 'مش شغال', 'رديء', 'مش لذيذ', 'بارد', 'سخن'],
-      compliment: ['حلو', 'جميل', 'عظمة', 'ممتاز', ' perfect', 'رائع', 'لذيذ', 'طعمه حلو'],
-      question_product: ['عندك', 'فيه', 'موجود', 'متاح'],
-      question_price: ['بكام', 'سعر', 'cost', 'فلوس'],
-      question_time: ['امتى', 'متى', 'ساعة', 'وقت', 'دقيقة'],
-      small_talk: ['اخبارك', 'عمل ايه', 'كيفك', 'ازيك', 'صباح', 'مساء', 'نهارك'],
+      complaint: ['مش كويس', 'سيئ', 'خراب', 'مش شغال', 'رديء', 'مش لذيذ', 'بارد', 'سخن', 'وحش', 'تأخير'],
+      compliment: ['حلو', 'جميل', 'عظمة', 'ممتاز', 'رائع', 'لذيذ', 'طعمه حلو', ' perfect', 'good'],
+      question_product: ['عندك', 'فيه', 'موجود', 'متاح', 'عندكم', 'ايش عندك'],
+      question_price: ['بكام', 'سعر', 'cost', 'فلوس', 'قيمة', 'تكلفة', 'بكم'],
+      question_time: ['امتى', 'متى', 'ساعة', 'وقت', 'دقيقة', 'امتا', 'توصيل'],
+      small_talk: ['اخبارك', 'عمل ايه', 'كيفك', 'ازيك', 'صباح', 'مساء', 'نهارك', 'فطور', 'غدا'],
     };
     
     for (const [intent, keywords] of Object.entries(intents)) {
-      if (keywords.some(k => lower.includes(k))) return intent;
+      if (keywords.some(k => this.fuzzyMatch(normalizedText, k, 0.8))) return intent;
     }
     return 'general';
   }
@@ -642,20 +725,188 @@ class BotManager {
     return this.getSmartFallback(name, shop, context, greeting);
   }
 
+  // Normalize Arabic text for better matching (handle common variations)
+  normalizeText(text) {
+    return text
+      .toLowerCase()
+      .trim()
+      // Arabic letter variations
+      .replace(/[أإآا]/g, 'ا')    // All forms of alef
+      .replace(/ى/g, 'ي')         // Alef maksura to ya
+      .replace(/ة/g, 'ه')         // Ta marbuta to ha
+      .replace(/[ؤئ]/g, 'ء')      // Hamza variations
+      // Common spelling mistakes
+      .replace(/ق/g, 'ك')         // Qaf to kaf (common in dialect)
+      .replace(/ث/g, 'س')         // Tha to seen
+      .replace(/ذ/g, 'ز')         // Dhal to zay
+      .replace(/ظ/g, 'ض')         // Dha to dad
+      // Remove extra spaces and punctuation
+      .replace(/\s+/g, ' ')
+      .replace(/[.,!?;:\-_]/g, '');
+  }
+
+  // Calculate string similarity (Levenshtein distance based)
+  calculateSimilarity(str1, str2) {
+    const len1 = str1.length;
+    const len2 = str2.length;
+    const matrix = [];
+
+    for (let i = 0; i <= len1; i++) {
+      matrix[i] = [i];
+    }
+    for (let j = 0; j <= len2; j++) {
+      matrix[0][j] = j;
+    }
+
+    for (let i = 1; i <= len1; i++) {
+      for (let j = 1; j <= len2; j++) {
+        const cost = str1[i - 1] === str2[j - 1] ? 0 : 1;
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j] + 1,      // deletion
+          matrix[i][j - 1] + 1,      // insertion
+          matrix[i - 1][j - 1] + cost // substitution
+        );
+      }
+    }
+
+    const distance = matrix[len1][len2];
+    const maxLen = Math.max(len1, len2);
+    return maxLen === 0 ? 1 : 1 - distance / maxLen;
+  }
+
+  // Fuzzy match with spelling tolerance
+  fuzzyMatch(text, pattern, threshold = 0.7) {
+    const normalizedText = this.normalizeText(text);
+    const normalizedPattern = this.normalizeText(pattern);
+    
+    // Exact match after normalization
+    if (normalizedText.includes(normalizedPattern)) return true;
+    
+    // Word-by-word fuzzy match
+    const textWords = normalizedText.split(' ');
+    const patternWords = normalizedPattern.split(' ');
+    
+    for (const patternWord of patternWords) {
+      if (patternWord.length < 2) continue; // Skip single chars
+      
+      for (const textWord of textWords) {
+        // Check for substring match first
+        if (textWord.includes(patternWord) || patternWord.includes(textWord)) {
+          return true;
+        }
+        
+        // Check similarity for similar length words
+        if (Math.abs(textWord.length - patternWord.length) <= 2) {
+          const similarity = this.calculateSimilarity(textWord, patternWord);
+          if (similarity >= threshold) return true;
+        }
+      }
+    }
+    
+    return false;
+  }
+
+  // Enhanced matchesIntent with spelling mistake tolerance
   matchesIntent(text, intent) {
     const patterns = {
-      greeting: ['مرحبا', 'سلام', 'اهلا', 'هلا', 'صباح', 'مساء', 'هاي', 'hello', 'hi', 'السلام', 'ازيك', 'اخبارك'],
-      complaint: ['مش كويس', 'سيئ', 'خراب', 'مش شغال', 'رديء', 'مش لذيذ', 'بارد', 'سخن', 'تأخير', 'بطئ'],
-      compliment: ['حلو', 'جميل', 'عظمة', 'ممتاز', ' perfect', 'رائع', 'لذيذ', 'طعمه حلو', 'احسن'],
-      question_product: ['عندك', 'فيه', 'موجود', 'متاح', 'شو عندك', 'ايش'],
-      question_price: ['بكام', 'سعر', 'cost', 'فلوس', 'قيمة', 'تكلفة'],
-      question_time: ['امتى', 'متى', 'ساعة', 'وقت', 'دقيقة', ' delivery', 'توصيل'],
-      small_talk: ['اخبارك', 'عمل ايه', 'كيفك', 'ازيك', 'صباح', 'مساء', 'نهارك', 'فطور', 'غدا', 'عشا'],
-      joke: ['نكتة', 'نكته', ' joke', 'ضحك', 'هظحك', 'فرفش'],
-      help: ['مساعدة', 'help', 'ازاي', 'كيف', 'شلون'],
+      greeting: [
+        'مرحبا', 'سلام', 'اهلا', 'هلا', 'صباح', 'مساء', 'هاي', 'hello', 'hi', 
+        'السلام', 'ازيك', 'اخبارك', 'حياك', 'اهلين', 'هلا والله',
+        // Common misspellings
+        'مرحب', 'مرحب', 'اهلان', 'اهلين', 'هلاا', 'سلامم', 'مرحباً'
+      ],
+      complaint: [
+        'مش كويس', 'سيئ', 'خراب', 'مش شغال', 'رديء', 'مش لذيذ', 'بارد', 'سخن', 
+        'تأخير', 'بطئ', 'مش حلو', 'وحش', 'سيء',
+        // Misspellings
+        'مش شغل', 'مش شغاله', 'خرابه', 'سئ', 'سىء', 'بطيء', 'بطىء'
+      ],
+      compliment: [
+        'حلو', 'جميل', 'عظمة', 'ممتاز', 'رائع', 'لذيذ', 'طعمه حلو', 'احسن', 'افضل',
+        'perfect', 'good', 'nice', 'great', 'awesome',
+        // Misspellings
+        'حلوو', 'حلاوة', 'جمال', 'عظمه', 'ممتازز', 'رائعع', 'لذيذذ'
+      ],
+      question_product: [
+        'عندك', 'فيه', 'موجود', 'متاح', 'شو عندك', 'ايش', 'عندكم', 'ايه عندك',
+        // Misspellings
+        'عندكك', 'عندكك', 'فيهه', 'موجودد', 'متاحح'
+      ],
+      question_price: [
+        'بكام', 'سعر', 'cost', 'فلوس', 'قيمة', 'تكلفة', 'كم', 'بكم', 'كام',
+        // Misspellings
+        'بكامم', 'سععر', 'فلوسص', 'كما', 'بكام'
+      ],
+      question_time: [
+        'امتى', 'متى', 'ساعة', 'وقت', 'دقيقة', 'delivery', 'توصيل', 'امتى',
+        // Misspellings
+        'امتىى', 'امتا', 'امتى', 'ساعه', 'دقيقه', 'توقيت'
+      ],
+      small_talk: [
+        'اخبارك', 'عمل ايه', 'كيفك', 'ازيك', 'صباح', 'مساء', 'نهارك', 
+        'فطور', 'غدا', 'عشا', 'اكلك', 'اخبار', 'شو الاخبار',
+        // Misspellings
+        'اخبارر', 'اخباركك', 'كيففك', 'اززيك', 'صباحح'
+      ],
+      joke: [
+        'نكتة', 'نكته', 'joke', 'ضحك', 'هظحك', 'فرفش', 'نكت', 'تحشيش', 'هبل',
+        // Misspellings
+        'نكتت', 'نكتةة', 'ضحكك', 'فرفشش'
+      ],
+      help: [
+        'مساعدة', 'help', 'ازاي', 'كيف', 'شلون', 'كيفية', 'طريقة', 'شرح',
+        // Misspellings
+        'مساعده', 'مساعدةة', 'ازايي', 'كيفف', 'شلونن'
+      ],
+      menu: [
+        'قائمة', 'منيو', 'menu', 'قايمة', 'قائمه', 'القائمة', 'المنيو',
+        // Misspellings
+        'قايمه', 'قائمةة', 'منيوو', 'قايمةة', 'قائمه'
+      ],
+      cart: [
+        'كارت', 'cart', 'سلة', 'السلة', 'الكارت', 'طلبي', 'اوردر',
+        // Misspellings
+        'كاررت', 'كارتت', 'سله', 'سلةة', 'طلبيي'
+      ],
+      order: [
+        'اطلب', 'order', 'اطلب', 'احجز', 'booking', 'حجز',
+        // Misspellings
+        'اطلبب', 'اطللب', 'احجزز', 'حجزز'
+      ],
+      yes: [
+        'ايوه', 'yes', 'أيوه', 'أيوة', 'ايوة', 'اوكي', 'تمام', 'ماشي', 'ok', 'okay',
+        // Misspellings
+        'ايووه', 'ايوهه', 'أيووه', 'اوكيي', 'تمامم'
+      ],
+      no: [
+        'لا', 'no', 'لأ', 'لأ', 'مش', 'مش عايز', 'مش حابب',
+        // Misspellings
+        'لأأ', 'لاا', 'مشش'
+      ],
+      cancel: [
+        'الغاء', 'cancel', 'stop', 'مش عايز', 'غير', 'ما ابغى', 'لا ابغى', 'مش عاوز',
+        'الفاء', 'الغي', 'الغاء',
+        // Misspellings
+        'الغا', 'الغاءء', 'كانسل', 'cancle'
+      ],
+      thanks: [
+        'شكرا', 'thank', 'merci', 'تسلم', 'دومت', 'شكر', 'شكراً', 'thanks', 'thx',
+        'مشكور', 'جزاك الله', 'بارك الله',
+        // Misspellings
+        'شكرر', 'شكراا', 'شكرراً', 'تسلمم'
+      ],
+      address: [
+        'عنوان', 'address', 'موقع', 'مكان', 'loc',
+        // Misspellings
+        'عنوانن', 'عنوان', 'عنواان'
+      ],
     };
     
-    return patterns[intent]?.some(p => text.includes(p)) || false;
+    const intentPatterns = patterns[intent];
+    if (!intentPatterns) return false;
+    
+    // Try fuzzy matching with tolerance for spelling mistakes
+    return intentPatterns.some(p => this.fuzzyMatch(text, p, 0.75));
   }
 
   async getGreetingResponse(name, shop, context) {

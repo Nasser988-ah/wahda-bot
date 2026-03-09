@@ -36,6 +36,7 @@ class BotManager {
     this.qrCallbacks = new Map();
     this.connectionStates = new Map();
     this.qrReceived = new Map();
+    this.currentQrs = new Map(); // Store current QR codes
   }
 
   async connectShop(shopId, qrCallback) {
@@ -67,20 +68,15 @@ class BotManager {
       // Setup session directory
       const sessionDir = path.resolve(`./sessions/${shopId}`);
       
-      // Only clear session for fresh connections, not reconnects after QR scan
-      const isReconnect = this.qrCallbacks.has(shopId);
-      if (!isReconnect && fs.existsSync(sessionDir)) {
-        try {
-          fs.rmSync(sessionDir, { recursive: true, force: true });
-          console.log(`🧹 Cleared existing session for ${shop.name}`);
-        } catch (e) {
-          console.log(`⚠️ Could not clear session: ${e.message}`);
-        }
+      // NEVER clear existing session - only create if doesn't exist
+      // Session should only be deleted on explicit logout
+      if (!fs.existsSync(sessionDir)) {
+        console.log(`📁 Creating new session directory for ${shop.name}`);
+        fs.mkdirSync(sessionDir, { recursive: true });
+      } else {
+        console.log(`📁 Using existing session for ${shop.name}`);
       }
       
-      // Create session directory
-      fs.mkdirSync(sessionDir, { recursive: true });
-
       // Initialize auth state
       const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
 
@@ -100,8 +96,11 @@ class BotManager {
       this.connections.set(shopId, sock);
       this.qrCallbacks.set(shopId, qrCallback);
 
-      // Handle credentials update
-      sock.ev.on('creds.update', saveCreds);
+      // Handle credentials update with logging
+      sock.ev.on('creds.update', () => {
+        saveCreds();
+        console.log(`💾 Session credentials saved for ${shop.name} (${shopId})`);
+      });
 
       // Handle connection updates
       sock.ev.on('connection.update', async (update) => {
@@ -111,6 +110,7 @@ class BotManager {
         if (qr && qrCallback && !this.qrReceived.get(shopId)) {
           console.log(`📱 QR received for ${shop.name}`);
           this.qrReceived.set(shopId, true);
+          this.setCurrentQr(shopId, qr); // Store QR for later retrieval
           qrCallback(qr);
         }
 
@@ -1432,6 +1432,19 @@ ${contextMessage}
 
   isShopConnected(shopId) {
     return this.connectionStates.get(shopId) === 'connected';
+  }
+
+  // QR code management helpers
+  setCurrentQr(shopId, qr) {
+    this.currentQrs.set(shopId, qr);
+  }
+
+  getCurrentQr(shopId) {
+    return this.currentQrs.get(shopId) || null;
+  }
+
+  clearCurrentQr(shopId) {
+    this.currentQrs.delete(shopId);
   }
 
   isConnecting(shopId) {

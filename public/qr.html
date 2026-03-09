@@ -658,9 +658,112 @@
             }, 3000);
         }
 
-        // Refresh QR code
+        // Refresh QR code - calls backend to generate new QR
         async function refreshQR() {
-            await checkConnectionStatus();
+          const btn = document.getElementById('refreshBtn');
+          if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'جارٍ التحديث...';
+          }
+          
+          try {
+            const shop = JSON.parse(localStorage.getItem('shop') || '{}');
+            if (!shop.id) {
+              console.error('No shop ID found');
+              return;
+            }
+            
+            // Call refresh endpoint
+            const response = await apiFetch(`${API_BASE}/shop/qr/refresh?shopId=${shop.id}`, { 
+              method: 'POST'
+            });
+            
+            if (!response) return;
+            
+            if (response.ok) {
+              const data = await response.json();
+              console.log('✅ QR refresh initiated:', data.message);
+              
+              // Show loading state
+              const qrContainer = document.getElementById('qrContainer');
+              qrContainer.innerHTML = `
+                <div class="qr-placeholder">
+                  <div class="qr-placeholder-icon">⏳</div>
+                  <div>جارٍ إنشاء كود QR جديد...</div>
+                </div>
+              `;
+              
+              // Wait 3 seconds then start polling
+              await new Promise(resolve => setTimeout(resolve, 3000));
+              
+              // Start polling for new QR
+              startQRPolling();
+            } else {
+              const error = await response.json();
+              showMessage(error.error || 'فشل تحديث كود QR', 'error');
+            }
+          } catch (err) {
+            console.error('Refresh failed:', err);
+            showMessage('فشل التحديث، يرجى المحاولة مرة أخرى', 'error');
+          } finally {
+            if (btn) {
+              btn.disabled = false;
+              btn.textContent = 'تحديث كود QR';
+            }
+          }
+        }
+
+        // QR polling function - polls for new QR code
+        function startQRPolling() {
+          let attempts = 0;
+          const maxAttempts = 60; // 5 minutes max (60 * 5 seconds)
+          
+          const shop = JSON.parse(localStorage.getItem('shop') || '{}');
+          if (!shop.id) {
+            console.error('No shop ID for QR polling');
+            return;
+          }
+          
+          // Clear any existing interval
+          if (refreshInterval) {
+            clearInterval(refreshInterval);
+          }
+          
+          const interval = setInterval(async () => {
+            attempts++;
+            
+            if (attempts > maxAttempts) {
+              clearInterval(interval);
+              showMessage('انتهت مدة الانتظار. يرجى المحاولة مرة أخرى.', 'error');
+              return;
+            }
+            
+            try {
+              const response = await apiFetch(`${API_BASE}/shop/qr?shopId=${shop.id}`);
+              if (!response) return;
+              
+              const data = await response.json();
+              
+              if (data.connected) {
+                clearInterval(interval);
+                updateConnectionStatus(true);
+                showMessage('تم الاتصال بواتساب بنجاح!', 'success');
+                // Restart normal auto-refresh
+                startAutoRefresh();
+                return;
+              }
+              
+              if (data.qr) {
+                // New QR received
+                displayQR(data.qr);
+              }
+            } catch (error) {
+              console.error('QR polling error:', error);
+            }
+          }, 5000); // Poll every 5 seconds
+          
+          // Store interval so we can clear it later
+          refreshInterval = interval;
         }
 
         

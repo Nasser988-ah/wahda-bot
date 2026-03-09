@@ -5,6 +5,8 @@ const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
 const rateLimit = require("express-rate-limit");
+const path = require("path");
+const fs = require("fs");
 const databaseService = require("./src/services/databaseService");
 const logger = require("./src/services/loggerService");
 const { errorHandler } = require("./src/middleware/errorHandler");
@@ -112,10 +114,52 @@ async function main() {
     // await initBot();
     logger.info('WhatsApp bot initialized');
     
+    // Reconnect all previously connected shops
+    await reconnectAllShops();
+    
     logger.info('Application started successfully');
   } catch (error) {
     logger.error('Failed to start application', error);
     process.exit(1);
+  }
+}
+
+// Reconnect all shops with existing sessions on startup
+async function reconnectAllShops() {
+  try {
+    const prisma = databaseService.getClient();
+    const shops = await prisma.shop.findMany({
+      where: { subscriptionStatus: { not: 'inactive' } }
+    });
+    
+    console.log(`🔄 Checking ${shops.length} shops for session restoration...`);
+    
+    const botManager = require('./src/bot/botManager');
+    
+    for (const shop of shops) {
+      const sessionDir = path.resolve(`./sessions/${shop.id}`);
+      
+      // Only reconnect if session folder exists and has credentials
+      if (fs.existsSync(sessionDir)) {
+        const credsPath = path.join(sessionDir, 'creds.json');
+        if (fs.existsSync(credsPath)) {
+          console.log(`🔄 Restoring session for ${shop.name} (${shop.id})`);
+          try {
+            await botManager.connectShop(shop.id, (qr) => {
+              botManager.setCurrentQr(shop.id, qr);
+            });
+          } catch (err) {
+            console.log(`⚠️ Could not restore ${shop.name}: ${err.message}`);
+          }
+        } else {
+          console.log(`ℹ️ No credentials found for ${shop.name}, skipping`);
+        }
+      }
+    }
+    
+    console.log(`✅ Shop reconnection complete`);
+  } catch (err) {
+    console.error('❌ Error reconnecting shops:', err);
   }
 }
 

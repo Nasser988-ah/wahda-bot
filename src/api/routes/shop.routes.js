@@ -3,6 +3,7 @@ const prisma = require("../../db/index");
 const { authenticateToken } = require("../middleware/auth.middleware");
 const { z } = require("zod");
 const qrService = require("../../services/qrService");
+const botManager = require("../../bot/botManager");
 const router = express.Router();
 
 // QR routes (no auth required for initial connection)
@@ -108,6 +109,50 @@ router.post("/qr", async (req, res) => {
   }
 });
 
+
+router.post("/qr/refresh", async (req, res) => {
+  try {
+    const shopId = req.query.shopId || req.body.shopId;
+    
+    if (!shopId) {
+      return res.status(400).json({ 
+        error: "Shop ID is required",
+        message: "Please provide shopId as query parameter or in request body"
+      });
+    }
+
+    console.log(`🔄 QR Refresh requested for shop: ${shopId}`);
+    
+    // Disconnect existing connection
+    await botManager.disconnectShop(shopId);
+    console.log(`🔌 Disconnected shop ${shopId}`);
+    
+    // Clear current QR
+    botManager.clearCurrentQr(shopId);
+    botManager.qrReceived.set(shopId, false);
+    
+    // Reset connection state
+    botManager.connectionStates.set(shopId, 'not_started');
+    
+    // Wait a moment for cleanup
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // Start fresh connection
+    botManager.connectShop(shopId, (qr) => {
+      botManager.setCurrentQr(shopId, qr);
+    });
+    
+    res.json({ 
+      success: true, 
+      message: 'جارٍ إنشاء رمز QR جديد',
+      shopId: shopId
+    });
+    
+  } catch (err) {
+    console.error('QR Refresh error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // Apply auth middleware to remaining routes
 router.use(authenticateToken);

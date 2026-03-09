@@ -711,28 +711,25 @@ class BotManager {
         ? `العميل لديه ${cart.length} منتج في السلة` 
         : `سلة العميل فارغة`;
 
-      // Create system prompt with shop context - FORMAL ARABIC ONLY
-      const systemPrompt = `أنت مساعد ذكي وودود لمحل ${shop.name}. 
-المحل يبيع: ${shop.products?.filter(p => p.isAvailable).map(p => p.name).join(', ') || 'منتجات متنوعة'}.
+      // Create system prompt with shop context - STRICT FORMAL ARABIC ONLY
+      const systemPrompt = `أنت مساعد متجر ${shop.name}.
 
-قواعد الرد:
-1. رد باللغة العربية الفصحى فقط (لا تستخدم العامية المصرية)
-2. كون ودوداً ومحترفاً وإنسانياً
-3. إذا كان العميل لديه منتجات في السلة (${context.itemCount} منتجات)، شجعه على إكمال الطلب
-4. إذا كان العميل جديداً، رحب به واطلب منه كتابة "قائمة" 
-5. إذا كان العميل منزعجاً (${emotion})، طمأنه وحل مشكلته
-6. اجعل الرد مختصراً (2-3 جمل كحد أقصى)
-7. استخدم الإيموجي المناسبة
-8. إذا لم تفهم شيئاً، قل "هل يمكنك التوضيح أكثر؟" أو "اكتب مساعدة"
+قواعد صارمة جداً:
+1. استخدم اللغة العربية الفصحى فقط في جميع ردودك
+2. ممنوع منعاً باتاً استخدام: أيوه، لأ، تمام، ماشي، كويس، عامل، ازيك، يلا، بص، معلش، خلاص، زي، أوي، هنا دي، كسر الكرش، تخاف من الشبكة
+3. إذا سألك العميل عن حالك أو حياك ("عامل إيه" أو "ازيك")، رد بـ: "أهلاً بك! كيف يمكنني مساعدتك اليوم؟"
+4. ردودك قصيرة لا تتجاوز 3 جمل
+5. لا تخترع منتجات غير موجودة في القائمة
+6. كن ودوداً ومحترفاً
+
+المنتجات المتاحة: ${shop.products?.filter(p => p.isAvailable).map(p => p.name).join(', ') || 'منتجات متنوعة'}
 
 ${contextMessage}
 آخر ما فعله العميل: ${lastResponse || 'بدأ المحادثة'}
-إذا سأل عن طلبه قله يكتب "اطلب" لتأكيد الطلب.
 
 العميل: ${context.name || 'غير معروف'}
 السلة: ${context.hasItems ? `${context.itemCount} منتج (${context.totalValue} جنيه)` : 'فارغة'}
-الحالة المزاجية: ${emotion}
-النواية: ${intent}`;
+الحالة: ${intent}`;
 
       // Prepare messages for Groq
       const groqMessages = [
@@ -771,9 +768,9 @@ ${contextMessage}
     const normalizedText = this.normalizeText(text);
     const emotions = {
       frustrated: ['مش شغال', 'بطل', 'خراب', 'زهق', 'عصب', 'غضبان', 'متضايق', 'مش فاهم', 'مش بيشتغل', 'وحش', 'سيئ'],
-      excited: ['عظمة', 'حلو', 'ممتاز', 'جميل', 'رائع', 'لذيذ', 'حلوة', ' perfect', 'awesome', 'great'],
-      confused: ['مش فاهم', 'ازاي', 'ازاى', 'ايه', 'مش عارف', 'صعب', 'معقد', 'مش فاهم', 'صعبه'],
-      urgent: ['بسرعة', 'عاجل', 'دلوقتي', 'الحين', 'urgent', 'بسرعه', 'عالسريع', 'بسرعه'],
+      excited: ['عظمة', 'جيد', 'ممتاز', 'جميل', 'رائع', 'لذيذ', ' perfect', 'awesome', 'great'],
+      confused: ['لا أفهم', 'كيف', 'ماذا', 'لا أعرف', 'صعب', 'معقد'],
+      urgent: ['بسرعة', 'عاجل', 'الآن', 'urgent', 'بسرعة', 'على السريع'],
       happy: ['شكرا', 'تسلم', 'دومت', '❤️', '😍', '😊', '🥰', 'حبيت', 'عجبني'],
     };
     
@@ -788,12 +785,12 @@ ${contextMessage}
     const normalizedText = this.normalizeText(text);
     
     const intents = {
-      complaint: ['مش كويس', 'سيئ', 'خراب', 'مش شغال', 'رديء', 'مش لذيذ', 'بارد', 'سخن', 'وحش', 'تأخير'],
+      complaint: ['سيئ', 'خراب', 'لا يعمل', 'رديء', 'ليس لذيذ', 'بارد', 'سخن', 'سيء', 'تأخير'],
       compliment: ['حلو', 'جميل', 'عظمة', 'ممتاز', 'رائع', 'لذيذ', 'طعمه حلو', ' perfect', 'good'],
       question_product: ['عندك', 'فيه', 'موجود', 'متاح', 'عندكم', 'ايش عندك'],
       question_price: ['بكام', 'سعر', 'cost', 'فلوس', 'قيمة', 'تكلفة', 'بكم'],
       question_time: ['امتى', 'متى', 'ساعة', 'وقت', 'دقيقة', 'امتا', 'توصيل'],
-      small_talk: ['اخبارك', 'عمل ايه', 'كيفك', 'ازيك', 'صباح', 'مساء', 'نهارك', 'فطور', 'غدا'],
+      small_talk: ['كيف حالك', 'أخبارك', 'كيفك', 'صباح', 'مساء', 'نهارك', 'فطور', 'غدا', 'عشاء', 'طعامك', 'أخبار'],
     };
     
     for (const [intent, keywords] of Object.entries(intents)) {
@@ -807,13 +804,13 @@ ${contextMessage}
     const lowerText = text.toLowerCase();
     const name = context.name ? `يا ${context.name}` : 'يا فندم';
     
-    // Emotional response adjustments
+    // Emotional response adjustments - FORMAL ARABIC ONLY
     const emotionalPrefix = {
-      frustrated: `🤗 ${name}، أفهم إنك متضايق... خلني أساعدك:`,
-      confused: `💡 ${name}، سهل جداً! خلني أوضحلك:`,
-      urgent: `⚡ ${name}، هتصرف معاك فوراً:`,
-      excited: `🎉 ${name}، شكلك متحمس!`,
-      happy: `😊 ${name}، دايماً في خدمتك!`,
+      frustrated: `🤗 ${name}، أفهم أنك غاضب... دعني أساعدك:`,
+      confused: `💡 ${name}، الأمر سهل جداً! دعني أوضح لك:`,
+      urgent: `⚡ ${name}، سأتصرف معك فوراً:`,
+      excited: `🎉 ${name}، أراك متحمساً!`,
+      happy: `😊 ${name}، دائماً في خدمتك!`,
       neutral: ''
     };
     
@@ -937,9 +934,9 @@ ${contextMessage}
     const patterns = {
       greeting: [
         'مرحبا', 'سلام', 'اهلا', 'هلا', 'صباح', 'مساء', 'هاي', 'hello', 'hi', 
-        'السلام', 'ازيك', 'اخبارك', 'حياك', 'اهلين', 'هلا والله',
+        'السلام', 'كيف حالك', 'أخبارك', 'حياك', 'أهلين', 'هلا والله', 'عامل ايه', 'ازيك', 'إيه الأخبار', 'الأخبار إيه',
         // Common misspellings
-        'مرحب', 'مرحب', 'اهلان', 'اهلين', 'هلاا', 'سلامم', 'مرحباً'
+        'مرحب', 'مرحب', 'اهلان', 'اهلين', 'هلاا', 'سلامم', 'مرحباً', 'عامل', 'كيفك', 'ازيك', 'الاخبار', 'كيف الحال'
       ],
       complaint: [
         'مش كويس', 'سيئ', 'خراب', 'مش شغال', 'رديء', 'مش لذيذ', 'بارد', 'سخن', 
@@ -969,10 +966,10 @@ ${contextMessage}
         'امتىى', 'امتا', 'امتى', 'ساعه', 'دقيقه', 'توقيت'
       ],
       small_talk: [
-        'اخبارك', 'عمل ايه', 'كيفك', 'ازيك', 'صباح', 'مساء', 'نهارك', 
-        'فطور', 'غدا', 'عشا', 'اكلك', 'اخبار', 'شو الاخبار',
+        'كيف حالك', 'أخبارك', 'كيفك', 'صباح', 'مساء', 'نهارك', 
+        'فطور', 'غدا', 'عشاء', 'طعامك', 'أخبار', 'ما الأخبار',
         // Misspellings
-        'اخبارر', 'اخباركك', 'كيففك', 'اززيك', 'صباحح'
+        'أخبارر', 'أخباركك', 'كيففك', 'صباحح', 'كيف الحال'
       ],
       joke: [
         'نكتة', 'نكته', 'joke', 'ضحك', 'هظحك', 'فرفش', 'نكت', 'تحشيش', 'هبل',
@@ -1000,18 +997,18 @@ ${contextMessage}
         'اطلبب', 'اطللب', 'احجزز', 'حجزز'
       ],
       yes: [
-        'ايوه', 'yes', 'أيوه', 'أيوة', 'ايوة', 'اوكي', 'تمام', 'ماشي', 'ok', 'okay',
+        'نعم', 'ايوه', 'yes', 'أيوه', 'أيوة', 'ايوة', 'اوكي', 'حسنا', 'حسناً', 'ok', 'okay',
         // Misspellings
-        'ايووه', 'ايوهه', 'أيووه', 'اوكيي', 'تمامم'
+        'نعما', 'ايووه', 'ايوهه', 'أيووه', 'اوكيي', 'حسناا'
       ],
       no: [
-        'لا', 'no', 'لأ', 'لأ', 'مش', 'مش عايز', 'مش حابب',
+        'لا', 'no', 'لأ', 'لأ', 'ليس', 'لا أريد', 'لا أحب',
         // Misspellings
-        'لأأ', 'لاا', 'مشش'
+        'لأأ', 'لاا', 'ليسس'
       ],
       cancel: [
-        'الغاء', 'cancel', 'stop', 'مش عايز', 'غير', 'ما ابغى', 'لا ابغى', 'مش عاوز',
-        'الفاء', 'الغي', 'الغاء',
+        'الغاء', 'cancel', 'stop', 'لا أريد', 'غير', 'ما أريد', 'لا أريد', 'لا أحب',
+        'الفاء', 'إلغاء', 'الغي',
         // Misspellings
         'الغا', 'الغاءء', 'كانسل', 'cancle'
       ],
@@ -1102,9 +1099,9 @@ ${contextMessage}
 
   async getJokeResponse(name) {
     const jokes = [
-      `😂 ${name}، لماذا تحب البيضة الجيم؟ لأنها تحب كسر الكرش!`,
-      `🤣 ${name}، لماذا لا تستخدم السمكة الكمبيوتر؟ لأنها تخاف من الشبكة!`,
-      `😅 ${name}، اثنان فطر يتحدثان، قال أحدهما للآخر: أنت لذيذ الطعم، فقال له: لا، أنت تضحك!`,
+      `😂 ${name}، لماذا أحببت البيضة الجيم؟ لأنها تحب تحطيم البطن!`,
+      `🤣 ${name}، لماذا لا تستخدم السمكة الكمبيوتر؟ لأنها تخشى من الشبكة!`,
+      `😅 ${name}، اثنان فطر يتحدثان، قال أحدهما للآخر: أنت لذيذ الطعم، فقال له: لا، أنت تضحكني!`,
     ];
     return jokes[Math.floor(Math.random() * jokes.length)] + '\n\nاكتب "قائمة" للعودة للعمل 😂📋';
   }
@@ -1192,7 +1189,7 @@ ${contextMessage}
       message += `💰 الإجمالي: ${total} جنيه\n\n`;
       message += `━━━━━━━━━━━━━━━━━━━━━\n\n`;
       message += `هل ترغب في إضافة شيء آخر؟ 🤔\n\n`;
-      message += `👍 اكتب "ايوه" إذا كنت ترغب في إضافة منتج آخر\n`;
+      message += `👍 اكتب "نعم" إذا كنت ترغب في إضافة منتج آخر\n`;
       message += `✅ اكتب "لا" إذا كان هذا كل شيء وترغب في إكمال الطلب`;
       
       // Set state for tracking
@@ -1292,7 +1289,7 @@ ${contextMessage}
       }
 
       if (items.length === 0) {
-        await this.safeSendMessage(sock, from, "❌ السلة فارغة. أرسل قائمة لعرض المنتجات.", shop.name);
+        await this.safeSendMessage(sock, from, "❌ السلة فارغة. اكتب قائمة لعرض المنتجات.", shop.name);
         return;
       }
 
@@ -1329,7 +1326,7 @@ ${contextMessage}
         msg += `${idx + 1}. ${i.name} × ${i.quantity} = ${i.price * i.quantity} جنيه\n`;
       });
       msg += `\n💰 المجموع الكلي: ${total} جنيه\n\n`;
-      msg += `⏰ هنتوصل معاك خلال شوية لتأكيد التوصيل\n`;
+      msg += `⏰ سنتواصل معك قريباً لتأكيد التوصيل\n`;
       msg += `شكراً لاختيارك ${shop.name}! 🙏`;
 
       await this.safeSendMessage(sock, from, msg, shop.name);
@@ -1340,16 +1337,26 @@ ${contextMessage}
       await redis.del(`customer_phone:${shopId}:${customerPhone}`);
       await redis.del(`customer_address:${shopId}:${customerPhone}`);
 
-      // Notify owner
+      // Notify owner with complete details
       if (shop.whatsappNumber) {
-        const ownerMsg = `🔔 طلب جديد من ${shop.name}\n\n` +
-                        `رقم الطلب: ${order.id.slice(-8)}\n` +
-                        `العميل: ${customerName}\n` +
-                        `📱 ${customerPhoneNumber}\n` +
-                        `📍 ${customerAddress}\n` +
-                        `💰 المبلغ: ${total} جنيه\n` +
-                        `🛒 عدد المنتجات: ${items.length}\n\n` +
-                        `افحص لوحة التحكم للتفاصيل.`;
+        const ownerMsg = 
+          `🔔 *طلب جديد #${order.id.slice(-6)}*\n` +
+          `━━━━━━━━━━━━━━━━━━━━\n` +
+          `👤 *بيانات العميل:*\n` +
+          `   الاسم: ${customerName}\n` +
+          `   الهاتف: ${customerPhoneNumber}\n` +
+          `   العنوان: ${customerAddress || 'لم يُحدد'}\n\n` +
+          `📦 *تفاصيل الطلب:*\n` +
+          items.map((i, idx) => 
+            `   ${idx + 1}. ${i.name}\n` +
+            `      الكمية: ${i.quantity} × ${i.price} جنيه = ${i.quantity * i.price} جنيه`
+          ).join('\n') +
+          `\n\n` +
+          `━━━━━━━━━━━━━━━━━━━━\n` +
+          `💰 *الإجمالي: ${total} جنيه*\n` +
+          `⏰ *الوقت: ${new Date().toLocaleString('ar-EG')}*\n` +
+          `━━━━━━━━━━━━━━━━━━━━\n` +
+          `للتأكيد ردّ بـ "تم" أو افتح لوحة التحكم`;
         
         await this.safeSendMessage(sock, `${shop.whatsappNumber}@s.whatsapp.net`, ownerMsg, shop.name);
       }
@@ -1385,7 +1392,7 @@ ${contextMessage}
                 `📋 "قائمة" - عرض جميع المنتجات\n` +
                 `🛒 "كارت" - عرض طلبك\n` +
                 `✅ "اطلب" - تأكيد الطلب\n` +
-                `👍 "ايوه" - إضافة منتج آخر\n` +
+                `👍 "نعم" - إضافة منتج آخر\n` +
                 `👎 "لا" - إكمال الطلب\n` +
                 `❌ "الغاء" - تفريغ السلة\n\n` +
                 `💡 أو اكتب رقم المنتج مباشرة (1, 2, 3...)`;
@@ -1395,8 +1402,10 @@ ${contextMessage}
   async sendEgyptianResponse(sock, from, text, shop) {
     const lowerText = text.toLowerCase();
     
-    // Formal Arabic responses
-    if (lowerText.includes('مرحبا') || lowerText.includes('سلام') || lowerText.includes('اهلا') || lowerText.includes('هلا')) {
+    // Formal Arabic responses - handle dialect greetings
+    if (lowerText.match(/عامل|ازيك|كيف حالك|إيه الأخبار|الأخبار إيه|كيفك|كيف الحال/)) {
+      await this.safeSendMessage(sock, from, `أهلاً بك! 👋\n\nكيف يمكنني مساعدتك اليوم؟\nاكتب *قائمة* لعرض منتجاتنا.`, shop.name);
+    } else if (lowerText.includes('مرحبا') || lowerText.includes('سلام') || lowerText.includes('اهلا') || lowerText.includes('هلا')) {
       await this.safeSendMessage(sock, from, `أهلاً بك في ${shop.name}! 😊\n\nاكتب "قائمة" لرؤية منتجاتنا.`, shop.name);
     } else if (lowerText.includes('مين') || lowerText.includes('who') || lowerText.includes('انت مين')) {
       await this.safeSendMessage(sock, from, `أنا مساعد ${shop.name}! 🤖\n\nاكتب "مساعدة" لمعرفة الأوامر.`, shop.name);

@@ -129,7 +129,11 @@ async function reconnectAllShops() {
   try {
     const prisma = databaseService.getClient();
     const shops = await prisma.shop.findMany({
-      where: { subscriptionStatus: { not: 'inactive' } }
+      where: { 
+        subscriptionStatus: { 
+          in: ['TRIAL', 'ACTIVE'] 
+        } 
+      }
     });
     
     console.log(`🔄 Checking ${shops.length} shops for session restoration...`);

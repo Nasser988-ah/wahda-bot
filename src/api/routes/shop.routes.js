@@ -3,8 +3,10 @@ const prisma = require("../../db/index");
 const { authenticateToken } = require("../middleware/auth.middleware");
 const { z } = require("zod");
 const qrService = require("../../services/qrService");
-const botManager = require("../../bot/botManager");
 const router = express.Router();
+
+// Get botManager instance from qrService singleton
+const botManager = qrService.botManager;
 
 // QR routes (no auth required for initial connection)
 router.get("/qr", async (req, res) => {

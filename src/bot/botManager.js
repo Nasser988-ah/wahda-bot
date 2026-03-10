@@ -223,27 +223,109 @@ class BotManager {
       await this.updateMessageHistory(shop.id, customerPhone, text, 'user');
 
       // Check for order states first - handle name/phone/address collection
+      // FIX: Smart state handling - allow cancel and questions during info collection
       const orderState = await redis.get(`order_state:${shop.id}:${customerPhone}`);
       
-      if (orderState === 'waiting_for_name') {
-        await this.handleNameInput(sock, from, shop.id, customerPhone, shop, text.trim());
-        return;
-      } else if (orderState === 'waiting_for_phone') {
-        const phone = text.replace(/\s/g, '');
-        if (/^0?1\d{9}$/.test(phone)) {
-          await this.handlePhoneInput(sock, from, shop.id, customerPhone, shop, phone);
-        } else {
-          await this.safeSendMessage(sock, from, 
-            `⚠️ رقم الهاتف غير صحيح\n\n` +
-            `يرجى كتابة الرقم بالصيغة الصحيحة: 01012345678 📱`, shop.name);
+      if (orderState === 'waiting_for_name' || orderState === 'waiting_for_phone' || orderState === 'waiting_for_address') {
+        // Check if customer wants to cancel during info collection
+        const cancelWords = /الغاء|إلغاء|الغي|إلغي|امسح|cancel|لا|مش عايز|بطل|اوقف|لأ|لا اريد|مش عايز اكمل|الغي الطلب/;
+        if (cancelWords.test(lowerText)) {
+          // Clear all order states and cart
+          await redis.del(`order_state:${shop.id}:${customerPhone}`);
+          await redis.del(`customer_name:${shop.id}:${customerPhone}`);
+          await redis.del(`customer_phone:${shop.id}:${customerPhone}`);
+          await redis.del(`customer_address:${shop.id}:${customerPhone}`);
+          await redis.del(`cart:${shop.id}:${customerPhone}`);
+          await redis.del(`msgcount:${shop.id}:${customerPhone}`);
+          
+          await sock.sendMessage(from, {
+            text: `تم إلغاء الطلب بنجاح ✅\n\nنتمنى أن نراك مجدداً! اكتب *قائمة* لتصفح منتجاتنا.` 
+          });
+          console.log(`🗑️ Order cancelled by ${customerPhone} during info collection`);
+          return;
         }
-        return;
-      } else if (orderState === 'waiting_for_address' || lowerText.startsWith('عنوان:') || lowerText.startsWith('العنوان:')) {
-        await this.handleAddressInput(sock, from, shop.id, customerPhone, shop, text);
-        return;
+        
+        // Check if customer asks a question or needs help during info collection
+        const questionWords = /كم|سعر|أسعار|قائمة|menu|مساعدة|help|؟|ايه|ما هو|كيف|منتجات|عندكم|فيه|موجود/;
+        if (questionWords.test(lowerText) && orderState !== 'waiting_for_address') {
+          // Use AI to answer and remind them to complete order
+          console.log(`❓ Question during info collection: "${lowerText}"`);
+          
+          const cartKey = `cart:${shop.id}:${customerPhone}`;
+          const cartData = await redis.get(cartKey);
+          let cart = [];
+          if (cartData) {
+            try {
+              cart = typeof cartData === 'string' ? JSON.parse(cartData) : cartData;
+            } catch (e) { cart = []; }
+          }
+          
+          const productsList = shop.products
+            ? shop.products
+                .filter(p => p.isAvailable)
+                .slice(0, 10)
+                .map((p, i) => `${i+1}. ${p.name} - ${p.price} جنيه`)
+                .join('\n')
+            : 'جاري تحميل المنتجات...';
+          
+          const systemPrompt = `أنت مساعد متجر "${shop.name}".
+المنتجات المتاحة: ${productsList}
+العميل في منتصف إتمام طلبه وله ${cart.length} منتج في السلة.
+أجب على سؤاله بإيجاز (جملتين فقط) ثم ذكّره بلطف بإكمال بياناته.`;
+          
+          const aiReply = await this.getGroqResponse(
+            text, 
+            shop, 
+            { hasItems: cart.length > 0, itemCount: cart.length }, 
+            'neutral', 
+            'question', 
+            customerPhone, 
+            ''
+          );
+          
+          if (aiReply) {
+            await sock.sendMessage(from, { text: aiReply });
+            
+            // Wait then remind to complete order
+            setTimeout(async () => {
+              let reminderMsg = `📝 لإتمام طلبك، يرجى إرسال `;
+              if (orderState === 'waiting_for_name') reminderMsg += `*اسمك*`;
+              else if (orderState === 'waiting_for_phone') reminderMsg += `*رقم هاتفك*`;
+              else if (orderState === 'waiting_for_address') reminderMsg += `*عنوانك*`;
+              reminderMsg += `\n\nأو اكتب *إلغاء* لإلغاء الطلب`;
+              
+              await sock.sendMessage(from, { text: reminderMsg });
+            }, 2000);
+          } else {
+            // Fallback if AI fails
+            await sock.sendMessage(from, {
+              text: `حسناً، سأجيب على سؤالك ثم نكمل الطلب 📝\n\nاكتب *قائمة* لرؤية المنتجات وأسعارها.`
+            });
+          }
+          return;
+        }
+        
+        // Otherwise process as normal info input (name, phone, or address)
+        if (orderState === 'waiting_for_name') {
+          await this.handleNameInput(sock, from, shop.id, customerPhone, shop, text.trim());
+          return;
+        } else if (orderState === 'waiting_for_phone') {
+          const phone = text.replace(/\s/g, '');
+          if (/^0?1\d{9}$/.test(phone)) {
+            await this.handlePhoneInput(sock, from, shop.id, customerPhone, shop, phone);
+          } else {
+            // Check if it's a question or cancel (already handled above)
+            await this.safeSendMessage(sock, from, 
+              `⚠️ رقم الهاتف غير صحيح\n\n` +
+              `يرجى كتابة الرقم بالصيغة الصحيحة: 01012345678 📱\n` +
+              `أو اكتب *إلغاء* لإلغاء الطلب`, shop.name, shop.id, customerPhone);
+          }
+          return;
+        } else if (orderState === 'waiting_for_address') {
+          await this.handleAddressInput(sock, from, shop.id, customerPhone, shop, text);
+          return;
+        }
       }
-
-      // Handle text commands with context awareness - using fuzzy matching for spelling tolerance
       // FIX 3: Check for frustration and repeating messages
       console.log(`🔍 Processing message: "${lowerText}"`);
       

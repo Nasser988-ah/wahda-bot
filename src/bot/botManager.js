@@ -244,7 +244,38 @@ class BotManager {
       }
 
       // Handle text commands with context awareness - using fuzzy matching for spelling tolerance
+      // FIX 3: Check for frustration and repeating messages
       console.log(`🔍 Processing message: "${lowerText}"`);
+      
+      // Track message count for AI takeover decision
+      const msgCountKey = `msgcount:${shop.id}:${customerPhone}`;
+      const msgCount = parseInt(await redis.get(msgCountKey) || '0') + 1;
+      await redis.set(msgCountKey, msgCount, { ex: 3600 });
+      
+      // Check if customer is frustrated
+      const emotion = this.detectEmotion(lowerText);
+      const isFrustrated = emotion === 'frustrated' || emotion === 'confused';
+      
+      // Check if same message repeated (from history)
+      const historyKey = `chat_history:${shop.id}:${customerPhone}`;
+      const historyData = await redis.get(historyKey);
+      let messages = [];
+      if (historyData) {
+        try {
+          messages = typeof historyData === 'string' ? JSON.parse(historyData) : historyData;
+        } catch (e) { messages = []; }
+      }
+      const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
+      const isRepeating = lastMessage && lastMessage.text === text && msgCount > 3;
+      
+      // Use AI if customer is frustrated, repeating, or sent many messages with no order
+      const shouldUseAI = isFrustrated || isRepeating || (msgCount > 5 && !context.hasItems);
+      
+      if (shouldUseAI) {
+        console.log(`🤖 AI takeover: emotion=${emotion}, repeating=${isRepeating}, msgCount=${msgCount}`);
+        await this.handleWithAI(sock, from, text, shop, customerPhone);
+        return;
+      }
       
       if (this.matchesIntent(lowerText, 'menu')) {
         console.log(`✓ Matched: menu`);
@@ -281,9 +312,9 @@ class BotManager {
         console.log(`✓ Matched: product number`);
         await this.addToCart(sock, from, shop.id, customerPhone, parseInt(text), shop);
       } else {
+        // FIX 3: Always use AI for unknown messages
         console.log(`→ No command match, using AI response`);
-        // Smart AI response with context
-        await this.handleSmartResponse(sock, from, shop, customerPhone, text, context);
+        await this.handleWithAI(sock, from, text, shop, customerPhone);
       }
 
     } catch (error) {
@@ -379,14 +410,29 @@ class BotManager {
     }
   }
 
-  async safeSendMessage(sock, to, message, shopName) {
+  async safeSendMessage(sock, to, message, shopName, shopId, customerPhone) {
     try {
+      // FIX 2: Check last message sent to prevent duplicates
+      if (shopId && customerPhone) {
+        const lastMsgKey = `lastmsg:${shopId}:${customerPhone}`;
+        const lastMsg = await redis.get(lastMsgKey);
+        
+        // If same message, warn and continue (allow caller to decide if they want AI)
+        if (lastMsg === message) {
+          console.log('⚠️ Duplicate message detected - same message already sent');
+          return { duplicate: true, sent: false };
+        }
+        
+        // Save this message as last sent (expires in 1 hour)
+        await redis.set(lastMsgKey, message, { ex: 3600 });
+      }
+      
       const result = await sock.sendMessage(to, { text: message });
       console.log(`✅ Message sent to ${to}: "${message.slice(0, 50)}${message.length > 50 ? '...' : ''}"`);
-      return result;
+      return { duplicate: false, sent: true, result };
     } catch (error) {
       console.error(`❌ Failed to send message to ${to}:`, error.message);
-      return null;
+      return { duplicate: false, sent: false, error };
     }
   }
 
@@ -450,9 +496,11 @@ class BotManager {
       
       const product = products[productNum - 1];
       
-      // Check if product number is out of range
+    // Check if product number is out of range
       if (!product) {
-        await this.safeSendMessage(sock, from, `❌ رقم منتج غير صحيح. نطاق الأرقام المتاحة: 1-${products.length}`, shop.name);
+        // FIX 5: Friendly product not found message
+        await this.safeSendMessage(sock, from, 
+          "عذراً، هذا الرقم غير موجود في قائمتنا 😊\nاكتب *قائمة* لرؤية المنتجات المتاحة.", shop.name, shopId, customerPhone);
         return;
       }
 
@@ -530,11 +578,13 @@ class BotManager {
       }
 
       if (items.length === 0) {
-        await this.safeSendMessage(sock, from, "🛒 السلة فارغة.", shop.name);
+        // FIX 5: Friendly empty cart message
+        await this.safeSendMessage(sock, from, 
+          "سلتك فارغة حالياً 🛒\nاكتب *قائمة* لاستعراض منتجاتنا واختيار ما يناسبك!", shop.name);
         return;
       }
 
-      let message = `سلة التسوق:\n\n`;
+      let message = `🛒 سلة التسوق:\n\n`;
       let total = 0;
       items.forEach((item, i) => {
         const subtotal = item.price * item.quantity;
@@ -545,19 +595,21 @@ class BotManager {
         message += "-------------------\n";
       });
       message += `\nالإجمالي: ${total} جنيه\n\n`;
-      message += "اكتب *اطلب* لتأكيد الطلب";
+      message += "اكتب *اطلب* لتأكيد الطلب ✅";
 
-      await this.safeSendMessage(sock, from, message, shop.name);
+      await this.safeSendMessage(sock, from, message, shop.name, shopId, customerPhone);
     } catch (error) {
       console.error(`❌ Error in showCart:`, error);
-      await this.safeSendMessage(sock, from, "❌ حدث خطأ. يرجى المحاولة مرة أخرى.", shop.name);
+      await this.safeSendMessage(sock, from, "عذراً، حدث خطأ. يرجى المحاولة مرة أخرى 🙏", shop.name);
     }
   }
 
   async clearCart(sock, from, shopId, customerPhone, shopName) {
     const cartKey = `cart:${shopId}:${customerPhone}`;
     await redis.del(cartKey);
-    await this.safeSendMessage(sock, from, "🗑️ تم تفريغ السلة.", shopName);
+    // FIX 5: Friendly cancel success message
+    await this.safeSendMessage(sock, from, 
+      "تم مسح سلتك بنجاح ✅\nنتمنى أن نراك مجدداً! اكتب *قائمة* لتصفح منتجاتنا.", shopName, shopId, customerPhone);
   }
 
   async confirmOrder(sock, from, shopId, customerPhone, shop) {
@@ -600,13 +652,13 @@ class BotManager {
       `اكتب رقم المنتج الذي تريده، أو اكتب "قائمة" لرؤية جميع المنتجات 📋`, shop.name);
   }
 
-  // Smart cancel with empathy
+  // Smart cancel with empathy - ENHANCED
   async handleCancelCommand(sock, from, shop, customerPhone) {
     const cartKey = `cart:${shop.id}:${customerPhone}`;
     await redis.del(cartKey);
+    // FIX 5: Friendly cancel message
     await this.safeSendMessage(sock, from, 
-      `🗑️ تم تفريغ السلة.\n\n` +
-      `إذا كنت ترغب في طلب منتجات أخرى في أي وقت، اكتب "قائمة" وسأكون في خدمتك 😊`, shop.name);
+      "تم مسح سلتك بنجاح ✅\nنتمنى أن نراك مجدداً! اكتب *قائمة* لتصفح منتجاتنا.", shop.name, shop.id, customerPhone);
   }
 
   // Validate AI response
@@ -763,15 +815,24 @@ ${contextMessage}
     }
   }
 
-  // Detect user emotion with spelling tolerance
+  // Detect user emotion with spelling tolerance - ENHANCED for frustration
   detectEmotion(text) {
     const normalizedText = this.normalizeText(text);
     const emotions = {
-      frustrated: ['مش شغال', 'بطل', 'خراب', 'زهق', 'عصب', 'غضبان', 'متضايق', 'مش فاهم', 'مش بيشتغل', 'وحش', 'سيئ'],
-      excited: ['عظمة', 'جيد', 'ممتاز', 'جميل', 'رائع', 'لذيذ', ' perfect', 'awesome', 'great'],
-      confused: ['لا أفهم', 'كيف', 'ماذا', 'لا أعرف', 'صعب', 'معقد'],
-      urgent: ['بسرعة', 'عاجل', 'الآن', 'urgent', 'بسرعة', 'على السريع'],
-      happy: ['شكرا', 'تسلم', 'دومت', '❤️', '😍', '😊', '🥰', 'حبيت', 'عجبني'],
+      frustrated: [
+        'مش شغال', 'بطل', 'خراب', 'زهق', 'عصب', 'غضبان', 'متضايق', 
+        'مش فاهم', 'مش بيشتغل', 'وحش', 'سيئ', 'باظ', 'تعبت', 'زهقت',
+        'مش عارف', 'ليه', 'لا يعني', 'معقول', 'يعني إيه', 'مش تمام',
+        'في إيه', 'ايه', 'مش شايف', 'مخنوق', 'مستفز', 'زفت', 'هبل',
+        'مش ماشي', 'قرفت', 'مش فاهمة', 'ايه الغباء', 'غلط', 'غلطان'
+      ],
+      excited: ['عظمة', 'جيد', 'ممتاز', 'جميل', 'رائع', 'لذيذ', ' perfect', 'awesome', 'great', 'حلو', 'شهي'],
+      confused: [
+        'لا أفهم', 'كيف', 'ماذا', 'لا أعرف', 'صعب', 'معقد', 'مش عارف', 
+        'مش فاهم', 'في إيه', 'ازاي', 'يعني', 'هو إيه', 'شرح', 'افسر'
+      ],
+      urgent: ['بسرعة', 'عاجل', 'الآن', 'urgent', 'بسرعة', 'على السريع', 'بسرعه', 'عاجل جدا'],
+      happy: ['شكرا', 'تسلم', 'دومت', '❤️', '😍', '😊', '🥰', 'حبيت', 'عجبني', 'شكر', 'مشكور'],
     };
     
     for (const [emotion, keywords] of Object.entries(emotions)) {
@@ -1007,10 +1068,10 @@ ${contextMessage}
         'لأأ', 'لاا', 'ليسس'
       ],
       cancel: [
-        'الغاء', 'cancel', 'stop', 'لا أريد', 'غير', 'ما أريد', 'لا أريد', 'لا أحب',
-        'الفاء', 'إلغاء', 'الغي',
+        'الغاء', 'cancel', 'stop', 'لا أريد', 'غير', 'ما أريد', 'لا أحب',
+        'الفاء', 'إلغاء', 'الغي', 'إلغي', 'امسح', 'لا عادي', 'مش عايز', 'بطل', 'اوقف', 'إيقاف', 'مسح', 'احذف', 'حذف', 'صفر',
         // Misspellings
-        'الغا', 'الغاءء', 'كانسل', 'cancle'
+        'الغا', 'الغاءء', 'كانسل', 'cancle', 'الغيي', 'امسحح', 'حذفف', 'امساح', 'الغاء الطلب', 'إلغاء الطلب', 'الغي الطلب'
       ],
       thanks: [
         'شكرا', 'thank', 'merci', 'تسلم', 'دومت', 'شكر', 'شكراً', 'thanks', 'thx',
@@ -1289,7 +1350,8 @@ ${contextMessage}
       }
 
       if (items.length === 0) {
-        await this.safeSendMessage(sock, from, "❌ السلة فارغة. اكتب قائمة لعرض المنتجات.", shop.name);
+        await this.safeSendMessage(sock, from, 
+          "سلتك فارغة حالياً 🛒\nاكتب *قائمة* لاستعراض منتجاتنا واختيار ما يناسبك!", shop.name, shopId, customerPhone);
         return;
       }
 
@@ -1318,7 +1380,8 @@ ${contextMessage}
         }
       });
 
-      let msg = `🎉 تم تأكيد طلبك رقم ${order.id.slice(-8)} ✅\n\n`;
+      // FIX 5: Friendly order confirmed message
+      let msg = `تم استلام طلبك بنجاح! 🎉\n\n`;
       msg += `📱 رقم التليفون: ${customerPhoneNumber}\n`;
       msg += `📍 عنوان التوصيل: ${customerAddress}\n\n`;
       msg += `🛒 تفاصيل الطلب:\n`;
@@ -1326,10 +1389,10 @@ ${contextMessage}
         msg += `${idx + 1}. ${i.name} × ${i.quantity} = ${i.price * i.quantity} جنيه\n`;
       });
       msg += `\n💰 المجموع الكلي: ${total} جنيه\n\n`;
-      msg += `⏰ سنتواصل معك قريباً لتأكيد التوصيل\n`;
+      msg += `سنتواصل معك قريباً لتأكيد التوصيل 📞\n`;
       msg += `شكراً لاختيارك ${shop.name}! 🙏`;
 
-      await this.safeSendMessage(sock, from, msg, shop.name);
+      await this.safeSendMessage(sock, from, msg, shop.name, shopId, customerPhone);
       
       // Clear cart and temp data
       await redis.del(cartKey);
@@ -1423,6 +1486,81 @@ ${contextMessage}
       // Default - show menu with greeting only for unknown input
       const greeting = `👋 أهلاً بك في ${shop.name}!\n\n`;
       await this.sendNumberedMenu(sock, from, shop, greeting);
+    }
+  }
+
+  // FIX 4: Smart AI handler for edge cases
+  async handleWithAI(sock, from, text, shop, customerPhone) {
+    try {
+      const cartKey = `cart:${shop.id}:${customerPhone}`;
+      const cartData = await redis.get(cartKey);
+      let cart = [];
+      if (cartData) {
+        try {
+          cart = typeof cartData === 'string' ? JSON.parse(cartData) : cartData;
+        } catch (e) { cart = []; }
+      }
+      
+      const productsList = shop.products
+        ? shop.products
+            .filter(p => p.isAvailable)
+            .map((p, i) => `${i+1}. ${p.name} - ${p.price} جنيه`)
+            .join('\n')
+        : 'جاري تحميل المنتجات...';
+      
+      const cartSummary = cart.length > 0
+        ? `السلة تحتوي على: ${cart.map(i => `${i.quantity}x ${i.name}`).join('، ')}` 
+        : 'السلة فارغة';
+      
+      const systemPrompt = `أنت مساعد ودود ومحترف لمتجر "${shop.name}".
+
+منتجاتنا المتاحة:
+${productsList}
+
+حالة سلة العميل: ${cartSummary}
+
+تعليمات مهمة جداً:
+1. استخدم اللغة العربية الفصحى فقط
+2. كن لطيفاً وودوداً دائماً
+3. ردودك قصيرة (جملتين أو ثلاث فقط)
+4. إذا أراد العميل إلغاء شيء قله يكتب "إلغاء"
+5. إذا أراد رؤية القائمة قله يكتب "قائمة"
+6. إذا أراد تأكيد الطلب قله يكتب "اطلب"
+7. لا تكرر نفس الرد مرتين
+8. إذا بدا العميل محبطاً اعتذر بلطف وساعده`;
+      
+      const aiReply = await this.getGroqResponse(text, shop, { hasItems: cart.length > 0 }, 'neutral', 'general', customerPhone, '');
+      
+      if (aiReply) {
+        await sock.sendMessage(from, { text: aiReply });
+        console.log(`🤖 AI replied to: "${text}"`);
+        
+        // Update message history
+        await this.updateMessageHistory(shop.id, customerPhone, aiReply, 'bot', 'ai_response');
+      } else {
+        // Fallback if AI fails
+        await sock.sendMessage(from, { 
+          text: `عذراً على الإزعاج! 🙏\nيمكنك كتابة:\n📋 *قائمة* - لعرض المنتجات\n✅ *اطلب* - لتأكيد طلبك\n❌ *إلغاء* - لمسح السلة` 
+        });
+      }
+    } catch (err) {
+      console.error('AI handler error:', err);
+      // Friendly fallback
+      await sock.sendMessage(from, { 
+        text: `عذراً على الإزعاج! 🙏\nيمكنك كتابة:\n📋 *قائمة* - لعرض المنتجات\n✅ *اطلب* - لتأكيد طلبك\n❌ *إلغاء* - لمسح السلة` 
+      });
+    }
+  }
+
+  // Helper to get cart contents
+  async getCartContents(shopId, customerPhone) {
+    const cartKey = `cart:${shopId}:${customerPhone}`;
+    const cartData = await redis.get(cartKey);
+    if (!cartData) return [];
+    try {
+      return typeof cartData === 'string' ? JSON.parse(cartData) : cartData;
+    } catch (e) {
+      return [];
     }
   }
 

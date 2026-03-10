@@ -326,7 +326,7 @@ class BotManager {
           return;
         }
       }
-      // FIX 3: Check for frustration and repeating messages
+      // FIX 3: Check for frustration and repeating messages - BUT ONLY FOR UNKNOWN MESSAGES
       console.log(`🔍 Processing message: "${lowerText}"`);
       
       // Track message count for AI takeover decision
@@ -334,7 +334,55 @@ class BotManager {
       const msgCount = parseInt(await redis.get(msgCountKey) || '0') + 1;
       await redis.set(msgCountKey, msgCount, { ex: 3600 });
       
-      // Check if customer is frustrated
+      // IMPORTANT: Check basic commands FIRST before any AI logic
+      if (this.matchesIntent(lowerText, 'menu')) {
+        console.log(`✓ Matched: menu`);
+        await this.sendProductsList(sock, from, shop, customerPhone, 1);
+        return;
+      } else if (this.matchesIntent(lowerText, 'cart')) {
+        console.log(`✓ Matched: cart`);
+        await this.showCart(sock, from, shop.id, customerPhone, shop);
+        return;
+      } else if (this.matchesIntent(lowerText, 'order')) {
+        console.log(`✓ Matched: order`);
+        await this.askForMoreItems(sock, from, shop.id, customerPhone, shop);
+        return;
+      } else if (this.matchesIntent(lowerText, 'no')) {
+        console.log(`✓ Matched: no`);
+        await this.handleNoResponse(sock, from, shop, customerPhone);
+        return;
+      } else if (this.matchesIntent(lowerText, 'yes')) {
+        console.log(`✓ Matched: yes`);
+        await this.handleYesResponse(sock, from, shop, customerPhone, context);
+        return;
+      } else if (lowerText.startsWith('عنوان:') || lowerText.startsWith('العنوان:') || lowerText.startsWith('address:')) {
+        console.log(`✓ Matched: address input`);
+        await this.handleAddressInput(sock, from, shop.id, customerPhone, shop, text);
+        return;
+      } else if (/^0?1\d{9}$/.test(text.replace(/\s/g, ''))) {
+        console.log(`✓ Matched: phone number`);
+        await this.handlePhoneInput(sock, from, shop.id, customerPhone, shop, text.replace(/\s/g, ''));
+        return;
+      } else if (lowerText.startsWith('صفحة ') || lowerText.startsWith('page ')) {
+        console.log(`✓ Matched: page navigation`);
+        const pageNum = parseInt(text.split(' ')[1]) || 1;
+        await this.sendProductsList(sock, from, shop, customerPhone, pageNum);
+        return;
+      } else if (this.matchesIntent(lowerText, 'cancel')) {
+        console.log(`✓ Matched: cancel`);
+        await this.handleCancelCommand(sock, from, shop, customerPhone);
+        return;
+      } else if (this.matchesIntent(lowerText, 'help')) {
+        console.log(`✓ Matched: help`);
+        await this.sendHelpMessage(sock, from, shop, context);
+        return;
+      } else if (/^\d+$/.test(text)) {
+        console.log(`✓ Matched: product number`);
+        await this.addToCart(sock, from, shop.id, customerPhone, parseInt(text), shop);
+        return;
+      }
+      
+      // Only for UNKNOWN messages: Check if customer is frustrated or repeating
       const emotion = this.detectEmotion(lowerText);
       const isFrustrated = emotion === 'frustrated' || emotion === 'confused';
       
@@ -359,45 +407,9 @@ class BotManager {
         return;
       }
       
-      if (this.matchesIntent(lowerText, 'menu')) {
-        console.log(`✓ Matched: menu`);
-        await this.sendProductsList(sock, from, shop, customerPhone, 1);
-      } else if (this.matchesIntent(lowerText, 'cart')) {
-        console.log(`✓ Matched: cart`);
-        await this.showCart(sock, from, shop.id, customerPhone, shop);
-      } else if (this.matchesIntent(lowerText, 'order')) {
-        console.log(`✓ Matched: order`);
-        await this.askForMoreItems(sock, from, shop.id, customerPhone, shop);
-      } else if (this.matchesIntent(lowerText, 'no')) {
-        console.log(`✓ Matched: no`);
-        await this.handleNoResponse(sock, from, shop, customerPhone);
-      } else if (this.matchesIntent(lowerText, 'yes')) {
-        console.log(`✓ Matched: yes`);
-        await this.handleYesResponse(sock, from, shop, customerPhone, context);
-      } else if (lowerText.startsWith('عنوان:') || lowerText.startsWith('العنوان:') || lowerText.startsWith('address:')) {
-        console.log(`✓ Matched: address input`);
-        await this.handleAddressInput(sock, from, shop.id, customerPhone, shop, text);
-      } else if (/^0?1\d{9}$/.test(text.replace(/\s/g, ''))) {
-        console.log(`✓ Matched: phone number`);
-        await this.handlePhoneInput(sock, from, shop.id, customerPhone, shop, text.replace(/\s/g, ''));
-      } else if (lowerText.startsWith('صفحة ') || lowerText.startsWith('page ')) {
-        console.log(`✓ Matched: page navigation`);
-        const pageNum = parseInt(text.split(' ')[1]) || 1;
-        await this.sendProductsList(sock, from, shop, customerPhone, pageNum);
-      } else if (this.matchesIntent(lowerText, 'cancel')) {
-        console.log(`✓ Matched: cancel`);
-        await this.handleCancelCommand(sock, from, shop, customerPhone);
-      } else if (this.matchesIntent(lowerText, 'help')) {
-        console.log(`✓ Matched: help`);
-        await this.sendHelpMessage(sock, from, shop, context);
-      } else if (/^\d+$/.test(text)) {
-        console.log(`✓ Matched: product number`);
-        await this.addToCart(sock, from, shop.id, customerPhone, parseInt(text), shop);
-      } else {
-        // FIX 3: Always use AI for unknown messages
-        console.log(`→ No command match, using AI response`);
-        await this.handleWithAI(sock, from, text, shop, customerPhone);
-      }
+      // For unknown messages that don't need AI, use smart response
+      console.log(`→ No command match, using smart response`);
+      await this.handleSmartResponse(sock, from, shop, customerPhone, text, context);
 
     } catch (error) {
       console.error(`❌ Error handling message:`, error.message);

@@ -86,8 +86,11 @@ class BotManager {
         logger: pino({ level: "silent" }),
         printQRInTerminal: false,
         keepAliveIntervalMs: 30000,
-        connectTimeoutMs: 60000,
-        qrTimeout: 40000,
+        connectTimeoutMs: 120000, // Increased to 2 minutes
+        qrTimeout: 60000, // Increased to 1 minute
+        defaultQueryTimeoutMs: 20000, // Add query timeout
+        retryRequestDelayMs: 500, // Add retry delay
+        maxMsgRetryCount: 3, // Limit retry attempts
         shouldIgnoreJid: () => false,
         shouldSyncHistoryMessage: () => false,
       });
@@ -126,10 +129,27 @@ class BotManager {
         // Handle connection close
         if (connection === 'close') {
           const statusCode = lastDisconnect?.error?.output?.statusCode;
-          console.log(`🔌 ${shop.name} disconnected. Code: ${statusCode}`);
+          const errorMessage = lastDisconnect?.error?.message;
+          
+          console.log(`🔌 ${shop.name} disconnected. Code: ${statusCode}, Error: ${errorMessage}`);
           
           // Clean up
           this.connections.delete(shopId);
+          
+          // Handle timeout errors specifically
+          if (errorMessage?.includes('Timed Out') || statusCode === 408) {
+            console.log(`⏱️ Timeout detected, will retry connection...`);
+            this.connectionStates.set(shopId, 'not_started');
+            
+            // Retry after 5 seconds
+            setTimeout(() => {
+              console.log(`🔄 Retrying connection after timeout...`);
+              this.connectShop(shopId, qrCallback).catch(err => {
+                console.log(`⚠️ Retry failed: ${err.message}`);
+              });
+            }, 5000);
+            return;
+          }
           
           if (statusCode === DisconnectReason.loggedOut) {
             // Clear session on logout

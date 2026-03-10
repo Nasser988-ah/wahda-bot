@@ -202,7 +202,7 @@ router.put("/:id", async (req, res) => {
   }
 });
 
-// Delete product
+// Delete product (mark as unavailable if has orders, otherwise delete)
 router.delete("/:id", async (req, res) => {
   try {
     // Check if product exists and belongs to shop
@@ -226,22 +226,31 @@ router.delete("/:id", async (req, res) => {
 
     // Check if product has orders
     if (existingProduct._count.orderItems > 0) {
-      return res.status(400).json({ 
-        error: "Cannot delete product with existing orders. Consider marking it as unavailable instead." 
+      // Mark as unavailable instead of deleting
+      const updatedProduct = await prisma.product.update({
+        where: { id: req.params.id },
+        data: { isAvailable: false }
+      });
+
+      return res.json({
+        message: "تم إخفاء المنتج بنجاح (يحتوي على طلبات سابقة)",
+        product: updatedProduct,
+        action: "marked_unavailable"
       });
     }
 
+    // No orders - safe to delete
     await prisma.product.delete({
       where: { id: req.params.id }
     });
 
     res.json({
-      message: "Product deleted successfully"
+      message: "تم حذف المنتج بنجاح"
     });
 
   } catch (error) {
     console.error("Delete product error:", error);
-    res.status(500).json({ error: "Failed to delete product" });
+    res.status(500).json({ error: "فشل حذف المنتج" });
   }
 });
 

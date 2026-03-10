@@ -899,18 +899,19 @@ ${contextMessage}
 
   // Detect user emotion with spelling tolerance - ENHANCED for frustration
   detectEmotion(text) {
-    const normalizedText = this.normalizeText(text);
+    const normalizedText = ' ' + this.normalizeText(text) + ' '; // Add spaces for word boundary detection
     const emotions = {
       frustrated: [
         'مش شغال', 'بطل', 'خراب', 'زهق', 'عصب', 'غضبان', 'متضايق', 
         'مش فاهم', 'مش بيشتغل', 'وحش', 'سيئ', 'باظ', 'تعبت', 'زهقت',
-        'مش عارف', 'ليه', 'لا يعني', 'معقول', 'يعني إيه', 'مش تمام',
-        'في إيه', 'ايه', 'مش شايف', 'مخنوق', 'مستفز', 'زفت', 'هبل',
-        'مش ماشي', 'قرفت', 'مش فاهمة', 'ايه الغباء', 'غلط', 'غلطان'
+        'مش عارف', 'ليه كدا', 'لا يعني', 'معقول', 'يعني إيه', 'مش تمام',
+        'في إيه مش', 'مش شايف', 'مخنوق', 'مستفز', 'زفت', 'هبل',
+        'مش ماشي', 'قرفت', 'مش فاهمة', 'ايه الغباء', 'غلط', 'غلطان',
+        'ياعم', 'يا عم', 'انت فاشل'
       ],
-      excited: ['عظمة', 'جيد', 'ممتاز', 'جميل', 'رائع', 'لذيذ', ' perfect', 'awesome', 'great', 'حلو', 'شهي'],
+      excited: ['عظمة', 'جيد', 'ممتاز', 'جميل', 'رائع', 'لذيذ', ' perfect', 'awesome', 'great', 'حلو', 'شهي', 'ممتاز جدا'],
       confused: [
-        'لا أفهم', 'كيف', 'ماذا', 'لا أعرف', 'صعب', 'معقد', 'مش عارف', 
+        'لا أفهم', 'كيف ذلك', 'ماذا تقصد', 'لا أعرف', 'صعب', 'معقد', 'مش عارف', 
         'مش فاهم', 'في إيه', 'ازاي', 'يعني', 'هو إيه', 'شرح', 'افسر'
       ],
       urgent: ['بسرعة', 'عاجل', 'الآن', 'urgent', 'بسرعة', 'على السريع', 'بسرعه', 'عاجل جدا'],
@@ -918,7 +919,14 @@ ${contextMessage}
     };
     
     for (const [emotion, keywords] of Object.entries(emotions)) {
-      if (keywords.some(k => this.fuzzyMatch(normalizedText, k, 0.8))) return emotion;
+      // Use word boundary matching - don't match short words as substrings
+      if (keywords.some(k => {
+        // For very short keywords (<= 3 chars), require exact match with spaces
+        if (k.length <= 3) {
+          return normalizedText.includes(' ' + k + ' ');
+        }
+        return this.fuzzyMatch(normalizedText, k, 0.8);
+      })) return emotion;
     }
     return 'neutral';
   }

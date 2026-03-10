@@ -981,9 +981,25 @@ ${contextMessage}
     
     // Context-aware greeting for returning customers
     const greeting = context.isReturningCustomer && context.messageCount > 5
-      ? `${name}، نورتنا تاني! 🌟\n\n`
+      ? `${name}، نورتنا مجدداً! 🌟\n\n`
       : context.messageCount === 1
-        ? `👋 أهلاً ${name} في ${shop.name}!\n\n`
+        ? `أهلاً وسهلاً! 👋 مرحباً بك في *${shop.name}*\n\n` +
+          `🤖 *أنا مساعدك الذكي*\n` +
+          `أفهم أوامرك وأساعدك في الطلب بسرعة وسهولة.\n\n` +
+          `━━━━━━━━━━━━━━━━━━━━\n` +
+          `📖 *كيفية الاستخدام:*\n\n` +
+          `📋 اكتب *قائمة*\n` +
+          `    ← لعرض جميع المنتجات والأسعار\n\n` +
+          `🔢 اكتب *رقم المنتج* (مثال: 1 أو 2)\n` +
+          `    ← لإضافة المنتج إلى سلتك\n\n` +
+          `🛒 اكتب *كارت*\n` +
+          `    ← لعرض ما في سلتك\n\n` +
+          `✅ اكتب *اطلب*\n` +
+          `    ← لتأكيد طلبك\n\n` +
+          `❌ اكتب *إلغاء*\n` +
+          `    ← لمسح السلة والبدء من جديد\n\n` +
+          `━━━━━━━━━━━━━━━━━━━━\n` +
+          `ابدأ الآن بكتابة *قائمة* 👇`
         : '';
 
     // Advanced intent responses with personality

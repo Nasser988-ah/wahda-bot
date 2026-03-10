@@ -219,6 +219,36 @@ class BotManager {
       // Get conversation context for smarter responses
       const context = await this.getConversationContext(shop.id, customerPhone);
       
+      // IMPORTANT: Send welcome message immediately for first-time users
+      if (context.messageCount === 0) {
+        const welcomeMsg = 
+          `أهلاً وسهلاً! 👋 مرحباً بك في *${shop.name}*\n\n` +
+          `🤖 *أنا مساعدك الذكي*\n` +
+          `أفهم أوامرك وأساعدك في الطلب بسرعة وسهولة.\n\n` +
+          `━━━━━━━━━━━━━━━━━━━━\n` +
+          `📖 *كيفية الاستخدام:*\n\n` +
+          `📋 اكتب *قائمة*\n` +
+          `    ← لعرض جميع المنتجات والأسعار\n\n` +
+          `🔢 اكتب *رقم المنتج* (مثال: 1 أو 2)\n` +
+          `    ← لإضافة المنتج إلى سلتك\n\n` +
+          `🛒 اكتب *كارت*\n` +
+          `    ← لعرض ما في سلتك\n\n` +
+          `✅ اكتب *اطلب*\n` +
+          `    ← لتأكيد طلبك\n\n` +
+          `❌ اكتب *إلغاء*\n` +
+          `    ← لمسح السلة والبدء من جديد\n\n` +
+          `━━━━━━━━━━━━━━━━━━━━\n` +
+          `ابدأ الآن بكتابة *قائمة* 👇`;
+        
+        await this.safeSendMessage(sock, from, welcomeMsg, shop.name, shop.id, customerPhone);
+        console.log(`🎉 First-time welcome sent to ${customerPhone}`);
+        
+        // Update history to mark welcome sent
+        await this.updateMessageHistory(shop.id, customerPhone, text, 'user');
+        await this.updateMessageHistory(shop.id, customerPhone, welcomeMsg, 'bot', 'welcome');
+        return;
+      }
+      
       // Update message history for context awareness
       await this.updateMessageHistory(shop.id, customerPhone, text, 'user');
 

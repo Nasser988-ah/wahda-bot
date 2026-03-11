@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "postinstall": "prisma generate || true",
+    "postinstall": "DATABASE_URL=postgresql://placeholder:placeholder@localhost:5432/postgres npx prisma generate || true",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",

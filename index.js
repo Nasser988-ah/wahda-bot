@@ -67,9 +67,14 @@ app.use("/api", apiLimiter);
 // Serve static files (HTML dashboard)
 app.use(express.static("public"));
 
-// Health check
-app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'ok' })
+// Health check - include database status
+app.get('/health', async (req, res) => {
+  const dbHealth = await databaseService.healthCheck();
+  if (dbHealth.connected) {
+    res.status(200).json({ status: 'ok' })
+  } else {
+    res.status(503).json({ status: 'error', message: 'Database not connected' })
+  }
 })
 
 // API routes
@@ -101,21 +106,28 @@ async function main() {
   try {
     logger.info('Starting WhatsApp Bot SaaS application...');
 
-    // Connect to database
-    await databaseService.connect();
-    logger.info('Database connected successfully');
-
+    // Start server immediately (don't wait for reconnect)
     app.listen(PORT, '0.0.0.0', () => {
       logger.info(`Server running on port ${PORT}`);
     });
+
+    // Connect to database
+    try {
+      await databaseService.connect();
+      logger.info('Database connected successfully');
+    } catch (dbError) {
+      logger.error('Database connection failed, but server is running:', dbError.message);
+    }
 
     // Initialize WhatsApp bot
     // Note: Bot is now initialized per-shop via API routes
     // await initBot();
     logger.info('WhatsApp bot initialized');
     
-    // Reconnect all previously connected shops
-    await reconnectAllShops();
+    // Reconnect all previously connected shops (non-blocking)
+    reconnectAllShops().catch(err => {
+      logger.error('Shop reconnection failed:', err.message);
+    });
     
     logger.info('Application started successfully');
   } catch (error) {

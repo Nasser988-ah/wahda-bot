@@ -105,7 +105,7 @@ async function main() {
     await databaseService.connect();
     logger.info('Database connected successfully');
 
-    app.listen(PORT, () => {
+    app.listen(PORT, '0.0.0.0', () => {
       logger.info(`Server running on port ${PORT}`);
     });
 

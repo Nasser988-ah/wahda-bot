@@ -397,13 +397,12 @@
         
         async function loadProducts() {
             try {
-                const response = await fetch(`${API_URL}/products`, {
+                const response = await fetch(`${API_URL}/shop/products`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 
                 if (response.ok) {
-                    const data = await response.json();
-                    products = data.products || [];
+                    products = await response.json();
                     renderProducts();
                 }
             } catch (error) {
@@ -461,7 +460,7 @@
             };
             
             try {
-                const response = await fetch(`${API_URL}/products`, {
+                const response = await fetch(`${API_URL}/shop/products`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -495,7 +494,7 @@
             };
             
             try {
-                const response = await fetch(`${API_URL}/products`, {
+                const response = await fetch(`${API_URL}/shop/products`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -521,7 +520,7 @@
             if (!confirm('هل أنت متأكد من حذف هذا المنتج؟')) return;
             
             try {
-                const response = await fetch(`${API_URL}/products/${id}`, {
+                const response = await fetch(`${API_URL}/shop/products/${id}`, {
                     method: 'DELETE',
                     headers: { 'Authorization': `Bearer ${token}` }
                 });

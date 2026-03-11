@@ -51,7 +51,6 @@
             font-weight: 700;
             background: var(--gradient-primary);
             -webkit-background-clip: text;
-            background-clip: text;
             -webkit-text-fill-color: transparent;
         }
         
@@ -351,7 +350,7 @@
                 
                 if (response.ok) {
                     const data = await response.json();
-                    document.getElementById('totalProducts').textContent = data.total || 0;
+                    document.getElementById('totalProducts').textContent = data.totalProducts || 0;
                     document.getElementById('todayOrders').textContent = data.todayOrders || 0;
                     document.getElementById('totalRevenue').textContent = data.totalRevenue || 0;
                     document.getElementById('totalCustomers').textContent = data.totalCustomers || 0;
@@ -378,7 +377,7 @@
         // Check connection status
         async function checkConnection() {
             try {
-                const response = await fetch(`${API_URL}/shop/bot/status`, {
+                const response = await fetch(`${API_URL}/bot/status`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 

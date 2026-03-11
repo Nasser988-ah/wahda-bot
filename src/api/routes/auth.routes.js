@@ -171,4 +171,17 @@ router.post("/login", async (req, res) => {
   }
 });
 
+// DEBUG: List all registered phone numbers (remove in production)
+router.get("/debug/shops", async (req, res) => {
+  try {
+    const shops = await prisma.shop.findMany({
+      select: { phone: true, name: true, createdAt: true },
+      orderBy: { createdAt: "desc" }
+    });
+    res.json({ shops });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to get shops" });
+  }
+});
+
 module.exports = router;

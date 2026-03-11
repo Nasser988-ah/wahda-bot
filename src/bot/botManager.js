@@ -420,7 +420,7 @@ class BotManager {
         return;
       } else if (this.matchesIntent(lowerText, 'cancel')) {
         console.log(`✓ Matched: cancel`);
-        await this.handleCancelCommand(sock, from, shop, customerPhone);
+        await this.handleCancelCommand(sock, from, shop, customerPhone, context);
         return;
       } else if (this.matchesIntent(lowerText, 'help')) {
         console.log(`✓ Matched: help`);
@@ -796,13 +796,46 @@ class BotManager {
       `اكتب رقم المنتج الذي تريده، أو اكتب "قائمة" لرؤية جميع المنتجات 📋`, shop.name);
   }
 
-  // Smart cancel with empathy - ENHANCED
-  async handleCancelCommand(sock, from, shop, customerPhone) {
+  // Smart cancel with empathy - ENHANCED with confirmation
+  async handleCancelCommand(sock, from, shop, customerPhone, context = {}) {
     const cartKey = `cart:${shop.id}:${customerPhone}`;
-    await redis.del(cartKey);
-    // FIX 5: Friendly cancel message
+    let cart = await redis.get(cartKey);
+    let items = [];
+    if (cart) {
+      try {
+        items = typeof cart === 'string' ? JSON.parse(cart) : cart;
+      } catch (e) { items = []; }
+    }
+    
+    // If cart is empty, just inform the user
+    if (items.length === 0) {
+      await this.safeSendMessage(sock, from, 
+        "سلتك فارغة بالفعل! 🛒\n\nاكتب *قائمة* لتصفح منتجاتنا.", shop.name, shop.id, customerPhone);
+      return;
+    }
+    
+    // Check if user already confirmed cancellation
+    const cancelConfirmKey = `cancel_confirm:${shop.id}:${customerPhone}`;
+    const pendingConfirm = await redis.get(cancelConfirmKey);
+    
+    if (pendingConfirm === 'waiting') {
+      // User confirmed - clear the cart
+      await redis.del(cartKey);
+      await redis.del(cancelConfirmKey);
+      await this.safeSendMessage(sock, from, 
+        "تم مسح سلتك بنجاح ✅\nنتمنى أن نراك مجدداً! اكتب *قائمة* لتصفح منتجاتنا.", shop.name, shop.id, customerPhone);
+      return;
+    }
+    
+    // Ask for confirmation first
+    const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+    await redis.set(cancelConfirmKey, 'waiting', { ex: 300 }); // 5 minute expiry
+    
     await this.safeSendMessage(sock, from, 
-      "تم مسح سلتك بنجاح ✅\nنتمنى أن نراك مجدداً! اكتب *قائمة* لتصفح منتجاتنا.", shop.name, shop.id, customerPhone);
+      `⚠️ هل أنت متأكد من مسح السلة؟\n\n` +
+      `لديك ${items.length} منتج بإجمالي ${total} جنيه\n\n` +
+      `اكتب *نعم* لتأكيد المسح\n` +
+      `اكتب *لا* للإلغاء والاحتفاظ بالسلة`, shop.name, shop.id, customerPhone);
   }
 
   // Validate AI response
@@ -816,8 +849,20 @@ class BotManager {
     return response;
   }
 
-  // Smart response handler with emotional intelligence and Groq AI
+  // Smart response handler with emotional intelligence and Groq AI - ENHANCED
   async handleSmartResponse(sock, from, shop, customerPhone, text, context) {
+    // ALWAYS try AI first for natural conversation (unless it's a clear command)
+    const lowerText = text.toLowerCase();
+    
+    // Check if this is a clear command that should NOT use AI
+    const clearCommands = ['قائمة', 'منيو', 'menu', 'كارت', 'سلة', 'cart', 'اطلب', 'order', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
+    const isClearCommand = clearCommands.some(cmd => lowerText === cmd || lowerText.startsWith(cmd + ' '));
+    
+    // If it's a clear command, use rule-based response
+    if (isClearCommand && !context.isReturningCustomer) {
+      return this.handleRuleBasedResponse(sock, from, shop, customerPhone, text, context);
+    }
+    
     // Check for duplicate help messages
     const lastResponseKey = `last:${shop.id}:${customerPhone}`;
     const lastResponse = await redis.get(lastResponseKey);
@@ -841,6 +886,19 @@ class BotManager {
       await redis.set(`${lastResponseKey}:type`, 'ai', { ex: 300 });
       return;
     }
+    
+    // Fallback to rule-based response
+    return this.handleRuleBasedResponse(sock, from, shop, customerPhone, text, context);
+  }
+
+  // Rule-based fallback responses
+  async handleRuleBasedResponse(sock, from, shop, customerPhone, text, context) {
+    const lastResponseKey = `last:${shop.id}:${customerPhone}`;
+    const lastResponseType = await redis.get(`${lastResponseKey}:type`);
+    
+    // Detect emotion and intent
+    const emotion = this.detectEmotion(text);
+    const intent = this.detectAdvancedIntent(text);
     
     // If last response was help and this is unknown message again, use AI instead
     if (lastResponseType === 'help') {
@@ -908,24 +966,36 @@ class BotManager {
         : `سلة العميل فارغة`;
 
       // Create system prompt with shop context - STRICT FORMAL ARABIC ONLY
-      const systemPrompt = `أنت مساعد متجر ${shop.name}.
+      const systemPrompt = `أنت مساعد ذكي وودود لمتجر ${shop.name}.
 
-قواعد صارمة جداً:
-1. استخدم اللغة العربية الفصحى فقط في جميع ردودك
-2. ممنوع منعاً باتاً استخدام: أيوه، لأ، تمام، ماشي، كويس، عامل، ازيك، يلا، بص، معلش، خلاص، زي، أوي، هنا دي، كسر الكرش، تخاف من الشبكة
-3. إذا سألك العميل عن حالك أو حياك ("عامل إيه" أو "ازيك")، رد بـ: "أهلاً بك! كيف يمكنني مساعدتك اليوم؟"
-4. ردودك قصيرة لا تتجاوز 3 جمل
-5. لا تخترع منتجات غير موجودة في القائمة
-6. كن ودوداً ومحترفاً
+مهمتك الأساسية:
+1. مساعدة العملاء بشكل طبيعي وودود في العربية الفصحى
+2. الإجابة على جميع الأسئلة بطريقة مفيدة وواضحة
+3. شرح كيفية استخدام البوت ببساطة
+4. إذا كان العميل يسأل عن منتجات، اشرح له أنه يمكنه كتابة "قائمة"
+5. إذا كان العميل يسأل عن طريقة الطلب، اشرح الخطوات ببساطة
+6. كن لطيفاً وصبوراً مع العملاء
 
-المنتجات المتاحة: ${shop.products?.filter(p => p.isAvailable).map(p => p.name).join(', ') || 'منتجات متنوعة'}
+قواعد هامة:
+1. استخدم اللغة العربية الفصحى فقط - ممنوع العامية المصرية
+2. ردودك يجب أن تكون ودودة ومفيدة
+3. لا تترك العميل دون إجابة
+4. إذا لم تفهم شيئاً، اطلب التوضيح بلطف
+5. شجع العميل دائماً على إكمال طلبه إذا كان لديه منتجات في السلة
+6. لا تخترع منتجات غير موجودة
+
+المنتجات المتاحة: ${shop.products?.filter(p => p.isAvailable).map(p => `${p.name} (${p.price} جنيه)`).join(', ') || 'منتجات متنوعة'}
 
 ${contextMessage}
-آخر ما فعله العميل: ${lastResponse || 'بدأ المحادثة'}
 
-العميل: ${context.name || 'غير معروف'}
+معلومات العميل:
+الاسم: ${context.name || 'غير معروف'}
 السلة: ${context.hasItems ? `${context.itemCount} منتج (${context.totalValue} جنيه)` : 'فارغة'}
-الحالة: ${intent}`;
+
+تعليمات إضافية:
+- إذا سأل العميل "كيف أطلب" أو "طريقة الطلب"، اشرح: اكتب قائمة ثم اختر رقم المنتج ثم اكتب اطلب
+- إذا شكا العميل من مشكلة، اعتذر بلطف واقترح التواصل مع صاحب المحل
+- كن إيجابياً ومحفزاً دائماً`;
 
       // Prepare messages for Groq
       const groqMessages = [
@@ -939,9 +1009,9 @@ ${contextMessage}
       const chatCompletion = await groq.chat.completions.create({
         messages: groqMessages,
         model: 'llama-3.3-70b-versatile',
-        temperature: 0.7,
-        max_tokens: 150,
-        top_p: 0.9,
+        temperature: 0.9, // Increased for more creative and friendly responses
+        max_tokens: 200, // Increased for longer helpful responses
+        top_p: 0.95, // Slightly higher for more natural responses
         stream: false
       });
 

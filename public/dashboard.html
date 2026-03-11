@@ -345,7 +345,7 @@
         // Load dashboard data
         async function loadDashboard() {
             try {
-                const response = await fetch(`${API_URL}/products`, {
+                const response = await fetch(`${API_URL}/shop/dashboard`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 
@@ -378,7 +378,7 @@
         // Check connection status
         async function checkConnection() {
             try {
-                const response = await fetch(`${API_URL}/bot/status`, {
+                const response = await fetch(`${API_URL}/shop/bot/status`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 

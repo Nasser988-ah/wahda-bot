@@ -361,7 +361,7 @@
         
         async function checkStatus() {
             try {
-                const response = await fetch(`${API_URL}/bot/status`, {
+                const response = await fetch(`${API_URL}/shop/bot/status`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 
@@ -432,7 +432,7 @@
             connectBtn.disabled = true;
             
             try {
-                const response = await fetch(`${API_URL}/bot/connect`, {
+                const response = await fetch(`${API_URL}/shop/bot/connect`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
@@ -458,7 +458,7 @@
             if (!confirm('هل أنت متأكد من فصل الاتصال؟')) return;
             
             try {
-                const response = await fetch(`${API_URL}/bot/disconnect`, {
+                const response = await fetch(`${API_URL}/shop/bot/disconnect`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${token}` }
                 });

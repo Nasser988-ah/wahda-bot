@@ -77,6 +77,16 @@ app.get('/health', async (req, res) => {
   }
 })
 
+// Railway fallback healthcheck
+app.get('/api/products', async (req, res) => {
+  const dbHealth = await databaseService.healthCheck();
+  if (dbHealth.connected) {
+    res.status(200).json({ status: 'ok', products: [] })
+  } else {
+    res.status(503).json({ status: 'error', message: 'Database not connected' })
+  }
+})
+
 // API routes
 app.use("/api", apiRoutes);
 

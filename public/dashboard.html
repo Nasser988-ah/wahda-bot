@@ -3,599 +3,425 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لوحة التحكم - واحة بوت</title>
+    <title>لوحة التحكم - Zaki Bot</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            min-height: 100vh;
         }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f5f5f5;
-            color: #333;
-        }
-
-        .header {
-            background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
-            color: white;
-            padding: 15px 20px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            position: sticky;
+        
+        .sidebar {
+            background: var(--bg-secondary);
+            border-left: 1px solid var(--border-color);
+            padding: var(--space-lg);
+            position: fixed;
+            right: 0;
             top: 0;
+            height: 100vh;
+            width: 250px;
+            overflow-y: auto;
             z-index: 100;
         }
-
-        .header-content {
+        
+        .sidebar-logo {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            margin-bottom: var(--space-xl);
+            padding-bottom: var(--space-md);
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .sidebar-logo-icon {
+            width: 45px;
+            height: 45px;
+            background: var(--gradient-primary);
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+        
+        .sidebar-logo-text {
+            font-size: 1.25rem;
+            font-weight: 700;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .nav-menu {
+            list-style: none;
+        }
+        
+        .nav-item {
+            margin-bottom: var(--space-xs);
+        }
+        
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            padding: var(--space-sm) var(--space-md);
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-radius: var(--radius-md);
+            transition: all var(--transition-base);
+        }
+        
+        .nav-link:hover,
+        .nav-link.active {
+            background: var(--bg-glass);
+            color: var(--text-primary);
+        }
+        
+        .nav-link.active {
+            background: var(--gradient-primary);
+            color: white;
+        }
+        
+        .main-content {
+            margin-right: 250px;
+            padding: var(--space-lg);
+        }
+        
+        .page-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            max-width: 1200px;
-            margin: 0 auto;
+            margin-bottom: var(--space-lg);
         }
-
-        .logo {
-            font-size: 24px;
-            font-weight: bold;
-        }
-
-        .user-info {
+        
+        .quick-actions {
             display: flex;
+            gap: var(--space-sm);
+        }
+        
+        .status-badge {
+            display: inline-flex;
             align-items: center;
-            gap: 10px;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-size: 0.875rem;
+            font-weight: 500;
         }
-
-        .user-name {
-            font-size: 14px;
+        
+        .status-badge.connected {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
         }
-
-        .logout-btn {
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 12px;
-            transition: all 0.3s ease;
+        
+        .status-badge.disconnected {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
         }
-
-        .logout-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
+        
+        .recent-orders {
+            margin-top: var(--space-lg);
         }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .stat-card {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-            text-align: center;
-            transition: transform 0.3s ease;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-5px);
-        }
-
-        .stat-icon {
-            font-size: 40px;
-            margin-bottom: 15px;
-        }
-
-        .stat-value {
-            font-size: 32px;
-            font-weight: bold;
-            color: #25D366;
-            margin-bottom: 5px;
-        }
-
-        .stat-label {
-            color: #666;
-            font-size: 14px;
-        }
-
-        .section {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-            margin-bottom: 20px;
-        }
-
+        
         .section-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid #e0e0e0;
+            margin-bottom: var(--space-md);
         }
-
+        
         .section-title {
-            font-size: 20px;
-            font-weight: bold;
-            color: #333;
+            font-size: 1.25rem;
+            font-weight: 600;
         }
-
-        .btn {
-            background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            display: inline-block;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(37, 211, 102, 0.3);
-        }
-
-        .btn-small {
-            padding: 6px 12px;
-            font-size: 12px;
-        }
-
+        
         .orders-table {
             width: 100%;
             border-collapse: collapse;
         }
-
+        
         .orders-table th,
         .orders-table td {
-            padding: 12px;
+            padding: var(--space-sm) var(--space-md);
             text-align: right;
-            border-bottom: 1px solid #e0e0e0;
+            border-bottom: 1px solid var(--border-color);
         }
-
+        
         .orders-table th {
-            background: #f8f8f8;
-            font-weight: 600;
-            color: #666;
-            font-size: 12px;
-        }
-
-        .orders-table td {
-            font-size: 14px;
-        }
-
-        .status-badge {
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
+            color: var(--text-secondary);
             font-weight: 500;
-            cursor: pointer;
-            border: none;
-            transition: all 0.3s ease;
+            font-size: 0.875rem;
         }
-
-        .status-pending {
-            background: #fff3cd;
-            color: #856404;
+        
+        .orders-table tr:hover td {
+            background: var(--bg-glass);
         }
-
-        .status-confirmed {
-            background: #d1ecf1;
-            color: #0c5460;
-        }
-
-        .status-delivered {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .status-cancelled {
-            background: #f8d7da;
-            color: #721c24;
-        }
-
-        .quick-actions {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-        }
-
-        .action-card {
-            background: white;
-            border: 2px solid #e0e0e0;
-            border-radius: 12px;
-            padding: 20px;
-            text-align: center;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            text-decoration: none;
-            color: #333;
-        }
-
-        .action-card:hover {
-            border-color: #25D366;
-            transform: translateY(-3px);
-            box-shadow: 0 5px 15px rgba(37, 211, 102, 0.2);
-        }
-
-        .action-icon {
-            font-size: 30px;
-            margin-bottom: 10px;
-        }
-
-        .action-title {
-            font-weight: 600;
-            margin-bottom: 5px;
-        }
-
-        .action-desc {
-            font-size: 12px;
-            color: #666;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: #666;
-        }
-
-        .spinner {
+        
+        .order-status {
             display: inline-block;
-            width: 30px;
-            height: 30px;
-            border: 3px solid #e0e0e0;
-            border-radius: 50%;
-            border-top-color: #25D366;
-            animation: spin 1s ease-in-out infinite;
-            margin-bottom: 10px;
+            padding: 0.25rem 0.75rem;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 500;
         }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
+        
+        .order-status.pending {
+            background: rgba(245, 158, 11, 0.2);
+            color: #f59e0b;
         }
-
-        .empty-state {
-            text-align: center;
-            padding: 40px;
-            color: #666;
+        
+        .order-status.confirmed {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
         }
-
-        .empty-icon {
-            font-size: 48px;
-            margin-bottom: 15px;
-            opacity: 0.5;
+        
+        .order-status.cancelled {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
         }
-
-        @media (max-width: 768px) {
-            .header-content {
-                flex-direction: column;
-                gap: 10px;
-            }
-
-            .container {
-                padding: 15px;
-            }
-
-            .stats-grid {
+        
+        @media (max-width: 1024px) {
+            .dashboard-grid {
                 grid-template-columns: 1fr;
             }
-
-            .orders-table {
-                font-size: 12px;
+            
+            .sidebar {
+                transform: translateX(100%);
+                transition: transform var(--transition-base);
             }
-
-            .orders-table th,
-            .orders-table td {
-                padding: 8px;
+            
+            .sidebar.open {
+                transform: translateX(0);
             }
-
-            .section-header {
+            
+            .main-content {
+                margin-right: 0;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .page-header {
                 flex-direction: column;
-                gap: 10px;
+                gap: var(--space-sm);
                 align-items: flex-start;
+            }
+            
+            .quick-actions {
+                width: 100%;
+                flex-wrap: wrap;
+            }
+            
+            .orders-table {
+                display: block;
+                overflow-x: auto;
             }
         }
     </style>
 </head>
 <body>
-    <header class="header">
-        <div class="header-content">
-            <div class="logo">🤖 واحة بوت</div>
-            <div class="user-info">
-                <span class="user-name" id="userName">تحميل...</span>
-                <button class="logout-btn" onclick="logout()">خروج</button>
+    <div class="bg-animation"></div>
+    
+    <div class="dashboard-grid">
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <div class="sidebar-logo-icon">🤖</div>
+                <span class="sidebar-logo-text">Zaki</span>
             </div>
-        </div>
-    </header>
-
-    <div class="container">
-        <!-- Stats Cards -->
-        <div class="stats-grid" id="statsGrid">
-            <div class="loading">
-                <div class="spinner"></div>
-                <div>جاري تحميل الإحصائيات...</div>
-            </div>
-        </div>
-
-        <!-- Quick Actions -->
-        <div class="section">
-            <div class="section-header">
-                <h2 class="section-title">إجراءات سريعة</h2>
-            </div>
-            <div class="quick-actions">
-                <a href="products.html" class="action-card">
-                    <div class="action-icon">📦</div>
-                    <div class="action-title">إدارة المنتجات</div>
-                    <div class="action-desc">إضافة وتعديل المنتجات</div>
-                </a>
-                <a href="qr.html" class="action-card">
-                    <div class="action-icon">📱</div>
-                    <div class="action-title">ربط واتساب</div>
-                    <div class="action-desc">توصيل البوت بالواتساب</div>
-                </a>
-                <a href="#" class="action-card" onclick="refreshData()">
-                    <div class="action-icon">🔄</div>
-                    <div class="action-title">تحديث البيانات</div>
-                    <div class="action-desc">تحديث الإحصائيات والطلبات</div>
-                </a>
-            </div>
-        </div>
-
-        <!-- Recent Orders -->
-        <div class="section">
-            <div class="section-header">
-                <h2 class="section-title">الطلبات الأخيرة</h2>
-                <button class="btn btn-small" onclick="refreshOrders()">تحديث</button>
-            </div>
-            <div id="ordersContainer">
-                <div class="loading">
-                    <div class="spinner"></div>
-                    <div>جاري تحميل الطلبات...</div>
+            
+            <nav>
+                <ul class="nav-menu">
+                    <li class="nav-item">
+                        <a href="dashboard.html" class="nav-link active">
+                            <span>📊</span>
+                            <span>لوحة التحكم</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="products.html" class="nav-link">
+                            <span>📦</span>
+                            <span>المنتجات</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="qr.html" class="nav-link">
+                            <span>📱</span>
+                            <span>اتصال الواتساب</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+        
+        <main class="main-content">
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">لوحة التحكم</h1>
+                    <p class="page-subtitle" id="shopName">مرحباً بك في Zaki</p>
+                </div>
+                <div class="quick-actions">
+                    <span id="connectionStatus" class="status-badge disconnected">
+                        <span class="animate-pulse">●</span>
+                        غير متصل
+                    </span>
+                    <button class="btn btn-secondary" onclick="logout()">
+                        <span>🚪</span>
+                        <span>تسجيل الخروج</span>
+                    </button>
                 </div>
             </div>
-        </div>
-    </div>
-
-    <script>
-        const API_BASE = window.location.origin + '/api';
-        let currentShop = null;
-
-        // Global API fetch helper with 401 handling
-        async function apiFetch(url, options = {}) {
-            const token = localStorage.getItem('token');
             
-            const res = await fetch(url, {
-                ...options,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
-                    ...options.headers
-                }
-            });
-            
-            if (res.status === 401) {
-                localStorage.removeItem('token');
-                localStorage.removeItem('shop');
-                window.location.href = 'login.html';
-                return;
-            }
-            
-            return res;
-        }
-
-        // Initialize dashboard
-        window.addEventListener('load', async () => {
-            const token = localStorage.getItem('token');
-            const shop = localStorage.getItem('shop');
-
-            if (!token || !shop) {
-                window.location.href = 'login.html';
-                return;
-            }
-
-            currentShop = JSON.parse(shop);
-            document.getElementById('userName').textContent = currentShop.name;
-
-            await loadStats();
-            await loadRecentOrders();
-        });
-
-        // Load statistics
-        async function loadStats() {
-            try {
-                const response = await apiFetch(`${API_BASE}/shop/stats`);
-                if (!response) return;
-
-                if (response.ok) {
-                    const data = await response.json();
-                    displayStats(data);
-                } else {
-                    console.error('Failed to load stats');
-                }
-            } catch (error) {
-                console.error('Error loading stats:', error);
-            }
-        }
-
-        // Display statistics
-        function displayStats(data) {
-            const statsGrid = document.getElementById('statsGrid');
-            statsGrid.innerHTML = `
-                <div class="stat-card">
+            <div class="stats-grid">
+                <div class="stat-card glass-card">
                     <div class="stat-icon">📦</div>
-                    <div class="stat-value">${data.products || 0}</div>
-                    <div class="stat-label">المنتجات المتاحة</div>
+                    <div class="stat-value" id="totalProducts">0</div>
+                    <div class="stat-label">إجمالي المنتجات</div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-icon">📋</div>
-                    <div class="stat-value">${data.recentOrders || 0}</div>
-                    <div class="stat-label">الطلبات (30 يوم)</div>
+                <div class="stat-card glass-card">
+                    <div class="stat-icon">🛒</div>
+                    <div class="stat-value" id="todayOrders">0</div>
+                    <div class="stat-label">طلبات اليوم</div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-icon">⏳</div>
-                    <div class="stat-value" id="pendingCount">-</div>
-                    <div class="stat-label">الطلبات المعلقة</div>
-                </div>
-                <div class="stat-card">
+                <div class="stat-card glass-card">
                     <div class="stat-icon">💰</div>
-                    <div class="stat-value">ج.م</div>
-                    <div class="stat-label">إجمالي الإيرادات</div>
+                    <div class="stat-value" id="totalRevenue">0</div>
+                    <div class="stat-label">الإيرادات (جنيه)</div>
                 </div>
-            `;
-        }
-
-        // Load recent orders
-        async function loadRecentOrders() {
-            try {
-                const response = await apiFetch(`${API_BASE}/orders/recent/list`);
-                if (!response) return;
-
-                if (response.ok) {
-                    const data = await response.json();
-                    displayOrders(data.orders);
-                    
-                    // Update pending count
-                    const pendingCount = data.orders.filter(o => o.status === 'PENDING').length;
-                    const pendingElement = document.getElementById('pendingCount');
-                    if (pendingElement) {
-                        pendingElement.textContent = pendingCount;
-                    }
-                } else {
-                    displayOrders([]);
-                }
-            } catch (error) {
-                console.error('Error loading orders:', error);
-                displayOrders([]);
-            }
-        }
-
-        // Display orders
-        function displayOrders(orders) {
-            const container = document.getElementById('ordersContainer');
-
-            if (orders.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-icon">📋</div>
-                        <div>لا توجد طلبات حالياً</div>
-                    </div>
-                `;
-                return;
-            }
-
-            container.innerHTML = `
-                <table class="orders-table">
-                    <thead>
-                        <tr>
-                            <th>رقم الطلب</th>
-                            <th>العميل</th>
-                            <th>الإجمالي</th>
-                            <th>الحالة</th>
-                            <th>التاريخ</th>
-                            <th>إجراءات</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${orders.map(order => `
+                <div class="stat-card glass-card">
+                    <div class="stat-icon">👥</div>
+                    <div class="stat-value" id="totalCustomers">0</div>
+                    <div class="stat-label">العملاء</div>
+                </div>
+            </div>
+            
+            <div class="recent-orders">
+                <div class="section-header">
+                    <h2 class="section-title">📋 آخر الطلبات</h2>
+                    <a href="#" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.875rem;">
+                        عرض الكل
+                    </a>
+                </div>
+                <div class="glass-card" style="padding: 0; overflow: hidden;">
+                    <table class="orders-table">
+                        <thead>
                             <tr>
-                                <td>#${order.id.slice(-8)}</td>
-                                <td>${order.customerPhone}</td>
-                                <td>${order.totalPrice} ج.م</td>
-                                <td>
-                                    <button class="status-badge status-${order.status.toLowerCase()}" 
-                                            onclick="updateOrderStatus('${order.id}', '${order.status}')">
-                                        ${getStatusText(order.status)}
-                                    </button>
-                                </td>
-                                <td>${new Date(order.createdAt).toLocaleDateString('ar-EG')}</td>
-                                <td>
-                                    <button class="btn btn-small" onclick="viewOrder('${order.id}')">
-                                        عرض
-                                    </button>
+                                <th>رقم الطلب</th>
+                                <th>العميل</th>
+                                <th>المبلغ</th>
+                                <th>الحالة</th>
+                                <th>التاريخ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ordersTableBody">
+                            <tr>
+                                <td colspan="5" style="text-align: center; color: var(--text-secondary); padding: var(--space-lg);">
+                                    لا توجد طلبات حالياً
                                 </td>
                             </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            `;
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script>
+        const API_URL = window.location.origin + '/api';
+        
+        // Check auth
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = 'login.html';
         }
-
-        // Get status text in Arabic
-        function getStatusText(status) {
-            const statusMap = {
-                'PENDING': 'معلق',
-                'CONFIRMED': 'مؤكد',
-                'DELIVERED': 'تم التوصيل',
-                'CANCELLED': 'ملغي'
-            };
-            return statusMap[status] || status;
+        
+        // Load shop data
+        const shop = JSON.parse(localStorage.getItem('shop') || '{}');
+        if (shop.name) {
+            document.getElementById('shopName').textContent = `متجر: ${shop.name}`;
         }
-
-        // Update order status
-        async function updateOrderStatus(orderId, currentStatus) {
-            const statusOptions = ['PENDING', 'CONFIRMED', 'DELIVERED', 'CANCELLED'];
-            const currentIndex = statusOptions.indexOf(currentStatus);
-            const nextIndex = (currentIndex + 1) % statusOptions.length;
-            const newStatus = statusOptions[nextIndex];
-
+        
+        // Load dashboard data
+        async function loadDashboard() {
             try {
-                const response = await apiFetch(`${API_BASE}/orders/${orderId}/status`, {
-                    method: 'PUT',
-                    body: JSON.stringify({ status: newStatus })
+                const response = await fetch(`${API_URL}/shop/dashboard`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
                 });
                 
-                if (!response) return;
-
                 if (response.ok) {
-                    await loadRecentOrders();
-                } else {
-                    alert('فشل تحديث حالة الطلب');
+                    const data = await response.json();
+                    document.getElementById('totalProducts').textContent = data.totalProducts || 0;
+                    document.getElementById('todayOrders').textContent = data.todayOrders || 0;
+                    document.getElementById('totalRevenue').textContent = data.totalRevenue || 0;
+                    document.getElementById('totalCustomers').textContent = data.totalCustomers || 0;
+                    
+                    // Update orders table
+                    if (data.recentOrders && data.recentOrders.length > 0) {
+                        const tbody = document.getElementById('ordersTableBody');
+                        tbody.innerHTML = data.recentOrders.map(order => `
+                            <tr>
+                                <td>#${order.id.slice(-6)}</td>
+                                <td>${order.customerName}</td>
+                                <td>${order.totalPrice} ج.م</td>
+                                <td><span class="order-status ${order.status.toLowerCase()}">${getStatusText(order.status)}</span></td>
+                                <td>${new Date(order.createdAt).toLocaleDateString('ar-EG')}</td>
+                            </tr>
+                        `).join('');
+                    }
                 }
             } catch (error) {
-                console.error('Error updating order status:', error);
-                alert('حدث خطأ في تحديث الحالة');
+                console.error('Failed to load dashboard:', error);
             }
         }
-
-        // View order details
-        function viewOrder(orderId) {
-            // For now, just show an alert
-            alert(`تفاصيل الطلب #${orderId.slice(-8)} - قيد التطوير`);
+        
+        // Check connection status
+        async function checkConnection() {
+            try {
+                const response = await fetch(`${API_URL}/bot/status`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                const statusEl = document.getElementById('connectionStatus');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.connected) {
+                        statusEl.className = 'status-badge connected';
+                        statusEl.innerHTML = '<span>●</span> متصل';
+                    } else {
+                        statusEl.className = 'status-badge disconnected';
+                        statusEl.innerHTML = '<span class="animate-pulse">●</span> غير متصل';
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to check connection:', error);
+            }
         }
-
-        // Refresh data
-        async function refreshData() {
-            await loadStats();
-            await loadRecentOrders();
+        
+        function getStatusText(status) {
+            const statuses = {
+                'PENDING': 'معلق',
+                'CONFIRMED': 'مؤكد',
+                'CANCELLED': 'ملغي',
+                'DELIVERED': 'تم التوصيل'
+            };
+            return statuses[status] || status;
         }
-
-        // Refresh orders only
-        async function refreshOrders() {
-            await loadRecentOrders();
-        }
-
-        // Logout
+        
         function logout() {
-            if (confirm('هل أنت متأكد من تسجيل الخروج؟')) {
-                localStorage.removeItem('token');
-                localStorage.removeItem('shop');
-                window.location.href = 'login.html';
-            }
+            localStorage.removeItem('token');
+            localStorage.removeItem('shop');
+            window.location.href = 'login.html';
         }
+        
+        // Initial load
+        loadDashboard();
+        checkConnection();
+        
+        // Refresh every 30 seconds
+        setInterval(() => {
+            loadDashboard();
+            checkConnection();
+        }, 30000);
     </script>
 </body>
 </html>

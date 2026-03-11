@@ -45,6 +45,17 @@ router.post("/register", async (req, res) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Create default welcome message
+    const welcomeMessage = `🎉 مرحباً بك في Zaki Bot!
+
+تم إنشاء حسابك بنجاح. الآن يمكنك:
+
+📦 إضافة منتجاتك
+📱 ربط رقم الواتساب
+🤖 السماح لـ Zaki بالرد على العملاء
+
+ابدأ الآن من لوحة التحكم!`;
+
     // Create shop
     const shop = await prisma.shop.create({
       data: {
@@ -52,6 +63,7 @@ router.post("/register", async (req, res) => {
         ownerName,
         phone,
         whatsappNumber,
+        welcomeMessage,
         subscriptionStatus: "TRIAL",
         subscriptionEnd: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days trial
       },
@@ -118,6 +130,7 @@ router.post("/login", async (req, res) => {
         whatsappNumber: true,
         subscriptionStatus: true,
         subscriptionEnd: true,
+        welcomeMessage: true,
         createdAt: true
       }
     });

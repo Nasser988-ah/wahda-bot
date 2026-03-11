@@ -3,343 +3,231 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تسجيل حساب جديد - واحة بوت</title>
+    <title>إنشاء حساب - Zaki Bot</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+        .auth-page {
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 20px;
+            padding: 2rem;
+            position: relative;
         }
-
-        .container {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        
+        .auth-container {
             width: 100%;
-            max-width: 450px;
-            padding: 40px 30px;
+            max-width: 520px;
+            animation: fadeInUp 0.8s ease-out;
+        }
+        
+        .auth-card {
+            padding: 2.5rem;
             text-align: center;
         }
-
-        .logo {
-            font-size: 48px;
-            margin-bottom: 10px;
+        
+        .auth-logo {
+            margin-bottom: 1.5rem;
         }
-
-        h1 {
-            color: #128C7E;
-            font-size: 28px;
-            margin-bottom: 10px;
+        
+        .auth-logo-icon {
+            width: 70px;
+            height: 70px;
+            background: var(--gradient-primary);
+            border-radius: var(--radius-xl);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            font-size: 2rem;
+            box-shadow: var(--shadow-glow);
         }
-
-        .subtitle {
-            color: #666;
-            font-size: 14px;
-            margin-bottom: 30px;
+        
+        .auth-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
-
-        .form-group {
-            margin-bottom: 20px;
+        
+        .auth-subtitle {
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+            font-size: 0.9rem;
+        }
+        
+        .auth-form {
             text-align: right;
         }
-
-        label {
-            display: block;
-            color: #333;
-            font-weight: 500;
-            margin-bottom: 8px;
-            font-size: 14px;
-        }
-
-        input {
-            width: 100%;
-            padding: 12px 15px;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            font-size: 16px;
-            transition: all 0.3s ease;
-            text-align: right;
-        }
-
-        input:focus {
-            outline: none;
-            border-color: #25D366;
-            box-shadow: 0 0 0 3px rgba(37, 211, 102, 0.1);
-        }
-
-        .btn {
-            width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-top: 10px;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(37, 211, 102, 0.3);
-        }
-
-        .btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .error {
-            background: #fee;
-            color: #c33;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-size: 14px;
-            display: none;
-        }
-
-        .success {
-            background: #efe;
-            color: #3c3;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-size: 14px;
-            display: none;
-        }
-
-        .login-link {
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #e0e0e0;
-        }
-
-        .login-link a {
-            color: #25D366;
-            text-decoration: none;
-            font-weight: 500;
-        }
-
-        .login-link a:hover {
-            text-decoration: underline;
-        }
-
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid #ffffff;
-            border-radius: 50%;
-            border-top-color: transparent;
-            animation: spin 1s ease-in-out infinite;
-            margin-left: 10px;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
+        
         .form-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 15px;
+            gap: 1rem;
         }
-
-        @media (max-width: 480px) {
+        
+        .auth-links {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border-color);
+        }
+        
+        .auth-links a {
+            color: var(--primary-light);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color var(--transition-base);
+        }
+        
+        .auth-links a:hover {
+            color: var(--primary);
+        }
+        
+        .error-message {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+            padding: 1rem;
+            border-radius: var(--radius-md);
+            margin-bottom: 1rem;
+            display: none;
+        }
+        
+        .error-message.show {
+            display: block;
+            animation: fadeInUp 0.3s ease-out;
+        }
+        
+        @media (max-width: 640px) {
             .form-row {
                 grid-template-columns: 1fr;
+            }
+            
+            .auth-card {
+                padding: 1.5rem;
+            }
+            
+            .auth-title {
+                font-size: 1.5rem;
             }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="logo">🤖</div>
-        <h1>واحة بوت</h1>
-        <p class="subtitle">إنشاء حساب جديد لمتجرك</p>
-
-        <div class="error" id="error"></div>
-        <div class="success" id="success"></div>
-
-        <form id="registerForm">
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="name">اسم المتجر *</label>
-                    <input type="text" id="name" name="name" placeholder="مثال: متجري المفضل" required>
+    <div class="bg-animation"></div>
+    
+    <div class="auth-page">
+        <div class="auth-container">
+            <div class="auth-card glass-card">
+                <div class="auth-logo">
+                    <div class="auth-logo-icon">🚀</div>
+                    <h1 class="auth-title">انضم إلى Zaki</h1>
+                    <p class="auth-subtitle">ابدأ رحلتك مع مساعدك الذكي</p>
                 </div>
-
-                <div class="form-group">
-                    <label for="ownerName">اسم المالك *</label>
-                    <input type="text" id="ownerName" name="ownerName" placeholder="اسمك الكامل" required>
+                
+                <div id="errorMessage" class="error-message"></div>
+                
+                <form id="registerForm" class="auth-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">اسم المحل</label>
+                            <input type="text" id="shopName" class="form-input" placeholder="مثال: بيتزا الحارة" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">اسم المالك</label>
+                            <input type="text" id="ownerName" class="form-input" placeholder="الاسم الكامل" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">رقم الهاتف</label>
+                            <input type="tel" id="phone" class="form-input" placeholder="01xxxxxxxxx" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">رقم واتساب للبوت</label>
+                            <input type="tel" id="whatsappNumber" class="form-input" placeholder="01xxxxxxxxx" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">كلمة المرور</label>
+                        <input type="password" id="password" class="form-input" placeholder="كلمة مرور قوية" required>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+                        <span id="btnText">إنشاء الحساب</span>
+                        <span id="btnLoader" class="hidden">⌛</span>
+                    </button>
+                </form>
+                
+                <div class="auth-links">
+                    <p style="color: var(--text-secondary);">
+                        لديك حساب بالفعل؟ 
+                        <a href="login.html">تسجيل الدخول</a>
+                    </p>
                 </div>
             </div>
-
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="phone">رقم الهاتف *</label>
-                    <input type="tel" id="phone" name="phone" placeholder="201234567890" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="whatsappNumber">رقم الواتساب *</label>
-                    <input type="tel" id="whatsappNumber" name="whatsappNumber" placeholder="201234567890" required>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label for="password">كلمة المرور *</label>
-                <input type="password" id="password" name="password" placeholder="أدخل كلمة مرور قوية" required>
-            </div>
-
-            <div class="form-group">
-                <label for="confirmPassword">تأكيد كلمة المرور *</label>
-                <input type="password" id="confirmPassword" name="confirmPassword" placeholder="أعد إدخال كلمة المرور" required>
-            </div>
-
-            <button type="submit" class="btn" id="registerBtn">
-                إنشاء حساب جديد
-            </button>
-        </form>
-
-        <div class="login-link">
-            <p>لديك حساب بالفعل؟ <a href="login.html">تسجيل الدخول</a></p>
         </div>
     </div>
-
+    
     <script>
-        const API_BASE = window.location.origin + '/api';
+        const API_URL = window.location.origin + '/api';
         
         document.getElementById('registerForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const formData = {
-                name: document.getElementById('name').value,
-                ownerName: document.getElementById('ownerName').value,
-                phone: document.getElementById('phone').value,
-                whatsappNumber: document.getElementById('whatsappNumber').value,
-                password: document.getElementById('password').value,
-                confirmPassword: document.getElementById('confirmPassword').value
-            };
+            const btn = e.target.querySelector('button');
+            const btnText = document.getElementById('btnText');
+            const btnLoader = document.getElementById('btnLoader');
+            const errorDiv = document.getElementById('errorMessage');
             
-            const registerBtn = document.getElementById('registerBtn');
-            const errorDiv = document.getElementById('error');
-            const successDiv = document.getElementById('success');
-            
-            // Validation
-            if (formData.password !== formData.confirmPassword) {
-                showError('كلمتا المرور غير متطابقتين');
-                return;
-            }
-            
-            if (!formData.phone.startsWith('20') || formData.phone.length !== 12) {
-                showError('رقم الهاتف يجب أن يبدأ بـ 20 ويكون 12 رقم');
-                return;
-            }
-            
-            if (!formData.whatsappNumber.startsWith('20') || formData.whatsappNumber.length !== 12) {
-                showError('رقم الواتساب يجب أن يبدأ بـ 20 ويكون 12 رقم');
-                return;
-            }
-            
-            if (formData.password.length < 6) {
-                showError('كلمة المرور يجب أن تكون 6 أحرف على الأقل');
-                return;
-            }
-            
-            // Show loading
-            registerBtn.disabled = true;
-            registerBtn.innerHTML = 'جاري إنشاء الحساب<span class="loading"></span>';
-            hideError();
-            hideSuccess();
+            btn.disabled = true;
+            btnText.classList.add('hidden');
+            btnLoader.classList.remove('hidden');
+            errorDiv.classList.remove('show');
             
             try {
-                const response = await fetch(`${API_BASE}/auth/register`, {
+                const response = await fetch(`${API_URL}/auth/register`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        name: formData.name,
-                        ownerName: formData.ownerName,
-                        phone: formData.phone,
-                        whatsappNumber: formData.whatsappNumber,
-                        password: formData.password
+                        shopName: document.getElementById('shopName').value,
+                        ownerName: document.getElementById('ownerName').value,
+                        phone: document.getElementById('phone').value,
+                        whatsappNumber: document.getElementById('whatsappNumber').value,
+                        password: document.getElementById('password').value
                     })
                 });
                 
                 const data = await response.json();
                 
                 if (response.ok) {
-                    // Save token and shop info
                     localStorage.setItem('token', data.token);
                     localStorage.setItem('shop', JSON.stringify(data.shop));
-                    
-                    showSuccess('تم إنشاء الحساب بنجاح! جاري التحويل إلى لوحة التحكم...');
-                    
-                    // Redirect to dashboard
-                    setTimeout(() => {
-                        window.location.href = 'dashboard.html';
-                    }, 2000);
+                    window.location.href = 'dashboard.html';
                 } else {
-                    if (data.details && data.details.length > 0) {
-                        const errorMessages = data.details.map(err => err.message).join(', ');
-                        showError(errorMessages);
-                    } else {
-                        showError(data.error || 'فشل إنشاء الحساب');
-                    }
+                    errorDiv.textContent = data.error || 'فشل إنشاء الحساب';
+                    errorDiv.classList.add('show');
                 }
             } catch (error) {
-                console.error('Registration error:', error);
-                showError('حدث خطأ في الاتصال. يرجى المحاولة مرة أخرى');
+                errorDiv.textContent = 'حدث خطأ في الاتصال';
+                errorDiv.classList.add('show');
             } finally {
-                registerBtn.disabled = false;
-                registerBtn.innerHTML = 'إنشاء حساب جديد';
+                btn.disabled = false;
+                btnText.classList.remove('hidden');
+                btnLoader.classList.add('hidden');
             }
         });
-        
-        function showError(message) {
-            const errorDiv = document.getElementById('error');
-            errorDiv.textContent = message;
-            errorDiv.style.display = 'block';
-            hideSuccess();
-        }
-        
-        function hideError() {
-            document.getElementById('error').style.display = 'none';
-        }
-        
-        function showSuccess(message) {
-            const successDiv = document.getElementById('success');
-            successDiv.textContent = message;
-            successDiv.style.display = 'block';
-            hideError();
-        }
-        
-        function hideSuccess() {
-            document.getElementById('success').style.display = 'none';
-        }
         
         // Check if already logged in
-        window.addEventListener('load', () => {
-            const token = localStorage.getItem('token');
-            if (token) {
-                window.location.href = 'dashboard.html';
-            }
-        });
+        if (localStorage.getItem('token')) {
+            window.location.href = 'dashboard.html';
+        }
     </script>
 </body>
 </html>

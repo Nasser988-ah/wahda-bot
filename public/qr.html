@@ -3,838 +3,482 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ربط واتساب - واحة بوت</title>
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
+    <title>اتصال الواتساب - Zaki Bot</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            min-height: 100vh;
         }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f5f5f5;
-            color: #333;
-        }
-
-        .header {
-            background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
-            color: white;
-            padding: 15px 20px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            position: sticky;
+        
+        .sidebar {
+            background: var(--bg-secondary);
+            border-left: 1px solid var(--border-color);
+            padding: var(--space-lg);
+            position: fixed;
+            right: 0;
             top: 0;
+            height: 100vh;
+            width: 250px;
+            overflow-y: auto;
             z-index: 100;
         }
-
-        .header-content {
+        
+        .sidebar-logo {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            max-width: 1200px;
-            margin: 0 auto;
+            gap: var(--space-sm);
+            margin-bottom: var(--space-xl);
+            padding-bottom: var(--space-md);
+            border-bottom: 1px solid var(--border-color);
         }
-
-        .logo {
-            font-size: 24px;
-            font-weight: bold;
-        }
-
-        .nav-links {
+        
+        .sidebar-logo-icon {
+            width: 45px;
+            height: 45px;
+            background: var(--gradient-primary);
+            border-radius: var(--radius-md);
             display: flex;
-            gap: 15px;
             align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
         }
-
+        
+        .sidebar-logo-text {
+            font-size: 1.25rem;
+            font-weight: 700;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .nav-menu {
+            list-style: none;
+        }
+        
+        .nav-item {
+            margin-bottom: var(--space-xs);
+        }
+        
         .nav-link {
-            color: white;
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            padding: var(--space-sm) var(--space-md);
+            color: var(--text-secondary);
             text-decoration: none;
-            font-size: 14px;
-            opacity: 0.9;
-            transition: opacity 0.3s ease;
+            border-radius: var(--radius-md);
+            transition: all var(--transition-base);
         }
-
-        .nav-link:hover {
-            opacity: 1;
+        
+        .nav-link:hover,
+        .nav-link.active {
+            background: var(--bg-glass);
+            color: var(--text-primary);
         }
-
-        .logout-btn {
-            background: rgba(255, 255, 255, 0.2);
+        
+        .nav-link.active {
+            background: var(--gradient-primary);
             color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 12px;
-            transition: all 0.3s ease;
         }
-
-        .logout-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
+        
+        .main-content {
+            margin-right: 250px;
+            padding: var(--space-lg);
         }
-
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
+        
         .page-header {
+            margin-bottom: var(--space-lg);
+        }
+        
+        .qr-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--space-lg);
+            align-items: start;
+        }
+        
+        .qr-card {
+            padding: var(--space-xl);
             text-align: center;
-            margin-bottom: 40px;
         }
-
-        .page-title {
-            font-size: 32px;
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 10px;
-        }
-
-        .page-subtitle {
-            color: #666;
-            font-size: 16px;
-        }
-
-        .connection-card {
+        
+        .qr-code-wrapper {
             background: white;
-            border-radius: 20px;
-            padding: 40px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            text-align: center;
-            margin-bottom: 30px;
+            padding: var(--space-md);
+            border-radius: var(--radius-md);
+            display: inline-block;
+            margin-bottom: var(--space-md);
         }
-
+        
+        .qr-code {
+            width: 250px;
+            height: 250px;
+            object-fit: contain;
+        }
+        
         .status-indicator {
             display: inline-flex;
             align-items: center;
-            gap: 10px;
-            padding: 12px 24px;
-            border-radius: 30px;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: 50px;
             font-weight: 500;
-            margin-bottom: 30px;
+            margin-bottom: var(--space-md);
         }
-
-        .status-connected {
-            background: #d4edda;
-            color: #155724;
+        
+        .status-indicator.connected {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
         }
-
-        .status-disconnected {
-            background: #f8d7da;
-            color: #721c24;
+        
+        .status-indicator.connecting {
+            background: rgba(245, 158, 11, 0.2);
+            color: #f59e0b;
         }
-
-        .status-connecting {
-            background: #fff3cd;
-            color: #856404;
+        
+        .status-indicator.disconnected {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
         }
-
-        .status-dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            animation: pulse 2s infinite;
+        
+        .connection-steps {
+            text-align: right;
         }
-
-        .status-connected .status-dot {
-            background: #28a745;
+        
+        .connection-steps h3 {
+            margin-bottom: var(--space-md);
+            color: var(--text-primary);
         }
-
-        .status-disconnected .status-dot {
-            background: #dc3545;
-        }
-
-        .status-connecting .status-dot {
-            background: #ffc107;
-        }
-
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
-        }
-
-        .qr-container {
-            background: white;
-            border: 3px solid #e0e0e0;
-            border-radius: 15px;
-            padding: 20px;
-            margin: 20px auto;
-            max-width: 300px;
-            min-height: 300px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .qr-image {
-            max-width: 100%;
-            height: auto;
-        }
-
-        .qr-placeholder {
-            text-align: center;
-            color: #666;
-        }
-
-        .qr-placeholder-icon {
-            font-size: 64px;
-            margin-bottom: 15px;
-            opacity: 0.3;
-        }
-
-        .instructions {
-            background: #f8f9fa;
-            border-radius: 15px;
-            padding: 25px;
-            margin-top: 30px;
-        }
-
-        .instructions h3 {
-            color: #333;
-            margin-bottom: 15px;
-            font-size: 18px;
-        }
-
-        .steps {
+        
+        .step-list {
             list-style: none;
-            counter-reset: step-counter;
         }
-
-        .steps li {
-            counter-increment: step-counter;
-            margin-bottom: 15px;
-            padding-right: 40px;
-            position: relative;
-            line-height: 1.6;
+        
+        .step-item {
+            display: flex;
+            align-items: flex-start;
+            gap: var(--space-sm);
+            margin-bottom: var(--space-md);
+            padding: var(--space-sm);
+            border-radius: var(--radius-md);
+            background: var(--bg-glass);
         }
-
-        .steps li::before {
-            content: counter(step-counter);
-            position: absolute;
-            right: 0;
-            top: 0;
-            background: #25D366;
-            color: white;
-            width: 25px;
-            height: 25px;
+        
+        .step-number {
+            width: 30px;
+            height: 30px;
+            background: var(--gradient-primary);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 12px;
-            font-weight: bold;
+            font-weight: 600;
+            font-size: 0.875rem;
+            flex-shrink: 0;
         }
-
-        .btn {
-            background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
-            color: white;
-            border: none;
-            padding: 12px 30px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            display: inline-block;
-            margin: 10px;
+        
+        .step-content {
+            flex: 1;
         }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(37, 211, 102, 0.3);
+        
+        .step-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
         }
-
-        .btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
+        
+        .step-desc {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
         }
-
-        .btn-secondary {
-            background: #6c757d;
+        
+        .actions {
+            display: flex;
+            gap: var(--space-sm);
+            margin-top: var(--space-lg);
+            justify-content: center;
         }
-
-        .refresh-info {
-            background: #e8f5e8;
-            border: 1px solid #c3e6c3;
-            border-radius: 8px;
-            padding: 15px;
-            margin: 20px 0;
-            font-size: 14px;
-            color: #155724;
+        
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid var(--border-color);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: var(--space-lg) auto;
         }
-
-        .last-update {
-            font-size: 12px;
-            color: #666;
-            margin-top: 10px;
-        }
-
-        .error-message {
-            background: #f8d7da;
-            border: 1px solid #f5c6cb;
-            border-radius: 8px;
-            padding: 15px;
-            margin: 20px 0;
-            color: #721c24;
-        }
-
-        .success-message {
-            background: #d4edda;
-            border: 1px solid #c3e6cb;
-            border-radius: 8px;
-            padding: 15px;
-            margin: 20px 0;
-            color: #155724;
-        }
-
-        @media (max-width: 768px) {
-            .header-content {
-                flex-direction: column;
-                gap: 10px;
-            }
-
-            .container {
-                padding: 15px;
-            }
-
-            .connection-card {
-                padding: 25px 20px;
-            }
-
+        
+        @media (max-width: 1024px) {
             .qr-container {
-                max-width: 250px;
-                min-height: 250px;
+                grid-template-columns: 1fr;
+            }
+            
+            .sidebar {
+                transform: translateX(100%);
+            }
+            
+            .main-content {
+                margin-right: 0;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .qr-code {
+                width: 200px;
+                height: 200px;
+            }
+            
+            .actions {
+                flex-direction: column;
             }
         }
     </style>
 </head>
 <body>
-    <header class="header">
-        <div class="header-content">
-            <div class="logo">🤖 واحة بوت</div>
-            <div class="nav-links">
-                <a href="dashboard.html" class="nav-link">لوحة التحكم</a>
-                <a href="products.html" class="nav-link">المنتجات</a>
-                <a href="qr.html" class="nav-link">ربط واتساب</a>
-                <button class="logout-btn" onclick="logout()">خروج</button>
+    <div class="bg-animation"></div>
+    
+    <div class="dashboard-grid">
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <div class="sidebar-logo-icon">🤖</div>
+                <span class="sidebar-logo-text">Zaki</span>
             </div>
-        </div>
-    </header>
-
-    <div class="container">
-        <div class="page-header">
-            <h1 class="page-title">ربط واتساب</h1>
-            <p class="page-subtitle">قم بتوصيل البوت بحساب واتساب متجرك</p>
-        </div>
-
-        <div class="connection-card">
-            <div class="status-indicator" id="statusIndicator">
-                <div class="status-dot"></div>
-                <span id="statusText">جاري التحقق...</span>
+            
+            <nav>
+                <ul class="nav-menu">
+                    <li class="nav-item">
+                        <a href="dashboard.html" class="nav-link">
+                            <span>📊</span>
+                            <span>لوحة التحكم</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="products.html" class="nav-link">
+                            <span>📦</span>
+                            <span>المنتجات</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="qr.html" class="nav-link active">
+                            <span>📱</span>
+                            <span>اتصال الواتساب</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+        
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">📱 اتصال الواتساب</h1>
+                <p class="page-subtitle">اربط Zaki بحساب الواتساب الخاص بك</p>
             </div>
-
-            <div id="connectionContent">
-                <div class="qr-container" id="qrContainer">
-                    <div class="qr-placeholder">
-                        <div class="qr-placeholder-icon">📱</div>
-                        <div>جاري تحميل كود QR...</div>
+            
+            <div class="qr-container">
+                <div class="qr-card glass-card">
+                    <div id="statusIndicator" class="status-indicator disconnected">
+                        <span>●</span>
+                        <span id="statusText">غير متصل</span>
+                    </div>
+                    
+                    <div id="qrWrapper" class="qr-code-wrapper" style="display: none;">
+                        <img id="qrCode" class="qr-code" src="" alt="QR Code">
+                    </div>
+                    
+                    <div id="loadingSpinner" class="loading-spinner" style="display: none;"></div>
+                    
+                    <div id="connectedState" style="display: none;">
+                        <div style="font-size: 4rem; margin-bottom: var(--space-md);">✅</div>
+                        <h3>متصل بنجاح!</h3>
+                        <p style="color: var(--text-secondary); margin-top: var(--space-sm);">
+                            Zaki جاهز للرد على عملائك
+                        </p>
+                    </div>
+                    
+                    <div class="actions">
+                        <button id="connectBtn" class="btn btn-primary" onclick="startConnection()">
+                            <span>🔗</span>
+                            <span>اتصال جديد</span>
+                        </button>
+                        <button id="disconnectBtn" class="btn btn-danger" onclick="disconnect()" style="display: none;">
+                            <span>❌</span>
+                            <span>فصل الاتصال</span>
+                        </button>
                     </div>
                 </div>
-
-                <div class="refresh-info">
-                    <div>🔄 يتم تحديث الحالة تلقائياً كل 5 ثوان</div>
-                    <div class="last-update" id="lastUpdate">آخر تحديث: --</div>
+                
+                <div class="glass-card" style="padding: var(--space-lg);">
+                    <div class="connection-steps">
+                        <h3>📋 خطوات الاتصال</h3>
+                        <ul class="step-list">
+                            <li class="step-item">
+                                <div class="step-number">1</div>
+                                <div class="step-content">
+                                    <div class="step-title">اضغط على "اتصال جديد"</div>
+                                    <div class="step-desc">سيقوم Zaki بإنشاء جلسة اتصال جديدة</div>
+                                </div>
+                            </li>
+                            <li class="step-item">
+                                <div class="step-number">2</div>
+                                <div class="step-content">
+                                    <div class="step-title">افتح واتساب على هاتفك</div>
+                                    <div class="step-desc">اذهب إلى الإعدادات > الأجهزة المرتبطة</div>
+                                </div>
+                            </li>
+                            <li class="step-item">
+                                <div class="step-number">3</div>
+                                <div class="step-content">
+                                    <div class="step-title">امسح رمز QR</div>
+                                    <div class="step-desc">وجه الكاميرا نحو رمز QR الظاهر على الشاشة</div>
+                                </div>
+                            </li>
+                            <li class="step-item">
+                                <div class="step-number">4</div>
+                                <div class="step-content">
+                                    <div class="step-title">جاهز!</div>
+                                    <div class="step-desc">سيبدأ Zaki بالرد على رسائل العملاء تلقائياً</div>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
             </div>
-
-            <div id="actionButtons" style="margin-top: 30px;">
-                <button class="btn" id="refreshBtn" onclick="refreshQR()">تحديث كود QR</button>
-                <button class="btn btn-secondary" onclick="disconnect()">قطع الاتصال</button>
-            </div>
-        </div>
-
-        <div class="instructions">
-            <h3>📋 خطوات التوصيل</h3>
-            <div style="background: #d4edda; border: 1px solid #c3e6c3; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
-                <strong>✅ اتصال حقيقي:</strong> هذا كود QR حقيقي لتوصيل البوت بواتساب.
-            </div>
-            <ol class="steps">
-                <li>افتح تطبيق واتساب على هاتفك</li>
-                <li>اذهب إلى الإعدادات → الأجهزة المرتبطة</li>
-                <li>انقر على "ربط جهاز"</li>
-                <li>امسح كود QR المعروض في هذه الصفحة</li>
-                <li>انتظر حتى يظهر حالة "متصل"</li>
-            </ol>
-            <div style="background: #e8f5e8; border: 1px solid #c3e6c3; border-radius: 8px; padding: 15px; margin-top: 20px;">
-                <strong>💡 ملاحظة:</strong> بعد الاتصال، سيتمكن البوت من استقبال الرسائل والرد عليها تلقائياً.
-            </div>
-        </div>
+        </main>
     </div>
-
+    
     <script>
-        const API_BASE = window.location.origin + '/api';
-        let refreshInterval = null;
-        let currentShop = null;
-
-        // Global API fetch helper with 401 handling
-        async function apiFetch(url, options = {}) {
-            const token = localStorage.getItem('token');
-            
-            const res = await fetch(url, {
-                ...options,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
-                    ...options.headers
-                }
-            });
-            
-            if (res.status === 401) {
-                localStorage.removeItem('token');
-                localStorage.removeItem('shop');
-                window.location.href = 'login.html';
-                return;
-            }
-            
-            return res;
+        const API_URL = window.location.origin + '/api';
+        const token = localStorage.getItem('token');
+        
+        if (!token) {
+            window.location.href = 'login.html';
         }
-
-        // Initialize page
-        window.addEventListener('load', async () => {
-            const token = localStorage.getItem('token');
-            const shop = localStorage.getItem('shop');
-
-            if (!token || !shop) {
-                window.location.href = 'login.html';
-                return;
-            }
-
-            currentShop = JSON.parse(shop);
-            
-            await checkConnectionStatus();
-            startAutoRefresh();
-        });
-
-        // Check connection status
-        async function checkConnectionStatus() {
+        
+        let checkInterval = null;
+        
+        async function checkStatus() {
             try {
-                const token = localStorage.getItem('token');
-                const shop = JSON.parse(localStorage.getItem('shop') || '{}');
-                
-                if (!shop.id) {
-                    console.error('No shop ID found');
-                    updateConnectionStatus(false);
-                    return;
-                }
-                
-                // Check real connection status via API
-                const response = await apiFetch(`${API_BASE}/shop/qr?shopId=${shop.id}`);
-                if (!response) return;
-
-                if (response.ok) {
-                    const data = await response.json();
-                    
-                    if (data.status === 'expired') {
-                        updateQRDisplay(data);
-                        return;
-                    }
-                    
-                    const isConnected = data.connected || false;
-                    updateConnectionStatus(isConnected);
-                    
-                    if (!isConnected && !data.qrGenerated) {
-                        await generateQR();
-                    } else if (data.qr && !isConnected) {
-                        // Display existing QR
-                        displayQR(data.qr);
-                    }
-                } else {
-                    console.error('Status check failed:', response.status);
-                    updateConnectionStatus(false);
-                    await generateQR();
-                }
-
-                updateLastRefresh();
-            } catch (error) {
-                console.error('Error checking connection status:', error);
-                updateConnectionStatus(false);
-                await generateQR();
-            }
-        }
-
-        // Update connection status UI
-        function updateConnectionStatus(isConnected) {
-            const statusIndicator = document.getElementById('statusIndicator');
-            const statusText = document.getElementById('statusText');
-            const qrContainer = document.getElementById('qrContainer');
-            const actionButtons = document.getElementById('actionButtons');
-
-            if (isConnected) {
-                statusIndicator.className = 'status-indicator status-connected';
-                statusText.textContent = 'متصل';
-                
-                qrContainer.innerHTML = `
-                    <div class="qr-placeholder">
-                        <div class="qr-placeholder-icon">✅</div>
-                        <div>تم الاتصال بنجاح!</div>
-                        <div style="font-size: 14px; margin-top: 10px;">
-                            البوت جاهز لاستقبال الرسائل
-                        </div>
-                    </div>
-                `;
-                
-                actionButtons.innerHTML = `
-                    <button class="btn btn-secondary" onclick="disconnect()">قطع الاتصال</button>
-                    <button class="btn" onclick="refreshStatus()">تحديث الحالة</button>
-                `;
-            } else {
-                statusIndicator.className = 'status-indicator status-disconnected';
-                statusText.textContent = 'غير متصل';
-                
-                // QR container will be updated by generateQR()
-                
-                actionButtons.innerHTML = `
-                    <button class="btn" id="refreshBtn" onclick="refreshQR()">تحديث كود QR</button>
-                    <button class="btn btn-secondary" onclick="refreshStatus()">تحديث الحالة</button>
-                `;
-            }
-        }
-
-        // Update QR display based on status
-        function updateQRDisplay(data) {
-            const qrContainer = documentQRContainer('qrContainer');
-            
-            if (data.status === 'expired') {
-                qrContainer.innerHTML = `
-                    <div class="qr-placeholder">
-                        <div class="qr-placeholder-icon">⏰️</div>
-                        <div>كود QR منتهي الصلاحية</div>
-                        <div style="font-size: 12px; margin-top: 10px;">
-                            <button class="btn" onclick="refreshQR()">إنشاء كود جديد</button>
-                        </div>
-                    </div>
-                `;
-                document.getElementById('refreshBtn').textContent = 'إنشاء كود جديد';
-            } else if (data.status === 'error') {
-                qrContainer.innerHTML = `
-                    <div class="qr-placeholder">
-                        <div class="qr-placeholder-icon">❌</div>
-                        <div>حدث خطأء</div>
-                        <div style="font-size: 12px; margin-top: 10px;">
-                            ${data.error || 'يرجى المحاولة مرة أخرى'}
-                        </div>
-                    </div>
-                `;
-                document.getElementById('refreshBtn').textContent = 'إعادة المحاولة';
-            }
-        }
-
-        // Display QR code
-        function displayQR(base64QR) {
-            const qrContainer = document.getElementById('qrContainer');
-            qrContainer.innerHTML = `
-                <img src="data:image/png;base64,${base64QR}" alt="WhatsApp QR Code" class="qr-image">
-                <div style="margin-top: 15px; font-size: 12px; color: #666;">
-                    ⏰️ صالحح الكود مع واتساب
-                </div>
-            `;
-            startConnectionCheck();
-        }
-
-        // Generate QR code
-        async function generateQR() {
-            try {
-                const token = localStorage.getItem('token');
-                const shop = JSON.parse(localStorage.getItem('shop') || '{}');
-                
-                if (!shop.id) {
-                    console.error('No shop ID found');
-                    return;
-                }
-                
-                const qrContainer = document.getElementById('qrContainer');
-                
-                // Show loading state
-                qrContainer.innerHTML = `
-                    <div class="qr-placeholder">
-                        <div class="qr-placeholder-icon">⏳</div>
-                        <div>جاري إنشاء كود QR...</div>
-                        <div style="font-size: 12px; margin-top: 10px;">متجر: ${shop.name}</div>
-                    </div>
-                `;
-
-                // Call API to get QR code
-                const response = await apiFetch(`${API_BASE}/shop/qr`, {
-                    method: 'POST',
-                    body: JSON.stringify({ shopId: shop.id })
+                const response = await fetch(`${API_URL}/bot/status`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
                 });
                 
-                if (!response) return;
-
-                if (response.ok) {
-                    const data = await response.json();
-                    
-                    if (data.qr) {
-                        // Display real QR code
-                        displayQR(data.qr);
-                        console.log('✅ QR code generated successfully');
-                    } else {
-                        qrContainer.innerHTML = `
-                            <div class="qr-placeholder">
-                                <div class="qr-placeholder-icon">❌</div>
-                                <div>فشل إنشاء كود QR</div>
-                                <div style="font-size: 12px; margin-top: 10px;">${data.error || 'يرجى المحاولة مرة أخرى'}</div>
-                            </div>
-                        `;
-                    }
-                } else {
-                    const error = await response.json();
-                    qrContainer.innerHTML = `
-                        <div class="qr-placeholder">
-                            <div class="qr-placeholder-icon">❌</div>
-                            <div>${error.error || 'فشل إنشاء كود QR'}</div>
-                        </div>
-                    `;
-                }
-                
+                const data = await response.json();
+                updateUI(data);
             } catch (error) {
-                console.error('Error generating QR:', error);
-                const qrContainer = document.getElementById('qrContainer');
-                qrContainer.innerHTML = `
-                    <div class="qr-placeholder">
-                        <div class="qr-placeholder-icon">❌</div>
-                        <div>حدث خطأ في الاتصال</div>
-                        <div style="font-size: 12px; margin-top: 10px;">يرجى المحاولة مرة أخرى</div>
-                    </div>
-                `;
+                console.error('Failed to check status:', error);
             }
         }
-
-        // Start connection status checking
-        function startConnectionCheck() {
-            const shop = JSON.parse(localStorage.getItem('shop') || '{}');
+        
+        function updateUI(data) {
+            const statusIndicator = document.getElementById('statusIndicator');
+            const statusText = document.getElementById('statusText');
+            const qrWrapper = document.getElementById('qrWrapper');
+            const qrCode = document.getElementById('qrCode');
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            const connectedState = document.getElementById('connectedState');
+            const connectBtn = document.getElementById('connectBtn');
+            const disconnectBtn = document.getElementById('disconnectBtn');
             
-            if (!shop.id) {
-                console.error('No shop ID for connection check');
-                return;
-            }
-            
-            let checkCount = 0;
-            const maxChecks = 20; // Check for 60 seconds (20 * 3 seconds)
-            
-            // Check every 3 seconds for connection
-            const checkInterval = setInterval(async () => {
-                try {
-                    checkCount++;
-                    const response = await apiFetch(`${API_BASE}/shop/qr?shopId=${shop.id}`);
-                    if (!response) return;
-
-                    if (response.ok) {
-                        const data = await response.json();
-                        if (data.connected) {
-                            clearInterval(checkInterval);
-                            updateConnectionStatus(true);
-                            showMessage('تم الاتصال بواتساب بنجاح!', 'success');
-                        } else if (checkCount >= maxChecks) {
-                            clearInterval(checkInterval);
-                            showMessage('انتهت مدة الانتظار. يرجى إعادة محاولة مسح كود QR.', 'error');
-                            updateConnectionStatus(false);
-                        }
-                    }
-                } catch (error) {
-                    console.error('Error checking connection:', error);
-                    if (checkCount >= maxChecks) {
-                        clearInterval(checkInterval);
-                        showMessage('حدث خطأ في التحقق من الاتصال. يرجى المحاولة مرة أخرى.', 'error');
-                    }
+            if (data.connected) {
+                statusIndicator.className = 'status-indicator connected';
+                statusText.textContent = 'متصل';
+                qrWrapper.style.display = 'none';
+                loadingSpinner.style.display = 'none';
+                connectedState.style.display = 'block';
+                connectBtn.style.display = 'none';
+                disconnectBtn.style.display = 'inline-flex';
+                
+                if (checkInterval) {
+                    clearInterval(checkInterval);
+                    checkInterval = null;
                 }
-            }, 3000);
-        }
-
-        // Refresh QR code - calls backend to generate new QR
-        async function refreshQR() {
-          const btn = document.getElementById('refreshBtn');
-          if (btn) {
-            btn.disabled = true;
-            btn.textContent = 'جارٍ التحديث...';
-          }
-          
-          try {
-            const shop = JSON.parse(localStorage.getItem('shop') || '{}');
-            if (!shop.id) {
-              console.error('No shop ID found');
-              return;
-            }
-            
-            // Call refresh endpoint
-            const response = await apiFetch(`${API_BASE}/shop/qr/refresh?shopId=${shop.id}`, { 
-              method: 'POST'
-            });
-            
-            if (!response) return;
-            
-            if (response.ok) {
-              const data = await response.json();
-              console.log('✅ QR refresh initiated:', data.message);
-              
-              // Show loading state
-              const qrContainer = document.getElementById('qrContainer');
-              qrContainer.innerHTML = `
-                <div class="qr-placeholder">
-                  <div class="qr-placeholder-icon">⏳</div>
-                  <div>جارٍ إنشاء كود QR جديد...</div>
-                </div>
-              `;
-              
-              // Wait 3 seconds then start polling
-              await new Promise(resolve => setTimeout(resolve, 3000));
-              
-              // Start polling for new QR
-              startQRPolling();
+            } else if (data.qr) {
+                statusIndicator.className = 'status-indicator connecting';
+                statusText.textContent = 'في انتظار المسح...';
+                qrCode.src = data.qr;
+                qrWrapper.style.display = 'inline-block';
+                loadingSpinner.style.display = 'none';
+                connectedState.style.display = 'none';
+                connectBtn.style.display = 'none';
+                disconnectBtn.style.display = 'none';
+                
+                if (!checkInterval) {
+                    checkInterval = setInterval(checkStatus, 3000);
+                }
             } else {
-              const error = await response.json();
-              showMessage(error.error || 'فشل تحديث كود QR', 'error');
+                statusIndicator.className = 'status-indicator disconnected';
+                statusText.textContent = 'غير متصل';
+                qrWrapper.style.display = 'none';
+                loadingSpinner.style.display = 'none';
+                connectedState.style.display = 'none';
+                connectBtn.style.display = 'inline-flex';
+                disconnectBtn.style.display = 'none';
+                
+                if (checkInterval) {
+                    clearInterval(checkInterval);
+                    checkInterval = null;
+                }
             }
-          } catch (err) {
-            console.error('Refresh failed:', err);
-            showMessage('فشل التحديث، يرجى المحاولة مرة أخرى', 'error');
-          } finally {
-            if (btn) {
-              btn.disabled = false;
-              btn.textContent = 'تحديث كود QR';
-            }
-          }
         }
-
-        // QR polling function - polls for new QR code
-        function startQRPolling() {
-          let attempts = 0;
-          const maxAttempts = 60; // 5 minutes max (60 * 5 seconds)
-          
-          const shop = JSON.parse(localStorage.getItem('shop') || '{}');
-          if (!shop.id) {
-            console.error('No shop ID for QR polling');
-            return;
-          }
-          
-          // Clear any existing interval
-          if (refreshInterval) {
-            clearInterval(refreshInterval);
-          }
-          
-          const interval = setInterval(async () => {
-            attempts++;
+        
+        async function startConnection() {
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            const connectBtn = document.getElementById('connectBtn');
             
-            if (attempts > maxAttempts) {
-              clearInterval(interval);
-              showMessage('انتهت مدة الانتظار. يرجى المحاولة مرة أخرى.', 'error');
-              return;
-            }
+            loadingSpinner.style.display = 'block';
+            connectBtn.disabled = true;
             
             try {
-              const response = await apiFetch(`${API_BASE}/shop/qr?shopId=${shop.id}`);
-              if (!response) return;
-              
-              const data = await response.json();
-              
-              if (data.connected) {
-                clearInterval(interval);
-                updateConnectionStatus(true);
-                showMessage('تم الاتصال بواتساب بنجاح!', 'success');
-                // Restart normal auto-refresh
-                startAutoRefresh();
-                return;
-              }
-              
-              if (data.qr) {
-                // New QR received
-                displayQR(data.qr);
-              }
+                const response = await fetch(`${API_URL}/bot/connect`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    checkStatus();
+                } else {
+                    alert(data.error || 'فشل بدء الاتصال');
+                    loadingSpinner.style.display = 'none';
+                    connectBtn.disabled = false;
+                }
             } catch (error) {
-              console.error('QR polling error:', error);
+                console.error('Failed to start connection:', error);
+                alert('حدث خطأ في الاتصال');
+                loadingSpinner.style.display = 'none';
+                connectBtn.disabled = false;
             }
-          }, 5000); // Poll every 5 seconds
-          
-          // Store interval so we can clear it later
-          refreshInterval = interval;
         }
-
         
-        // Disconnect
-        function disconnect() {
-            if (confirm('هل أنت متأكد من قطع الاتصال بواتساب؟')) {
-                localStorage.setItem('whatsappConnected', 'false');
-                updateConnectionStatus(false);
-                showMessage('تم قطع الاتصال بنجاح', 'success');
-            }
-        }
-
-        // Refresh status
-        async function refreshStatus() {
-            await checkConnectionStatus();
-        }
-
-        // Start auto refresh
-        function startAutoRefresh() {
-            if (refreshInterval) {
-                clearInterval(refreshInterval);
-            }
+        async function disconnect() {
+            if (!confirm('هل أنت متأكد من فصل الاتصال؟')) return;
             
-            refreshInterval = setInterval(async () => {
-                await checkConnectionStatus();
-            }, 5000); // Refresh every 5 seconds
-        }
-
-        // Update last refresh time
-        function updateLastRefresh() {
-            const lastUpdate = document.getElementById('lastUpdate');
-            lastUpdate.textContent = `آخر تحديث: ${new Date().toLocaleTimeString('ar-EG')}`;
-        }
-
-        // Show message
-        function showMessage(message, type) {
-            // Remove existing messages
-            const existingMessage = document.querySelector('.error-message, .success-message');
-            if (existingMessage) {
-                existingMessage.remove();
-            }
-
-            const messageDiv = document.createElement('div');
-            messageDiv.className = type === 'error' ? 'error-message' : 'success-message';
-            messageDiv.textContent = message;
-            
-            const connectionCard = document.querySelector('.connection-card');
-            connectionCard.insertBefore(messageDiv, document.getElementById('connectionContent'));
-            
-            // Auto remove after 5 seconds
-            setTimeout(() => {
-                messageDiv.remove();
-            }, 5000);
-        }
-
-        // Logout
-        function logout() {
-            if (confirm('هل أنت متأكد من تسجيل الخروج؟')) {
-                localStorage.removeItem('token');
-                localStorage.removeItem('shop');
-                localStorage.removeItem('whatsappConnected');
-                window.location.href = 'login.html';
+            try {
+                const response = await fetch(`${API_URL}/bot/disconnect`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (response.ok) {
+                    checkStatus();
+                } else {
+                    alert('فشل فصل الاتصال');
+                }
+            } catch (error) {
+                console.error('Failed to disconnect:', error);
+                alert('حدث خطأ في الاتصال');
             }
         }
-
-        // Cleanup on page unload
-        window.addEventListener('beforeunload', () => {
-            if (refreshInterval) {
-                clearInterval(refreshInterval);
-            }
-        });
+        
+        // Initial check
+        checkStatus();
+        
+        // Periodic check every 10 seconds
+        setInterval(checkStatus, 10000);
     </script>
 </body>
 </html>

@@ -3,753 +3,556 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>إدارة المنتجات - واحة بوت</title>
+    <title>المنتجات - Zaki Bot</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            min-height: 100vh;
         }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f5f5f5;
-            color: #333;
-        }
-
-        .header {
-            background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
-            color: white;
-            padding: 15px 20px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            position: sticky;
+        
+        .sidebar {
+            background: var(--bg-secondary);
+            border-left: 1px solid var(--border-color);
+            padding: var(--space-lg);
+            position: fixed;
+            right: 0;
             top: 0;
+            height: 100vh;
+            width: 250px;
+            overflow-y: auto;
             z-index: 100;
         }
-
-        .header-content {
+        
+        .sidebar-logo {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            max-width: 1200px;
-            margin: 0 auto;
+            gap: var(--space-sm);
+            margin-bottom: var(--space-xl);
+            padding-bottom: var(--space-md);
+            border-bottom: 1px solid var(--border-color);
         }
-
-        .logo {
-            font-size: 24px;
-            font-weight: bold;
-        }
-
-        .nav-links {
+        
+        .sidebar-logo-icon {
+            width: 45px;
+            height: 45px;
+            background: var(--gradient-primary);
+            border-radius: var(--radius-md);
             display: flex;
-            gap: 15px;
             align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
         }
-
+        
+        .sidebar-logo-text {
+            font-size: 1.25rem;
+            font-weight: 700;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .nav-menu {
+            list-style: none;
+        }
+        
+        .nav-item {
+            margin-bottom: var(--space-xs);
+        }
+        
         .nav-link {
-            color: white;
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            padding: var(--space-sm) var(--space-md);
+            color: var(--text-secondary);
             text-decoration: none;
-            font-size: 14px;
-            opacity: 0.9;
-            transition: opacity 0.3s ease;
+            border-radius: var(--radius-md);
+            transition: all var(--transition-base);
         }
-
-        .nav-link:hover {
-            opacity: 1;
+        
+        .nav-link:hover,
+        .nav-link.active {
+            background: var(--bg-glass);
+            color: var(--text-primary);
         }
-
-        .logout-btn {
-            background: rgba(255, 255, 255, 0.2);
+        
+        .nav-link.active {
+            background: var(--gradient-primary);
             color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 12px;
-            transition: all 0.3s ease;
         }
-
-        .logout-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
+        
+        .main-content {
+            margin-right: 250px;
+            padding: var(--space-lg);
         }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
+        
         .page-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 30px;
+            margin-bottom: var(--space-lg);
             flex-wrap: wrap;
-            gap: 15px;
+            gap: var(--space-sm);
         }
-
-        .page-title {
-            font-size: 28px;
-            font-weight: bold;
-            color: #333;
-        }
-
-        .btn {
-            background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            display: inline-block;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(37, 211, 102, 0.3);
-        }
-
-        .btn-secondary {
-            background: #6c757d;
-        }
-
-        .btn-danger {
-            background: #dc3545;
-        }
-
-        .btn-small {
-            padding: 6px 12px;
-            font-size: 12px;
-        }
-
-        .main-content {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 20px;
-        }
-
-        @media (min-width: 768px) {
-            .main-content {
-                grid-template-columns: 400px 1fr;
-            }
-        }
-
-        .form-section {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-            height: fit-content;
-        }
-
-        .section-title {
-            font-size: 20px;
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid #e0e0e0;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        label {
-            display: block;
-            color: #333;
-            font-weight: 500;
-            margin-bottom: 8px;
-            font-size: 14px;
-        }
-
-        input, textarea, select {
-            width: 100%;
-            padding: 12px 15px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 14px;
-            transition: all 0.3s ease;
-            text-align: right;
-        }
-
-        input:focus, textarea:focus, select:focus {
-            outline: none;
-            border-color: #25D366;
-            box-shadow: 0 0 0 3px rgba(37, 211, 102, 0.1);
-        }
-
-        textarea {
-            resize: vertical;
-            min-height: 80px;
-        }
-
-        .checkbox-group {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .checkbox-group input[type="checkbox"] {
-            width: auto;
-            margin: 0;
-        }
-
-        .products-section {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-        }
-
-        .search-filter {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-
-        .search-input {
-            flex: 1;
-            min-width: 200px;
-        }
-
-        .filter-select {
-            min-width: 150px;
-        }
-
+        
         .products-grid {
             display: grid;
-            gap: 15px;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: var(--space-md);
         }
-
+        
         .product-card {
-            border: 1px solid #e0e0e0;
-            border-radius: 12px;
-            padding: 20px;
-            transition: all 0.3s ease;
+            padding: var(--space-md);
+            position: relative;
+            overflow: hidden;
         }
-
-        .product-card:hover {
-            border-color: #25D366;
-            box-shadow: 0 5px 15px rgba(37, 211, 102, 0.1);
+        
+        .product-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--gradient-primary);
+            transform: scaleX(0);
+            transition: transform var(--transition-base);
         }
-
+        
+        .product-card:hover::before {
+            transform: scaleX(1);
+        }
+        
         .product-header {
             display: flex;
             justify-content: space-between;
-            align-items: start;
-            margin-bottom: 15px;
+            align-items: flex-start;
+            margin-bottom: var(--space-sm);
         }
-
+        
         .product-name {
-            font-size: 18px;
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 5px;
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
         }
-
-        .product-price {
-            font-size: 20px;
-            font-weight: bold;
-            color: #25D366;
-        }
-
+        
         .product-category {
-            display: inline-block;
-            background: #e8f5e8;
-            color: #25D366;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            margin-bottom: 10px;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
         }
-
-        .product-description {
-            color: #666;
-            font-size: 14px;
-            line-height: 1.5;
-            margin-bottom: 15px;
+        
+        .product-price {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: var(--space-sm) 0;
         }
-
-        .product-status {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 500;
-            margin-bottom: 15px;
-        }
-
-        .status-available {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .status-unavailable {
-            background: #f8d7da;
-            color: #721c24;
-        }
-
+        
         .product-actions {
             display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
+            gap: var(--space-xs);
+            margin-top: var(--space-md);
         }
-
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: #666;
+        
+        .btn-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-color);
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all var(--transition-base);
         }
-
-        .spinner {
-            display: inline-block;
-            width: 30px;
-            height: 30px;
-            border: 3px solid #e0e0e0;
-            border-radius: 50%;
-            border-top-color: #25D366;
-            animation: spin 1s ease-in-out infinite;
-            margin-bottom: 10px;
+        
+        .btn-icon:hover {
+            background: var(--bg-glass);
+            color: var(--text-primary);
+            border-color: var(--primary);
         }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
+        
+        .btn-icon.delete:hover {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            border-color: #ef4444;
         }
-
+        
+        .add-product-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--space-md);
+            margin-bottom: var(--space-lg);
+        }
+        
         .empty-state {
             text-align: center;
-            padding: 40px;
-            color: #666;
+            padding: var(--space-xl);
+            color: var(--text-secondary);
         }
-
-        .empty-icon {
-            font-size: 48px;
-            margin-bottom: 15px;
+        
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: var(--space-md);
             opacity: 0.5;
         }
-
-        .toast {
+        
+        .modal-overlay {
             position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #333;
-            color: white;
-            padding: 15px 25px;
-            border-radius: 8px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
             z-index: 1000;
             opacity: 0;
-            transition: opacity 0.3s ease;
+            visibility: hidden;
+            transition: all var(--transition-base);
         }
-
-        .toast.show {
+        
+        .modal-overlay.active {
             opacity: 1;
+            visibility: visible;
         }
-
-        .toast.success {
-            background: #25D366;
+        
+        .modal-content {
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: var(--space-lg);
         }
-
-        .toast.error {
-            background: #dc3545;
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--space-md);
         }
-
+        
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: color var(--transition-base);
+        }
+        
+        .modal-close:hover {
+            color: var(--text-primary);
+        }
+        
+        @media (max-width: 1024px) {
+            .sidebar {
+                transform: translateX(100%);
+            }
+            
+            .main-content {
+                margin-right: 0;
+            }
+        }
+        
         @media (max-width: 768px) {
-            .header-content {
-                flex-direction: column;
-                gap: 10px;
+            .products-grid {
+                grid-template-columns: 1fr;
             }
-
-            .container {
-                padding: 15px;
-            }
-
-            .page-header {
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-            .search-filter {
-                flex-direction: column;
-            }
-
-            .search-input,
-            .filter-select {
-                min-width: 100%;
+            
+            .add-product-form {
+                grid-template-columns: 1fr;
             }
         }
     </style>
 </head>
 <body>
-    <header class="header">
-        <div class="header-content">
-            <div class="logo">🤖 واحة بوت</div>
-            <div class="nav-links">
-                <a href="dashboard.html" class="nav-link">لوحة التحكم</a>
-                <a href="products.html" class="nav-link">المنتجات</a>
-                <a href="qr.html" class="nav-link">ربط واتساب</a>
-                <button class="logout-btn" onclick="logout()">خروج</button>
+    <div class="bg-animation"></div>
+    
+    <div class="dashboard-grid">
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <div class="sidebar-logo-icon">🤖</div>
+                <span class="sidebar-logo-text">Zaki</span>
             </div>
-        </div>
-    </header>
-
-    <div class="container">
-        <div class="page-header">
-            <h1 class="page-title">إدارة المنتجات</h1>
-            <button class="btn" onclick="showAddForm()">إضافة منتج جديد</button>
-        </div>
-
-        <div class="main-content">
-            <!-- Add/Edit Product Form -->
-            <div class="form-section" id="formSection" style="display: none;">
-                <h2 class="section-title" id="formTitle">إضافة منتج جديد</h2>
-                <form id="productForm">
-                    <input type="hidden" id="productId">
-                    
-                    <div class="form-group">
-                        <label for="productName">اسم المنتج *</label>
-                        <input type="text" id="productName" required>
+            
+            <nav>
+                <ul class="nav-menu">
+                    <li class="nav-item">
+                        <a href="dashboard.html" class="nav-link">
+                            <span>📊</span>
+                            <span>لوحة التحكم</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="products.html" class="nav-link active">
+                            <span>📦</span>
+                            <span>المنتجات</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="qr.html" class="nav-link">
+                            <span>📱</span>
+                            <span>اتصال الواتساب</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+        
+        <main class="main-content">
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">📦 المنتجات</h1>
+                    <p class="page-subtitle">إدارة منتجات متجرك</p>
+                </div>
+                <button class="btn btn-primary" onclick="openModal()">
+                    <span>+</span>
+                    <span>إضافة منتج</span>
+                </button>
+            </div>
+            
+            <div class="glass-card" style="margin-bottom: var(--space-lg); padding: var(--space-md);">
+                <form id="quickAddForm" class="add-product-form">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <input type="text" id="quickName" class="form-input" placeholder="اسم المنتج" required>
                     </div>
-
-                    <div class="form-group">
-                        <label for="productPrice">السعر (ج.م) *</label>
-                        <input type="number" id="productPrice" step="0.01" min="0" required>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <input type="number" id="quickPrice" class="form-input" placeholder="السعر" required>
                     </div>
-
-                    <div class="form-group">
-                        <label for="productCategory">الفئة</label>
-                        <input type="text" id="productCategory" placeholder="مثال: مشروبات، حلويات">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <input type="text" id="quickCategory" class="form-input" placeholder="الفئة (اختياري)">
                     </div>
-
-                    <div class="form-group">
-                        <label for="productDescription">الوصف</label>
-                        <textarea id="productDescription" placeholder="وصف المنتج والمكونات..."></textarea>
-                    </div>
-
-                    <div class="form-group">
-                        <div class="checkbox-group">
-                            <input type="checkbox" id="productAvailable" checked>
-                            <label for="productAvailable">متاح للطلب</label>
-                        </div>
-                    </div>
-
-                    <div style="display: flex; gap: 10px;">
-                        <button type="submit" class="btn" id="submitBtn">حفظ المنتج</button>
-                        <button type="button" class="btn btn-secondary" onclick="hideForm()">إلغاء</button>
-                    </div>
+                    <button type="submit" class="btn btn-primary" style="height: fit-content;">
+                        إضافة سريعة
+                    </button>
                 </form>
             </div>
-
-            <!-- Products List -->
-            <div class="products-section">
-                <h2 class="section-title">المنتجات</h2>
-                
-                <div class="search-filter">
-                    <input type="text" class="search-input" id="searchInput" placeholder="البحث عن منتج...">
-                    <select class="filter-select" id="categoryFilter">
-                        <option value="">جميع الفئات</option>
-                    </select>
-                    <select class="filter-select" id="availabilityFilter">
-                        <option value="">جميع المنتجات</option>
-                        <option value="true">المتاحة فقط</option>
-                        <option value="false">غير المتاحة</option>
-                    </select>
-                </div>
-
-                <div class="products-grid" id="productsGrid">
-                    <div class="loading">
-                        <div class="spinner"></div>
-                        <div>جاري تحميل المنتجات...</div>
-                    </div>
+            
+            <div id="productsContainer" class="products-grid">
+                <div class="empty-state glass-card">
+                    <div class="empty-state-icon">📦</div>
+                    <h3>لا توجد منتجات</h3>
+                    <p>ابدأ بإضافة منتجات إلى متجرك</p>
                 </div>
             </div>
+        </main>
+    </div>
+    
+    <!-- Modal -->
+    <div id="productModal" class="modal-overlay">
+        <div class="modal-content glass-card">
+            <div class="modal-header">
+                <h2>إضافة منتج جديد</h2>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <form id="productForm">
+                <div class="form-group">
+                    <label class="form-label">اسم المنتج</label>
+                    <input type="text" id="productName" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">السعر</label>
+                    <input type="number" id="productPrice" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">الفئة</label>
+                    <input type="text" id="productCategory" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">الوصف</label>
+                    <textarea id="productDescription" class="form-input" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">
+                        <input type="checkbox" id="productAvailable" checked>
+                        متاح للبيع
+                    </label>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">
+                    حفظ المنتج
+                </button>
+            </form>
         </div>
     </div>
-
-    <div class="toast" id="toast"></div>
-
+    
     <script>
-        const API_BASE = window.location.origin + '/api';
-        let currentProducts = [];
-        let editingProduct = null;
-
-        // Global API fetch helper with 401 handling
-        async function apiFetch(url, options = {}) {
-            const token = localStorage.getItem('token');
-            
-            const res = await fetch(url, {
-                ...options,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
-                    ...options.headers
-                }
-            });
-            
-            if (res.status === 401) {
-                localStorage.removeItem('token');
-                localStorage.removeItem('shop');
-                window.location.href = 'login.html';
-                return;
-            }
-            
-            return res;
+        const API_URL = window.location.origin + '/api';
+        const token = localStorage.getItem('token');
+        
+        if (!token) {
+            window.location.href = 'login.html';
         }
-
-        // Initialize page
-        window.addEventListener('load', async () => {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                window.location.href = 'login.html';
-                return;
-            }
-
-            await loadProducts();
-            await loadCategories();
-            
-            // Setup search and filters
-            document.getElementById('searchInput').addEventListener('input', filterProducts);
-            document.getElementById('categoryFilter').addEventListener('change', filterProducts);
-            document.getElementById('availabilityFilter').addEventListener('change', filterProducts);
-        });
-
-        // Load products
+        
+        let products = [];
+        
         async function loadProducts() {
             try {
-                const response = await apiFetch(`${API_BASE}/products`);
-                if (!response) return;
-
+                const response = await fetch(`${API_URL}/shop/products`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
                 if (response.ok) {
-                    const data = await response.json();
-                    currentProducts = data.products;
-                    displayProducts(currentProducts);
-                } else {
-                    displayProducts([]);
+                    products = await response.json();
+                    renderProducts();
                 }
             } catch (error) {
-                console.error('Error loading products:', error);
-                displayProducts([]);
+                console.error('Failed to load products:', error);
             }
         }
-
-        // Load categories
-        async function loadCategories() {
-            try {
-                const response = await apiFetch(`${API_BASE}/products/categories/list`);
-                if (!response) return;
-
-                if (response.ok) {
-                    const data = await response.json();
-                    const categoryFilter = document.getElementById('categoryFilter');
-                    
-                    data.categories.forEach(category => {
-                        const option = document.createElement('option');
-                        option.value = category;
-                        option.textContent = category;
-                        categoryFilter.appendChild(option);
-                    });
-                }
-            } catch (error) {
-                console.error('Error loading categories:', error);
-            }
-        }
-
-        // Display products
-        function displayProducts(products) {
-            const grid = document.getElementById('productsGrid');
-
+        
+        function renderProducts() {
+            const container = document.getElementById('productsContainer');
+            
             if (products.length === 0) {
-                grid.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-icon">📦</div>
-                        <div>لا توجد منتجات حالياً</div>
-                        <button class="btn" onclick="showAddForm()" style="margin-top: 20px;">
-                            إضافة منتج جديد
-                        </button>
+                container.innerHTML = `
+                    <div class="empty-state glass-card">
+                        <div class="empty-state-icon">📦</div>
+                        <h3>لا توجد منتجات</h3>
+                        <p>ابدأ بإضافة منتجات إلى متجرك</p>
                     </div>
                 `;
                 return;
             }
-
-            grid.innerHTML = products.map(product => `
-                <div class="product-card">
+            
+            container.innerHTML = products.map(product => `
+                <div class="product-card glass-card">
                     <div class="product-header">
                         <div>
                             <div class="product-name">${product.name}</div>
-                            <div class="product-price">${product.price} ج.م</div>
-                        </div>
-                        <div class="product-status ${product.isAvailable ? 'status-available' : 'status-unavailable'}">
-                            ${product.isAvailable ? 'متاح' : 'غير متاح'}
+                            <div class="product-category">${product.category || 'بدون فئة'}</div>
                         </div>
                     </div>
-                    
-                    ${product.category ? `<div class="product-category">${product.category}</div>` : ''}
-                    
-                    ${product.description ? `<div class="product-description">${product.description}</div>` : ''}
-                    
+                    <div class="product-price">${product.price} ج.م</div>
+                    <div style="color: var(--text-secondary); font-size: 0.875rem;">
+                        ${product.isAvailable ? '🟢 متاح' : '🔴 غير متاح'}
+                    </div>
                     <div class="product-actions">
-                        <button class="btn btn-small" onclick="editProduct('${product.id}')">
-                            تعديل
+                        <button class="btn-icon" onclick="editProduct('${product.id}')" title="تعديل">
+                            ✏️
                         </button>
-                        <button class="btn btn-danger btn-small" onclick="deleteProduct('${product.id}')">
-                            حذف
+                        <button class="btn-icon delete" onclick="deleteProduct('${product.id}')" title="حذف">
+                            🗑️
                         </button>
                     </div>
                 </div>
             `).join('');
         }
-
-        // Filter products
-        function filterProducts() {
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-            const category = document.getElementById('categoryFilter').value;
-            const availability = document.getElementById('availabilityFilter').value;
-
-            const filtered = currentProducts.filter(product => {
-                const matchesSearch = product.name.toLowerCase().includes(searchTerm) ||
-                                     (product.description && product.description.toLowerCase().includes(searchTerm));
-                const matchesCategory = !category || product.category === category;
-                const matchesAvailability = !availability || product.isAvailable.toString() === availability;
-
-                return matchesSearch && matchesCategory && matchesAvailability;
-            });
-
-            displayProducts(filtered);
-        }
-
-        // Show add form
-        function showAddForm() {
-            editingProduct = null;
-            document.getElementById('formTitle').textContent = 'إضافة منتج جديد';
-            document.getElementById('submitBtn').textContent = 'حفظ المنتج';
-            document.getElementById('productForm').reset();
-            document.getElementById('formSection').style.display = 'block';
-        }
-
-        // Edit product
-        function editProduct(productId) {
-            const product = currentProducts.find(p => p.id === productId);
-            if (!product) return;
-
-            editingProduct = product;
-            document.getElementById('formTitle').textContent = 'تعديل المنتج';
-            document.getElementById('submitBtn').textContent = 'تحديث المنتج';
-            
-            document.getElementById('productId').value = product.id;
-            document.getElementById('productName').value = product.name;
-            document.getElementById('productPrice').value = product.price;
-            document.getElementById('productCategory').value = product.category || '';
-            document.getElementById('productDescription').value = product.description || '';
-            document.getElementById('productAvailable').checked = product.isAvailable;
-            
-            document.getElementById('formSection').style.display = 'block';
-        }
-
-        // Hide form
-        function hideForm() {
-            document.getElementById('formSection').style.display = 'none';
-            document.getElementById('productForm').reset();
-            editingProduct = null;
-        }
-
-        // Handle form submission
-        document.getElementById('productForm').addEventListener('submit', async (e) => {
+        
+        // Quick add form
+        document.getElementById('quickAddForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-
-            const formData = {
-                name: document.getElementById('productName').value,
-                price: parseFloat(document.getElementById('productPrice').value),
-                category: document.getElementById('productCategory').value || null,
-                description: document.getElementById('productDescription').value || null,
-                isAvailable: document.getElementById('productAvailable').checked
+            
+            const productData = {
+                name: document.getElementById('quickName').value,
+                price: parseFloat(document.getElementById('quickPrice').value),
+                category: document.getElementById('quickCategory').value,
+                isAvailable: true
             };
-
-            const submitBtn = document.getElementById('submitBtn');
-            const originalText = submitBtn.textContent;
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'جاري الحفظ...';
-
+            
             try {
-                const url = editingProduct ? 
-                    `${API_BASE}/products/${editingProduct.id}` : 
-                    `${API_BASE}/products`;
-                const method = editingProduct ? 'PUT' : 'POST';
-
-                const response = await apiFetch(url, {
-                    method,
-                    body: JSON.stringify(formData)
+                const response = await fetch(`${API_URL}/shop/products`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(productData)
                 });
                 
-                if (!response) return;
-
                 if (response.ok) {
-                    showToast(editingProduct ? 'تم تحديث المنتج بنجاح' : 'تم إضافة المنتج بنجاح', 'success');
-                    hideForm();
-                    await loadProducts();
+                    document.getElementById('quickAddForm').reset();
+                    loadProducts();
                 } else {
-                    const error = await response.json();
-                    showToast(error.error || 'فشل حفظ المنتج', 'error');
+                    alert('فشل إضافة المنتج');
                 }
             } catch (error) {
-                console.error('Error saving product:', error);
-                showToast('حدث خطأ في حفظ المنتج', 'error');
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.textContent = originalText;
+                console.error('Failed to add product:', error);
+                alert('حدث خطأ في الاتصال');
             }
         });
-
-        // Delete product
-        async function deleteProduct(productId) {
-            if (!confirm('هل أنت متأكد من حذف هذا المنتج؟')) return;
-
+        
+        // Modal form
+        document.getElementById('productForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const productData = {
+                name: document.getElementById('productName').value,
+                price: parseFloat(document.getElementById('productPrice').value),
+                category: document.getElementById('productCategory').value,
+                description: document.getElementById('productDescription').value,
+                isAvailable: document.getElementById('productAvailable').checked
+            };
+            
             try {
-                const response = await apiFetch(`${API_BASE}/products/${productId}`, {
-                    method: 'DELETE'
+                const response = await fetch(`${API_URL}/shop/products`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(productData)
                 });
                 
-                if (!response) return;
-
                 if (response.ok) {
-                    showToast('تم حذف المنتج بنجاح', 'success');
-                    await loadProducts();
+                    closeModal();
+                    document.getElementById('productForm').reset();
+                    loadProducts();
                 } else {
-                    const error = await response.json();
-                    showToast(error.error || 'فشل حذف المنتج', 'error');
+                    alert('فشل إضافة المنتج');
                 }
             } catch (error) {
-                console.error('Error deleting product:', error);
-                showToast('حدث خطأ في حذف المنتج', 'error');
+                console.error('Failed to add product:', error);
+                alert('حدث خطأ في الاتصال');
+            }
+        });
+        
+        async function deleteProduct(id) {
+            if (!confirm('هل أنت متأكد من حذف هذا المنتج؟')) return;
+            
+            try {
+                const response = await fetch(`${API_URL}/shop/products/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (response.ok) {
+                    loadProducts();
+                } else {
+                    alert('فشل حذف المنتج');
+                }
+            } catch (error) {
+                console.error('Failed to delete product:', error);
+                alert('حدث خطأ في الاتصال');
             }
         }
-
-        // Show toast notification
-        function showToast(message, type = 'success') {
-            const toast = document.getElementById('toast');
-            toast.textContent = message;
-            toast.className = `toast ${type}`;
-            toast.classList.add('show');
-
-            setTimeout(() => {
-                toast.classList.remove('show');
-            }, 3000);
+        
+        function openModal() {
+            document.getElementById('productModal').classList.add('active');
         }
-
-        // Logout
-        function logout() {
-            if (confirm('هل أنت متأكد من تسجيل الخروج؟')) {
-                localStorage.removeItem('token');
-                localStorage.removeItem('shop');
-                window.location.href = 'login.html';
+        
+        function closeModal() {
+            document.getElementById('productModal').classList.remove('active');
+        }
+        
+        // Close modal on overlay click
+        document.getElementById('productModal').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) {
+                closeModal();
             }
-        }
+        });
+        
+        // Initial load
+        loadProducts();
     </script>
 </body>
 </html>

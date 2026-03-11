@@ -379,6 +379,31 @@ class BotManager {
       // FIX 3: Check for frustration and repeating messages - BUT ONLY FOR UNKNOWN MESSAGES
       console.log(`🔍 Processing message: "${lowerText}"`);
       
+      // CRITICAL FIX: Check for cancel confirmation FIRST, before yes/no intents
+      const cancelConfirmKey = `cancel_confirm:${shop.id}:${customerPhone}`;
+      const pendingConfirm = await redis.get(cancelConfirmKey);
+      if (pendingConfirm === 'waiting') {
+        console.log(`✓ Cancel confirmation state detected`);
+        if (this.matchesIntent(lowerText, 'yes')) {
+          console.log(`✓ Confirming cancel - clearing cart`);
+          await this.clearCart(sock, from, shop.id, customerPhone, shop.name);
+          await redis.del(cancelConfirmKey);
+          return;
+        } else if (this.matchesIntent(lowerText, 'no')) {
+          console.log(`✓ Canceling clear - keeping cart`);
+          await redis.del(cancelConfirmKey);
+          await this.showCart(sock, from, shop.id, customerPhone, shop);
+          return;
+        } else {
+          // Any other message in confirmation state - remind them
+          await this.safeSendMessage(sock, from, 
+            `⚠️ هل تريد مسح السلة؟\n\n` +
+            `اكتب *نعم* لتأكيد المسح\n` +
+            `اكتب *لا* للإلغاء`, shop.name, shop.id, customerPhone);
+          return;
+        }
+      }
+      
       // Track message count for AI takeover decision
       const msgCountKey = `msgcount:${shop.id}:${customerPhone}`;
       const msgCount = parseInt(await redis.get(msgCountKey) || '0') + 1;
@@ -422,9 +447,10 @@ class BotManager {
         console.log(`✓ Matched: cancel`);
         await this.handleCancelCommand(sock, from, shop, customerPhone, context);
         return;
-      } else if (this.matchesIntent(lowerText, 'help')) {
-        console.log(`✓ Matched: help`);
-        await this.sendHelpMessage(sock, from, shop, context);
+      } else if (lowerText.startsWith('شيل ') || lowerText.startsWith('احذف ') || lowerText.startsWith('امسح ')) {
+        console.log(`✓ Matched: remove item command`);
+        const itemName = text.substring(text.indexOf(' ') + 1).trim();
+        await this.removeFromCart(sock, from, shop.id, customerPhone, itemName, shop);
         return;
       } else if (/^\d+$/.test(text)) {
         console.log(`✓ Matched: product number`);
@@ -754,6 +780,59 @@ class BotManager {
     // FIX 5: Friendly cancel success message
     await this.safeSendMessage(sock, from, 
       "تم مسح سلتك بنجاح ✅\nنتمنى أن نراك مجدداً! اكتب *قائمة* لتصفح منتجاتنا.", shopName, shopId, customerPhone);
+  }
+
+  // NEW: Remove item from cart
+  async removeFromCart(sock, from, shopId, customerPhone, itemName, shop) {
+    try {
+      const cartKey = `cart:${shopId}:${customerPhone}`;
+      let cart = await redis.get(cartKey);
+      let items = [];
+      if (cart) {
+        try {
+          items = typeof cart === 'string' ? JSON.parse(cart) : cart;
+        } catch (e) { items = []; }
+      }
+
+      if (items.length === 0) {
+        await this.safeSendMessage(sock, from, 
+          "السلة فارغة بالفعل! 🛒\nاكتب *قائمة* لتصفح منتجاتنا.", shop.name, shopId, customerPhone);
+        return;
+      }
+
+      // Find item by name (partial match)
+      const itemIndex = items.findIndex(item => 
+        item.name.toLowerCase().includes(itemName.toLowerCase()) ||
+        itemName.toLowerCase().includes(item.name.toLowerCase())
+      );
+
+      if (itemIndex === -1) {
+        await this.safeSendMessage(sock, from, 
+          `لم أجد "${itemName}" في السلة 😕\n\n` +
+          `اكتب *كارت* لعرض محتويات السلة.`, shop.name, shopId, customerPhone);
+        return;
+      }
+
+      const removedItem = items[itemIndex];
+      items.splice(itemIndex, 1);
+
+      if (items.length === 0) {
+        await redis.del(cartKey);
+        await this.safeSendMessage(sock, from, 
+          `تمت إزالة ${removedItem.name} من السلة ✅\n\n` +
+          `الآن السلة فارغة. اكتب *قائمة* لاختيار منتجات جديدة.`, shop.name, shopId, customerPhone);
+      } else {
+        await redis.set(cartKey, JSON.stringify(items), { ex: 3600 });
+        const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+        await this.safeSendMessage(sock, from, 
+          `تمت إزالة ${removedItem.name} من السلة ✅\n\n` +
+          `لديك الآن ${items.length} منتجات بإجمالي ${total} جنيه.\n` +
+          `اكتب *كارت* لعرض السلة.`, shop.name, shopId, customerPhone);
+      }
+    } catch (error) {
+      console.error(`❌ Error in removeFromCart:`, error);
+      await this.safeSendMessage(sock, from, "عذراً، حدث خطأ أثناء إزالة المنتج 🙏", shop.name);
+    }
   }
 
   async confirmOrder(sock, from, shopId, customerPhone, shop) {
@@ -1328,6 +1407,16 @@ ${contextMessage}
     if (!intentPatterns) return false;
     
     // Try fuzzy matching with tolerance for spelling mistakes
+    // For 'yes' and 'no' intents, require exact match (not partial) to avoid false positives
+    if (intent === 'yes' || intent === 'no') {
+      // Require exact match or standalone word for yes/no
+      return intentPatterns.some(p => {
+        const normalizedText = ' ' + this.normalizeText(text) + ' ';
+        const normalizedPattern = ' ' + this.normalizeText(p) + ' ';
+        return normalizedText === normalizedPattern || 
+               normalizedText.includes(normalizedPattern);
+      });
+    }
     return intentPatterns.some(p => this.fuzzyMatch(text, p, 0.75));
   }
 

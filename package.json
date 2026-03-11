@@ -4,7 +4,7 @@
   "description": "WhatsApp Bot SaaS platform for Egyptian shops",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
+    "start": "node src/scripts/db-setup.js && node index.js",
     "dev": "nodemon index.js",
     "postinstall": "DATABASE_URL=postgresql://placeholder:placeholder@localhost:5432/postgres npx prisma generate || true",
     "db:generate": "prisma generate",

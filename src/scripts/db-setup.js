@@ -6,7 +6,7 @@ console.log('🔄 Running database setup...');
 try {
   // Run Prisma db push to create tables
   execSync('npx prisma db push --accept-data-loss', {
-    cwd: path.resolve(__dirname, '..'),
+    cwd: path.resolve(__dirname, '../..'),
     stdio: 'inherit',
     env: { ...process.env }
   });

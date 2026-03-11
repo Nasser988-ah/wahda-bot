@@ -72,6 +72,19 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok' })
 })
 
+// DB health check
+app.get('/health/db', async (req, res) => {
+  try {
+    const { PrismaClient } = require('@prisma/client');
+    const prisma = new PrismaClient();
+    await prisma.$queryRaw`SELECT 1`;
+    await prisma.$disconnect();
+    res.status(200).json({ status: 'ok', database: 'connected' });
+  } catch (error) {
+    res.status(500).json({ status: 'error', database: 'disconnected', error: error.message });
+  }
+})
+
 // Railway fallback healthcheck - works without DB
 app.get('/api/products', (req, res) => {
   res.status(200).json({ status: 'ok', products: [] })

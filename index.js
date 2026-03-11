@@ -68,9 +68,9 @@ app.use("/api", apiLimiter);
 app.use(express.static("public"));
 
 // Health check
-app.get("/health", (req, res) => {
-  res.json({ status: "ok", timestamp: new Date().toISOString() });
-});
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok' })
+})
 
 // API routes
 app.use("/api", apiRoutes);

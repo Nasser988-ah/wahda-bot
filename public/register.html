@@ -295,9 +295,11 @@
                         window.location.href = 'dashboard.html';
                     }, 2000);
                 } else {
-                    if (data.details && data.details.length > 0) {
+                    if (data.details && Array.isArray(data.details) && data.details.length > 0) {
                         const errorMessages = data.details.map(err => err.message).join(', ');
                         showError(errorMessages);
+                    } else if (data.details) {
+                        showError(data.details);
                     } else {
                         showError(data.error || 'فشل إنشاء الحساب');
                     }

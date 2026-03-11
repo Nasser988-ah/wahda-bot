@@ -1,0 +1,4 @@
+[build]
+cmd = "export DATABASE_URL=postgresql://placeholder:placeholder@localhost:5432/postgres && npm ci && npx prisma generate"
+[deploy]
+startCommand = "npm start"

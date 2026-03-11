@@ -344,13 +344,13 @@
         // Load dashboard data
         async function loadDashboard() {
             try {
-                const response = await fetch(`${API_URL}/shop/dashboard`, {
+                const response = await fetch(`${API_URL}/products`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 
                 if (response.ok) {
                     const data = await response.json();
-                    document.getElementById('totalProducts').textContent = data.totalProducts || 0;
+                    document.getElementById('totalProducts').textContent = data.total || 0;
                     document.getElementById('todayOrders').textContent = data.todayOrders || 0;
                     document.getElementById('totalRevenue').textContent = data.totalRevenue || 0;
                     document.getElementById('totalCustomers').textContent = data.totalCustomers || 0;

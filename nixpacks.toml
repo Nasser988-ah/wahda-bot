@@ -1,5 +1,6 @@
 [phases.build]
 cmds = [
+  "apt-get update && apt-get install -y libssl1.1 || apt-get install -y libssl3 || true",
   "DATABASE_URL='postgresql://placeholder:placeholder@localhost:5432/postgres' npm ci && DATABASE_URL='postgresql://placeholder:placeholder@localhost:5432/postgres' npx prisma generate"
 ]
 

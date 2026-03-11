@@ -1,4 +1,7 @@
 [phases.build]
 cmds = [
-  "export DATABASE_URL='postgresql://placeholder:placeholder@localhost:5432/postgres' && npm install && npx prisma generate"
+  "DATABASE_URL='postgresql://placeholder:placeholder@localhost:5432/postgres' npm ci && DATABASE_URL='postgresql://placeholder:placeholder@localhost:5432/postgres' npx prisma generate"
 ]
+
+[start]
+cmd = "npm start"

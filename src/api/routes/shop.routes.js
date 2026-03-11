@@ -257,36 +257,28 @@ router.put("/me", async (req, res) => {
 
 
 // Get shop statistics
-router.get("/dashboard", authenticateToken, async (req, res) => {
+router.get("/stats", async (req, res) => {
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    // Get products count
-    const productsCount = await prisma.product.count({
-      where: { shopId: req.shop.id, isAvailable: true }
-    });
-    
-    // Get today's orders
-    const todayOrders = await prisma.order.count({
-      where: { 
-        shopId: req.shop.id,
-        createdAt: { gte: today }
+    const stats = await prisma.shop.findUnique({
+      where: { id: req.shop.id },
+      select: {
+        _count: {
+          select: {
+            products: {
+              where: { isAvailable: true }
+            },
+            orders: {
+              where: {
+                createdAt: {
+                  gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) // Last 30 days
+                }
+              }
+            }
+          }
+        }
       }
     });
-    
-    // Get total revenue
-    const revenue = await prisma.order.aggregate({
-      where: { shopId: req.shop.id },
-      _sum: { totalPrice: true }
-    });
-    
-    // Get unique customers
-    const uniqueCustomers = await prisma.order.groupBy({
-      by: ['customerPhone'],
-      where: { shopId: req.shop.id }
-    });
-    
+
     // Get recent orders
     const recentOrders = await prisma.order.findMany({
       where: { shopId: req.shop.id },
@@ -303,57 +295,14 @@ router.get("/dashboard", authenticateToken, async (req, res) => {
     });
 
     res.json({
-      totalProducts: productsCount,
-      todayOrders: todayOrders,
-      totalRevenue: revenue._sum.totalPrice || 0,
-      totalCustomers: uniqueCustomers.length,
-      recentOrders: recentOrders
+      products: stats?._count?.products || 0,
+      recentOrders: stats?._count?.orders || 0,
+      recentOrdersList: recentOrders
     });
 
   } catch (error) {
-    console.error("Get dashboard error:", error);
-    res.status(500).json({ error: "Failed to get dashboard data" });
-  }
-});
-
-// Bot status endpoint
-router.get("/bot/status", authenticateToken, async (req, res) => {
-  try {
-    const status = await qrService.getConnectionStatus(req.shop.id);
-    res.json(status);
-  } catch (error) {
-    console.error("Get bot status error:", error);
-    res.status(500).json({ error: "Failed to get bot status" });
-  }
-});
-
-// Bot connect endpoint
-router.post("/bot/connect", authenticateToken, async (req, res) => {
-  try {
-    // Check if already connected
-    const status = await qrService.getConnectionStatus(req.shop.id);
-    if (status.connected) {
-      return res.json({ connected: true, status: 'already_connected' });
-    }
-    
-    // Generate QR code
-    const qrResult = await qrService.generateQR(req.shop.id, false);
-    res.json(qrResult);
-  } catch (error) {
-    console.error("Bot connect error:", error);
-    res.status(500).json({ error: "Failed to start connection" });
-  }
-});
-
-// Bot disconnect endpoint
-router.post("/bot/disconnect", authenticateToken, async (req, res) => {
-  try {
-    // Reset connection state
-    qrService.botManager.connectionStates.set(req.shop.id, 'not_started');
-    res.json({ success: true, message: "Disconnected successfully" });
-  } catch (error) {
-    console.error("Bot disconnect error:", error);
-    res.status(500).json({ error: "Failed to disconnect" });
+    console.error("Get stats error:", error);
+    res.status(500).json({ error: "Failed to get shop statistics" });
   }
 });
 

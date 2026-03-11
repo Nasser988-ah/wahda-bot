@@ -21,7 +21,7 @@ const sock = makeWASocket({
     connectTimeoutMs: 60000,
     retryRequestDelayMs: 3000,
     maxRetries: 5,
-    browser: ["ZakiBot", "Chrome", "120.0.0.0"],
+    browser: ["WahdaBot", "Chrome", "120.0.0.0"],
     syncFullHistory: false,
     markOnlineOnConnect: true,
   });

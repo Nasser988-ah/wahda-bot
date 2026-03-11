@@ -90,7 +90,8 @@ router.post("/register", async (req, res) => {
 
   } catch (error) {
     console.error("Registration error:", error);
-    res.status(500).json({ error: "Failed to register shop" });
+    console.error("Error stack:", error.stack);
+    res.status(500).json({ error: "Failed to register shop", details: error.message });
   }
 });
 

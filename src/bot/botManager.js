@@ -28,6 +28,86 @@ function normalizeNumbers(text) {
   return text.replace(/[٠-٩]/g, d => arabicNumerals[d] || d);
 }
 
+// Normalize Arabic text for comparison
+function normalizeArabic(text) {
+  return text
+    .replace(/أ|إ|آ/g, 'ا')
+    .replace(/ة/g, 'ه')
+    .replace(/ى/g, 'ي')
+    .replace(/ئ|ء/g, 'ء')
+    .replace(/ؤ/g, 'و')
+    .replace(/ّ|َ|ُ|ِ|ْ|ً|ٌ|ٍ/g, '')
+    .replace(/\s+/g, ' ')
+    .toLowerCase()
+    .trim();
+}
+
+// Find best matching product
+function findBestMatch(text, products) {
+  const normalizedInput = normalizeArabic(text);
+  const candidates = [];
+
+  products.filter(p => p.isAvailable).forEach(p => {
+    const normalizedName = normalizeArabic(p.name);
+
+    // Exact match
+    if (normalizedInput === normalizedName) {
+      candidates.push({ product: p, score: 1.0 });
+      return;
+    }
+
+    // Input is contained in product name
+    if (normalizedName.includes(normalizedInput)) {
+      candidates.push({ product: p, score: 0.95 });
+      return;
+    }
+
+    // Product name is contained in input
+    if (normalizedInput.includes(normalizedName)) {
+      candidates.push({ product: p, score: 0.9 });
+      return;
+    }
+
+    // Word-by-word matching
+    const inputWords = normalizedInput.split(' ').filter(w => w.length > 1);
+    const nameWords = normalizedName.split(' ').filter(w => w.length > 1);
+
+    let wordMatches = 0;
+    inputWords.forEach(inputWord => {
+      if (nameWords.some(nameWord => nameWord.includes(inputWord) || inputWord.includes(nameWord))) {
+        wordMatches++;
+      }
+    });
+
+    const wordScore = inputWords.length > 0 ? wordMatches / inputWords.length : 0;
+
+    // Character-level similarity
+    const longer = normalizedInput.length > normalizedName.length
+      ? normalizedInput : normalizedName;
+    const shorter = normalizedInput.length > normalizedName.length
+      ? normalizedName : normalizedInput;
+
+    let charMatches = 0;
+    const shorterChars = shorter.split('');
+    const longerChars = longer.split('');
+
+    for (let i = 0; i < shorterChars.length; i++) {
+      if (longerChars.includes(shorterChars[i])) charMatches++;
+    }
+    const charScore = shorter.length > 0 ? charMatches / longer.length : 0;
+
+    // Combined score (weighted)
+    const finalScore = (wordScore * 0.6) + (charScore * 0.4);
+
+    if (finalScore >= 0.5) {
+      candidates.push({ product: p, score: finalScore });
+    }
+  });
+
+  candidates.sort((a, b) => b.score - a.score);
+  return candidates;
+}
+
 const prisma = databaseService.getClient();
 
 class BotManager {
@@ -235,6 +315,35 @@ class BotManager {
       console.log(`📩 ${shop.name} - Message from ${customerPhone}: "${text}"`);
 
       const lowerText = text.toLowerCase().trim();
+
+      // HANDLE PENDING CONFIRMATION FIRST
+      const pendingKey = `pending:${shop.id}:${customerPhone}`;
+      const pendingData = await redis.get(pendingKey);
+
+      if (pendingData) {
+        const pending = JSON.parse(pendingData);
+        const t = text.trim();
+
+        // Confirmed with yes
+        if (t.match(/^(نعم|اه|أه|yes|ن|تمام|صح|أجل|بالتأكيد|بالتاكيد)$/i)) {
+          await redis.del(pendingKey);
+          await this.addProductToCart(sock, from, shop, customerPhone, pending[0]);
+          return;
+        }
+
+        // Chose by number
+        if (/^\d+$/.test(t)) {
+          const index = parseInt(t) - 1;
+          if (index >= 0 && index < pending.length) {
+            await redis.del(pendingKey);
+            await this.addProductToCart(sock, from, shop, customerPhone, pending[index]);
+            return;
+          }
+        }
+
+        // Said no - clear pending and continue normally
+        await redis.del(pendingKey);
+      }
 
       // Get conversation context for smarter responses
       const context = await this.getConversationContext(shop.id, customerPhone);
@@ -455,6 +564,66 @@ class BotManager {
       } else if (/^\d+$/.test(text)) {
         console.log(`✓ Matched: product number`);
         await this.addToCart(sock, from, shop.id, customerPhone, parseInt(text), shop);
+        return;
+      }
+      
+      // NAME-BASED ORDERING: Check if text matches a product name
+      const matches = findBestMatch(text, shop.products);
+      
+      // Single exact or very high confidence match - add directly
+      if (matches.length >= 1 && matches[0].score >= 0.85) {
+        const product = matches[0].product;
+        const productIndex = shop.products
+          .filter(p => p.isAvailable)
+          .indexOf(product) + 1;
+        console.log(`✓ Matched: product name "${product.name}" (score: ${matches[0].score.toFixed(2)})`);
+        await this.addToCart(sock, from, shop.id, customerPhone, productIndex, shop);
+        return;
+      }
+      
+      // Multiple possible matches - ask customer to choose
+      if (matches.length >= 2 && matches[0].score >= 0.65) {
+        const top3 = matches.slice(0, 3);
+        
+        // Save pending in Redis
+        const pendingKey = `pending:${shop.id}:${customerPhone}`;
+        await redis.set(pendingKey, JSON.stringify(
+          top3.map(m => ({
+            productId: m.product.id,
+            name: m.product.name,
+            price: m.product.price
+          }))
+        ), { ex: 300 });
+        
+        const confirmMsg =
+          `هل تقصد أحد هذه المنتجات؟\n\n` +
+          top3.map((m, i) =>
+            `${i + 1}. ${m.product.name} - ${m.product.price} جنيه`
+          ).join('\n') +
+          `\n\nاكتب الرقم للإضافة إلى سلتك، أو *لا* لعرض القائمة كاملة.`;
+        
+        await sock.sendMessage(from, { text: confirmMsg });
+        console.log(`❓ Multiple matches for "${text}", asking customer to choose`);
+        return;
+      }
+      
+      // One match with medium confidence - confirm first
+      if (matches.length === 1 && matches[0].score >= 0.65) {
+        const product = matches[0].product;
+        
+        const pendingKey = `pending:${shop.id}:${customerPhone}`;
+        await redis.set(pendingKey, JSON.stringify([{
+          productId: product.id,
+          name: product.name,
+          price: product.price
+        }]), { ex: 300 });
+        
+        await sock.sendMessage(from, {
+          text: `هل تقصد *${product.name}* بسعر ${product.price} جنيه؟\n\n` +
+                `اكتب *نعم* للإضافة إلى سلتك\n` +
+                `أو اكتب *لا* لعرض القائمة كاملة`
+        });
+        console.log(`❓ Single match for "${text}" (score: ${matches[0].score.toFixed(2)}), asking confirmation`);
         return;
       }
       
@@ -1897,6 +2066,31 @@ ${productsList}
         text: `عذراً على الإزعاج! 🙏\nيمكنك كتابة:\n📋 *قائمة* - لعرض المنتجات\n✅ *اطلب* - لتأكيد طلبك\n❌ *إلغاء* - لمسح السلة` 
       });
     }
+  }
+
+  async addProductToCart(sock, from, shop, customerPhone, product) {
+    const cartKey = `cart:${shop.id}:${customerPhone}`;
+    const cartData = await redis.get(cartKey);
+    const cart = cartData ? JSON.parse(cartData) : [];
+
+    const existing = cart.findIndex(i => i.productId === product.productId);
+    if (existing >= 0) {
+      cart[existing].quantity += 1;
+    } else {
+      cart.push({ ...product, quantity: 1 });
+    }
+
+    await redis.set(cartKey, JSON.stringify(cart), { ex: 3600 });
+
+    const total = cart.reduce((s, i) => s + i.price * i.quantity, 0);
+    await sock.sendMessage(from, {
+      text: `تمت إضافة *${product.name}* إلى سلتك.\n` +
+            `إجمالي سلتك: ${total} جنيه\n\n` +
+            `اكتب *قائمة* لإضافة المزيد أو *اطلب* لتأكيد طلبك.`
+    });
+    
+    // Update history
+    await this.updateMessageHistory(shop.id, customerPhone, product.name, 'bot', 'product_added');
   }
 
   // Helper to get cart contents

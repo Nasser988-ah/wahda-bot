@@ -15,7 +15,7 @@ const apiRoutes = require("./src/api");
 const { initBot } = require("./src/bot");
 
 const app = express();
-app.set('trust proxy', true);
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
 
 // Rate limiting

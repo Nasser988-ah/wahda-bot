@@ -3,7 +3,7 @@
  * Checks if database is configured before allowing requests to database-dependent endpoints
  */
 
-const databaseService = require("../services/databaseService");
+const databaseService = require("../../services/databaseService");
 
 function requireDatabase(req, res, next) {
   if (!databaseService.isConnected) {

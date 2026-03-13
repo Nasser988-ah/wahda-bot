@@ -2,17 +2,26 @@ const pino = require('pino');
 
 class LoggerService {
   constructor() {
-    this.logger = pino({
-      level: process.env.LOG_LEVEL || 'info',
-      transport: {
+    const isProduction = process.env.NODE_ENV === 'production';
+    const logLevel = process.env.LOG_LEVEL || (isProduction ? 'warn' : 'info');
+    
+    const pinoOptions = {
+      level: logLevel,
+    };
+
+    // Only use pino-pretty in development
+    if (!isProduction) {
+      pinoOptions.transport = {
         target: 'pino-pretty',
         options: {
           colorize: true,
           translateTime: 'HH:MM:ss Z',
           ignore: 'pid,hostname'
         }
-      }
-    });
+      };
+    }
+
+    this.logger = pino(pinoOptions);
   }
 
   info(message, meta = {}) {

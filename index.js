@@ -1,5 +1,9 @@
 require("dotenv").config();
 
+// Validate and load configuration
+const { validateEnvironment, logConfiguration } = require("./src/config/env");
+validateEnvironment();
+
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
@@ -18,19 +22,36 @@ const app = express();
 app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
 
-// Rate limiting
+// Rate limiting configuration from environment variables
+const rateLimitWindowMs = parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10);
+const rateLimitMaxRequests = parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10);
+
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // max 10 attempts
+  windowMs: rateLimitWindowMs,
+  max: 10,
   message: { error: "محاولات كثيرة، انتظر 15 دقيقة" },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req, res) => {
+    return req.ip === '127.0.0.1' || req.ip === '::1';
+  },
+  handler: (req, res) => {
+    res.status(429).json({ error: "محاولات كثيرة، انتظر 15 دقيقة" });
+  },
+  trustProxy: 1
 });
 
 const apiLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: 100, // 100 requests per minute
+  windowMs: rateLimitWindowMs,
+  max: rateLimitMaxRequests,
   message: { error: "Too many requests, please try again later" },
+  skip: (req, res) => {
+    return req.ip === '127.0.0.1' || req.ip === '::1';
+  },
+  handler: (req, res) => {
+    res.status(429).json({ error: "Too many requests, please try again later" });
+  },
+  trustProxy: 1
 });
 
 // Middleware
@@ -118,6 +139,9 @@ process.on("SIGTERM", async () => {
 // Start server
 async function main() {
   try {
+    // Log configuration at startup
+    logConfiguration();
+    
     logger.info('Starting WhatsApp Bot SaaS application...');
 
     // Start server immediately (don't wait for reconnect)

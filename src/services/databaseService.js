@@ -9,8 +9,23 @@ class DatabaseService {
   async connect() {
     try {
       if (!this.prisma) {
+        const dbUrl = process.env.DATABASE_URL;
+        if (!dbUrl) {
+          throw new Error('DATABASE_URL environment variable is not set');
+        }
+
+        const poolMax = process.env.DATABASE_POOL_MAX || 10;
+        const pooledDatabaseUrl = dbUrl.includes('?') 
+          ? `${dbUrl}&schema=public&connection_limit=${poolMax}`
+          : `${dbUrl}?schema=public&connection_limit=${poolMax}`;
+
         this.prisma = new PrismaClient({
-          log: ['warn', 'error'],
+          datasources: {
+            db: {
+              url: pooledDatabaseUrl
+            }
+          },
+          log: process.env.NODE_ENV === 'production' ? ['error'] : ['warn', 'error'],
           errorFormat: 'pretty'
         });
       }
@@ -42,8 +57,23 @@ class DatabaseService {
     if (!this.isConnected) {
       // Auto-connect if not connected
       if (!this.prisma) {
+        const dbUrl = process.env.DATABASE_URL;
+        if (!dbUrl) {
+          throw new Error('DATABASE_URL environment variable is not set');
+        }
+
+        const poolMax = process.env.DATABASE_POOL_MAX || 10;
+        const pooledDatabaseUrl = dbUrl.includes('?') 
+          ? `${dbUrl}&schema=public&connection_limit=${poolMax}`
+          : `${dbUrl}?schema=public&connection_limit=${poolMax}`;
+
         this.prisma = new PrismaClient({
-          log: ['warn', 'error'],
+          datasources: {
+            db: {
+              url: pooledDatabaseUrl
+            }
+          },
+          log: process.env.NODE_ENV === 'production' ? ['error'] : ['warn', 'error'],
           errorFormat: 'pretty'
         });
       }

@@ -1,8 +1,9 @@
-const { Redis } = require("@upstash/redis");
+/**
+ * Redis client export
+ * Re-exports the Redis service for backward compatibility
+ */
 
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN,
-});
+const redisService = require("../services/redisService");
 
-module.exports = redis;
+// Export the service directly, maintaining backward compatibility
+module.exports = redisService;

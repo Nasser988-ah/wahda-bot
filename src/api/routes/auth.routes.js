@@ -1,10 +1,19 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const prisma = require("../../db/index");
+const db = require("../../db/index");
+const databaseService = require("../../services/databaseService");
 const { z } = require("zod");
 
 const router = express.Router();
+
+// Helper function to get Prisma client
+function getPrisma() {
+  if (!databaseService.isConnected) {
+    throw new Error('Database is not configured. Please set DATABASE_URL environment variable.');
+  }
+  return databaseService.getClient();
+}
 
 // Validation schemas
 const registerSchema = z.object({
@@ -23,6 +32,9 @@ const loginSchema = z.object({
 // Register new shop
 router.post("/register", async (req, res) => {
   try {
+    // Check database availability
+    const prisma = getPrisma();
+
     const validation = registerSchema.safeParse(req.body);
     if (!validation.success) {
       return res.status(400).json({ 
@@ -91,6 +103,15 @@ router.post("/register", async (req, res) => {
   } catch (error) {
     console.error("Registration error:", error);
     console.error("Error stack:", error.stack);
+    
+    // Check if error is due to missing database
+    if (error.message.includes('Database is not configured') || error.message.includes('DATABASE_URL')) {
+      return res.status(503).json({ 
+        error: "Service unavailable", 
+        message: "Database is not configured. Please contact support." 
+      });
+    }
+    
     res.status(500).json({ error: "Failed to register shop", details: error.message });
   }
 });
@@ -98,6 +119,9 @@ router.post("/register", async (req, res) => {
 // Login
 router.post("/login", async (req, res) => {
   try {
+    // Check database availability
+    const prisma = getPrisma();
+
     const validation = loginSchema.safeParse(req.body);
     if (!validation.success) {
       return res.status(400).json({ 
@@ -133,7 +157,6 @@ router.post("/login", async (req, res) => {
         email: `${phone}@wahdabot.com`
       }
     });
-
     if (!admin) {
       return res.status(401).json({ error: "Invalid credentials" });
     }
@@ -168,6 +191,15 @@ router.post("/login", async (req, res) => {
 
   } catch (error) {
     console.error("Login error:", error);
+    
+    // Check if error is due to missing database
+    if (error.message.includes('Database is not configured') || error.message.includes('DATABASE_URL')) {
+      return res.status(503).json({ 
+        error: "Service unavailable", 
+        message: "Database is not configured. Please contact support." 
+      });
+    }
+    
     res.status(500).json({ error: "Failed to login" });
   }
 });
@@ -175,12 +207,21 @@ router.post("/login", async (req, res) => {
 // DEBUG: List all registered phone numbers (remove in production)
 router.get("/debug/shops", async (req, res) => {
   try {
+    // Check database availability
+    const prisma = getPrisma();
+
     const shops = await prisma.shop.findMany({
       select: { phone: true, name: true, createdAt: true },
       orderBy: { createdAt: "desc" }
     });
     res.json({ shops });
   } catch (error) {
+    if (error.message.includes('Database is not configured') || error.message.includes('DATABASE_URL')) {
+      return res.status(503).json({ 
+        error: "Service unavailable", 
+        message: "Database is not configured." 
+      });
+    }
     res.status(500).json({ error: "Failed to get shops" });
   }
 });

@@ -39,7 +39,7 @@ const authLimiter = rateLimit({
 
 const apiLimiter = rateLimit({
   windowMs: rateLimitWindowMs,
-  max: rateLimitMaxRequests,
+  max: 1000, // Increased from 100 to 1000 requests per window
   message: { error: "Too many requests, please try again later" },
   skip: (req, res) => {
     return req.ip === '127.0.0.1' || req.ip === '::1';
@@ -80,13 +80,8 @@ app.use(express.json());
 
 // Apply rate limiting
 app.use("/api/auth", authLimiter);
-app.use("/api", (req, res, next) => {
-  // Skip rate limiting for admin routes
-  if (req.path.startsWith('/admin')) {
-    return next();
-  }
-  return apiLimiter(req, res, next);
-});
+// General API limiter - skip for admin routes to allow dashboard operations
+app.use("/api", apiLimiter);
 
 // Serve static files (HTML dashboard)
 app.use(express.static("public"));

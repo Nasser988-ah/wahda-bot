@@ -536,10 +536,17 @@
                 
                 if (response.ok) {
                     const data = await response.json();
-                    console.log('[DEBUG] Products loaded successfully:', data);
+                    console.log('[DEBUG] Full API Response:', JSON.stringify(data, null, 2));
+                    console.log('[DEBUG] data.products:', data.products);
+                    console.log('[DEBUG] data.products is array:', Array.isArray(data.products));
+                    console.log('[DEBUG] data.products length:', data.products ? data.products.length : 'undefined');
+                    
                     currentProducts = data.products || [];
+                    console.log('[DEBUG] currentProducts after assignment:', currentProducts);
+                    console.log('[DEBUG] currentProducts length:', currentProducts.length);
+                    
                     displayProducts(currentProducts);
-                    console.log('[DEBUG] Displaying', currentProducts.length, 'products');
+                    console.log('[DEBUG] displayProducts called with', currentProducts.length, 'products');
                 } else {
                     const errorData = await response.json().catch(() => ({}));
                     console.error('[ERROR] API returned', response.status, ':', errorData);

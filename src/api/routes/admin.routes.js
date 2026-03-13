@@ -7,6 +7,15 @@ const QRService = require("../../services/qrService");
 
 const router = express.Router();
 
+// Debug endpoint - check if admin is configured
+router.get("/debug/config", async (req, res) => {
+  res.json({
+    adminUsername: ADMIN_USERNAME,
+    adminPasswordSet: !!process.env.ADMIN_PASSWORD,
+    adminPasswordLength: process.env.ADMIN_PASSWORD ? process.env.ADMIN_PASSWORD.length : 0
+  });
+});
+
 // Helper function to get Prisma client
 function getPrisma() {
   if (!databaseService.isConnected) {

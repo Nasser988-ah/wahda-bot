@@ -1,9 +1,5 @@
 require("dotenv").config();
 
-// Validate and load configuration
-const { validateEnvironment, logConfiguration } = require("./src/config/env");
-validateEnvironment();
-
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
@@ -139,8 +135,18 @@ process.on("SIGTERM", async () => {
 // Start server
 async function main() {
   try {
-    // Log configuration at startup
+    // Load and log configuration (warnings only, no exit)
+    const { logConfiguration, getConfigStatus } = require("./src/config/env");
     logConfiguration();
+    const configStatus = getConfigStatus();
+    
+    if (!configStatus.isValid) {
+      logger.warn('⚠️  Some required environment variables are missing');
+      logger.warn('   The application will start, but some features may not work');
+      if (configStatus.missing.length > 0) {
+        logger.warn('   Missing: ' + configStatus.missing.join(', '));
+      }
+    }
     
     logger.info('Starting WhatsApp Bot SaaS application...');
 
@@ -152,9 +158,13 @@ async function main() {
     // Connect to database
     try {
       await databaseService.connect();
-      logger.info('Database connected successfully');
+      if (databaseService.isConnected) {
+        logger.info('Database connected successfully');
+      } else {
+        logger.warn('Database not configured - features requiring database will be unavailable');
+      }
     } catch (dbError) {
-      logger.error('Database connection failed, but server is running:', dbError.message);
+      logger.warn('Database connection failed:', dbError.message);
     }
 
     // Initialize WhatsApp bot
@@ -163,9 +173,13 @@ async function main() {
     logger.info('WhatsApp bot initialized');
     
     // Reconnect all previously connected shops (non-blocking)
-    reconnectAllShops().catch(err => {
-      logger.error('Shop reconnection failed:', err.message);
-    });
+    if (databaseService.isConnected) {
+      reconnectAllShops().catch(err => {
+        logger.error('Shop reconnection failed:', err.message);
+      });
+    } else {
+      logger.warn('Skipping shop reconnection - database not connected');
+    }
     
     logger.info('Application started successfully');
   } catch (error) {
@@ -178,6 +192,11 @@ async function main() {
 async function reconnectAllShops() {
   try {
     const prisma = databaseService.getClient();
+    if (!prisma) {
+      console.warn('⚠️  Cannot reconnect shops - database not configured');
+      return;
+    }
+
     const shops = await prisma.shop.findMany({
       where: { 
         subscriptionStatus: { 

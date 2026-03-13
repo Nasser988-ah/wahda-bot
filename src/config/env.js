@@ -54,6 +54,26 @@ const optionalVars = {
 };
 
 /**
+ * Get configuration validation status (without exiting)
+ */
+function getConfigStatus() {
+  const missing = [];
+  
+  // Check required variables
+  for (const [key, description] of Object.entries(requiredVars)) {
+    if (!process.env[key]) {
+      missing.push(key);
+    }
+  }
+  
+  return {
+    isValid: missing.length === 0,
+    missing: missing,
+    isProduction: process.env.NODE_ENV === 'production'
+  };
+}
+
+/**
  * Validate environment variables
  */
 function validateEnvironment() {
@@ -116,6 +136,7 @@ function logConfiguration() {
 // Export functions and config
 module.exports = {
   validateEnvironment,
+  getConfigStatus,
   getConfig,
   logConfiguration,
   requiredVars,

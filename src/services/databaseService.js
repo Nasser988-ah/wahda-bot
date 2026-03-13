@@ -11,7 +11,9 @@ class DatabaseService {
       if (!this.prisma) {
         const dbUrl = process.env.DATABASE_URL;
         if (!dbUrl) {
-          throw new Error('DATABASE_URL environment variable is not set');
+          console.warn('⚠️  DATABASE_URL not set - database features will be unavailable');
+          this.isConnected = false;
+          return null;
         }
 
         const poolMax = process.env.DATABASE_POOL_MAX || 10;
@@ -37,7 +39,8 @@ class DatabaseService {
       return this.prisma;
     } catch (error) {
       console.error('❌ Database connection failed:', error);
-      throw error;
+      this.isConnected = false;
+      return null;
     }
   }
 
@@ -59,7 +62,8 @@ class DatabaseService {
       if (!this.prisma) {
         const dbUrl = process.env.DATABASE_URL;
         if (!dbUrl) {
-          throw new Error('DATABASE_URL environment variable is not set');
+          console.warn('⚠️  DATABASE_URL not set - database features will be unavailable');
+          return null;
         }
 
         const poolMax = process.env.DATABASE_POOL_MAX || 10;

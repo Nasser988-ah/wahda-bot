@@ -265,12 +265,22 @@ class BotManager {
       // Load current cart from Redis
       const cartKey = `cart:${shop.id}:${customerPhone}` 
       const cartData = await redis.get(cartKey)
-      const cart = cartData ? JSON.parse(cartData) : []
+      let cart = []
+      if (cartData) {
+        try {
+          cart = typeof cartData === 'string' ? JSON.parse(cartData) : cartData
+        } catch (e) { cart = [] }
+      }
       
       // Load conversation history
       const historyKey = `history:${shop.id}:${customerPhone}` 
       const historyData = await redis.get(historyKey)
-      const history = historyData ? JSON.parse(historyData) : []
+      let history = []
+      if (historyData) {
+        try {
+          history = typeof historyData === 'string' ? JSON.parse(historyData) : historyData
+        } catch (e) { history = [] }
+      }
       
       // Build products list
       const productsList = shop.products

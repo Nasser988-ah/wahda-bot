@@ -3,6 +3,9 @@ FROM node:20-slim
 
 WORKDIR /app
 
+# Install OpenSSL
+RUN apt-get update -y && apt-get install -y openssl
+
 # Copy package files
 COPY package*.json ./
 COPY prisma ./prisma/

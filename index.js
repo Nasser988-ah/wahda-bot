@@ -103,11 +103,6 @@ app.get('/health/db', async (req, res) => {
   }
 })
 
-// Railway fallback healthcheck - works without DB
-app.get('/api/products', (req, res) => {
-  res.status(200).json({ status: 'ok', products: [] })
-})
-
 // API routes
 app.use("/api", apiRoutes);
 

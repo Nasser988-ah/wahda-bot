@@ -536,7 +536,7 @@ ${cart.length > 0 ? `الإجمالي: ${cartTotal} جنيه` : ''}
             customerPhone: customerPhone,
             customerName: customerName,
             customerAddress: customerAddress,
-            status: 'pending',
+            status: 'PENDING',
             totalPrice: total,
             orderItems: {
               create: cart.map(item => ({

@@ -523,18 +523,41 @@
         // Load products
         async function loadProducts() {
             try {
+                console.log('[DEBUG] Starting to load products...');
                 const response = await apiFetch(`${API_BASE}/products`);
-                if (!response) return;
+                
+                if (!response) {
+                    console.error('[ERROR] No response from API');
+                    showToast('فشل تحميل المنتجات - لم يتم الحصول على رد من الخادم', 'error');
+                    return;
+                }
 
+                console.log('[DEBUG] Response status:', response.status);
+                
                 if (response.ok) {
                     const data = await response.json();
-                    currentProducts = data.products;
+                    console.log('[DEBUG] Products loaded successfully:', data);
+                    currentProducts = data.products || [];
                     displayProducts(currentProducts);
+                    console.log('[DEBUG] Displaying', currentProducts.length, 'products');
                 } else {
+                    const errorData = await response.json().catch(() => ({}));
+                    console.error('[ERROR] API returned', response.status, ':', errorData);
+                    
+                    // Show specific error messages
+                    if (response.status === 503) {
+                        showToast('قاعدة البيانات غير متاحة حالياً', 'error');
+                    } else if (response.status === 401) {
+                        showToast('جلستك انتهت، الرجاء تسجيل الدخول مجدداً', 'error');
+                        setTimeout(() => window.location.href = 'login.html', 2000);
+                    } else {
+                        showToast(errorData.error || 'فشل تحميل المنتجات', 'error');
+                    }
                     displayProducts([]);
                 }
             } catch (error) {
-                console.error('Error loading products:', error);
+                console.error('[ERROR] Exception loading products:', error);
+                showToast('خطأ في تحميل المنتجات: ' + error.message, 'error');
                 displayProducts([]);
             }
         }
@@ -671,6 +694,8 @@
                 isAvailable: document.getElementById('productAvailable').checked
             };
 
+            console.log('[DEBUG] Submitting product form:', formData, 'Editing:', editingProduct ? editingProduct.id : 'new');
+
             const submitBtn = document.getElementById('submitBtn');
             const originalText = submitBtn.textContent;
             submitBtn.disabled = true;
@@ -682,24 +707,41 @@
                     `${API_BASE}/products`;
                 const method = editingProduct ? 'PUT' : 'POST';
 
+                console.log('[DEBUG] API Request:', method, url);
+
                 const response = await apiFetch(url, {
                     method,
                     body: JSON.stringify(formData)
                 });
                 
-                if (!response) return;
+                if (!response) {
+                    console.error('[ERROR] No response from server');
+                    showToast('لم يتم الحصول على رد من الخادم', 'error');
+                    return;
+                }
+
+                console.log('[DEBUG] Response status:', response.status);
 
                 if (response.ok) {
+                    const responseData = await response.json();
+                    console.log('[DEBUG] Product saved successfully:', responseData);
                     showToast(editingProduct ? 'تم تحديث المنتج بنجاح' : 'تم إضافة المنتج بنجاح', 'success');
                     hideForm();
+                    console.log('[DEBUG] Reloading products list...');
                     await loadProducts();
                 } else {
-                    const error = await response.json();
-                    showToast(error.error || 'فشل حفظ المنتج', 'error');
+                    const errorData = await response.json().catch(() => ({}));
+                    console.error('[ERROR] API returned', response.status, ':', errorData);
+                    
+                    if (response.status === 503) {
+                        showToast('قاعدة البيانات غير متاحة', 'error');
+                    } else {
+                        showToast(errorData.error || 'فشل حفظ المنتج', 'error');
+                    }
                 }
             } catch (error) {
-                console.error('Error saving product:', error);
-                showToast('حدث خطأ في حفظ المنتج', 'error');
+                console.error('[ERROR] Exception submitting form:', error);
+                showToast('خطأ: ' + error.message, 'error');
             } finally {
                 submitBtn.disabled = false;
                 submitBtn.textContent = originalText;

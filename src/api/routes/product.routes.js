@@ -1,8 +1,20 @@
 const express = require("express");
-const prisma = require("../../db/index");
+const databaseService = require("../../services/databaseService");
 const { authenticateToken } = require("../middleware/auth.middleware");
 const { z } = require("zod");
 const router = express.Router();
+
+// Helper function to get Prisma client with error handling
+function getPrisma() {
+  if (!databaseService.isConnected) {
+    throw new Error('Database is not configured');
+  }
+  const client = databaseService.getClient();
+  if (!client) {
+    throw new Error('Database connection failed');
+  }
+  return client;
+}
 
 // Apply auth middleware to all routes
 router.use(authenticateToken);
@@ -27,6 +39,8 @@ const updateProductSchema = z.object({
 // Get all products for the shop
 router.get("/", async (req, res) => {
   try {
+    const prisma = getPrisma();
+
     const { page = 1, limit = 20, category, available } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
@@ -73,6 +87,14 @@ router.get("/", async (req, res) => {
 
   } catch (error) {
     console.error("Get products error:", error);
+    
+    if (error.message.includes('Database')) {
+      return res.status(503).json({ 
+        error: "Service Unavailable", 
+        message: "Database is not available" 
+      });
+    }
+    
     res.status(500).json({ error: "Failed to get products" });
   }
 });
@@ -80,6 +102,7 @@ router.get("/", async (req, res) => {
 // Get single product
 router.get("/:id", async (req, res) => {
   try {
+    const prisma = getPrisma();
     const product = await prisma.product.findFirst({
       where: {
         id: req.params.id,
@@ -110,6 +133,14 @@ router.get("/:id", async (req, res) => {
 
   } catch (error) {
     console.error("Get product error:", error);
+    
+    if (error.message.includes('Database')) {
+      return res.status(503).json({ 
+        error: "Service Unavailable", 
+        message: "Database is not available" 
+      });
+    }
+    
     res.status(500).json({ error: "Failed to get product" });
   }
 });
@@ -117,6 +148,7 @@ router.get("/:id", async (req, res) => {
 // Create new product
 router.post("/", async (req, res) => {
   try {
+    const prisma = getPrisma();
     const validation = createProductSchema.safeParse(req.body);
     if (!validation.success) {
       return res.status(400).json({ 
@@ -149,6 +181,14 @@ router.post("/", async (req, res) => {
 
   } catch (error) {
     console.error("Create product error:", error);
+    
+    if (error.message.includes('Database')) {
+      return res.status(503).json({ 
+        error: "Service Unavailable", 
+        message: "Database is not available" 
+      });
+    }
+    
     res.status(500).json({ error: "Failed to create product" });
   }
 });
@@ -156,6 +196,7 @@ router.post("/", async (req, res) => {
 // Update product
 router.put("/:id", async (req, res) => {
   try {
+    const prisma = getPrisma();
     const validation = updateProductSchema.safeParse(req.body);
     if (!validation.success) {
       return res.status(400).json({ 
@@ -198,6 +239,14 @@ router.put("/:id", async (req, res) => {
 
   } catch (error) {
     console.error("Update product error:", error);
+    
+    if (error.message.includes('Database')) {
+      return res.status(503).json({ 
+        error: "Service Unavailable", 
+        message: "Database is not available" 
+      });
+    }
+    
     res.status(500).json({ error: "Failed to update product" });
   }
 });
@@ -205,6 +254,7 @@ router.put("/:id", async (req, res) => {
 // Delete product (mark as unavailable if has orders, otherwise delete)
 router.delete("/:id", async (req, res) => {
   try {
+    const prisma = getPrisma();
     // Check if product exists and belongs to shop
     const existingProduct = await prisma.product.findFirst({
       where: {
@@ -250,6 +300,14 @@ router.delete("/:id", async (req, res) => {
 
   } catch (error) {
     console.error("Delete product error:", error);
+    
+    if (error.message.includes('Database')) {
+      return res.status(503).json({ 
+        error: "Service Unavailable", 
+        message: "Database is not available" 
+      });
+    }
+    
     res.status(500).json({ error: "فشل حذف المنتج" });
   }
 });
@@ -257,6 +315,7 @@ router.delete("/:id", async (req, res) => {
 // Get product categories
 router.get("/categories/list", async (req, res) => {
   try {
+    const prisma = getPrisma();
     const categories = await prisma.product.findMany({
       where: {
         shopId: req.shop.id,
@@ -276,6 +335,14 @@ router.get("/categories/list", async (req, res) => {
 
   } catch (error) {
     console.error("Get categories error:", error);
+    
+    if (error.message.includes('Database')) {
+      return res.status(503).json({ 
+        error: "Service Unavailable", 
+        message: "Database is not available" 
+      });
+    }
+    
     res.status(500).json({ error: "Failed to get categories" });
   }
 });

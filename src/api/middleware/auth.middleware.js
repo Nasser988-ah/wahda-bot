@@ -1,5 +1,5 @@
 const jwt = require("jsonwebtoken");
-const prisma = require("../../db/index");
+const databaseService = require("../../services/databaseService");
 
 const authenticateToken = async (req, res, next) => {
   try {
@@ -12,6 +12,22 @@ const authenticateToken = async (req, res, next) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
+    // Check database is connected
+    if (!databaseService.isConnected) {
+      return res.status(503).json({ 
+        error: "Service Unavailable", 
+        message: "Database is not available. Please try again later." 
+      });
+    }
+
+    const prisma = databaseService.getClient();
+    if (!prisma) {
+      return res.status(503).json({ 
+        error: "Service Unavailable", 
+        message: "Database connection failed." 
+      });
+    }
+
     // Get shop from database
     const shop = await prisma.shop.findUnique({
       where: { id: decoded.shopId },

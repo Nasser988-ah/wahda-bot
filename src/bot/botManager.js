@@ -587,7 +587,6 @@ ${cart.length > 0 ? `الإجمالي: ${cartTotal} جنيه` : ''}
   }
 
   // Keep existing helper methods for compatibility
-  async safeSendMessage(sock, to, message, shopName, shopId, customerPhone) {
 
   // Get conversation context for smarter responses
   async getConversationContext(shopId, customerPhone) {

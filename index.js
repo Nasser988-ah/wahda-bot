@@ -80,7 +80,13 @@ app.use(express.json());
 
 // Apply rate limiting
 app.use("/api/auth", authLimiter);
-app.use("/api", apiLimiter);
+app.use("/api", (req, res, next) => {
+  // Skip rate limiting for admin routes
+  if (req.path.startsWith('/admin')) {
+    return next();
+  }
+  return apiLimiter(req, res, next);
+});
 
 // Serve static files (HTML dashboard)
 app.use(express.static("public"));

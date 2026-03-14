@@ -357,31 +357,10 @@ class BotManager {
       
       // IMPORTANT: Send welcome message immediately for first-time users
       if (context.messageCount === 0) {
-        const welcomeMsg = 
-          `أهلاً وسهلاً! مرحباً بك في *${shop.name}*\n\n` +
-          `*أنا ذكي، موظف خدمة العملاء*\n` +
-          `أفهم أوامرك وأساعدك في الطلب بسرعة وسهولة.\n\n` +
-          `━━━━━━━━━━━━━━━━━━━━\n` +
-          `*كيفية الاستخدام:*\n\n` +
-          `اكتب *قائمة*\n` +
-          `    لعرض جميع المنتجات والأسعار\n\n` +
-          `اكتب *رقم المنتج* (مثال: 1 أو 2)\n` +
-          `    لإضافة المنتج إلى سلتك\n\n` +
-          `اكتب *كارت*\n` +
-          `    لعرض ما في سلتك\n\n` +
-          `اكتب *اطلب*\n` +
-          `    لتأكيد طلبك\n\n` +
-          `اكتب *إلغاء*\n` +
-          `    لمسح السلة والبدء من جديد\n\n` +
-          `━━━━━━━━━━━━━━━━━━━━\n` +
-          `ابدأ الآن باكتب *قائمة*`;
-        
-        await this.safeSendMessage(sock, from, welcomeMsg, shop.name, shop.id, customerPhone);
-        console.log(`🎉 First-time welcome sent to ${customerPhone}`);
+        await this.sendStoreLink(sock, from, shop, customerPhone);
         
         // Update history to mark welcome sent
         await this.updateMessageHistory(shop.id, customerPhone, text, 'user');
-        await this.updateMessageHistory(shop.id, customerPhone, welcomeMsg, 'bot', 'welcome');
         return;
       }
       
@@ -1137,7 +1116,7 @@ class BotManager {
     });
     
     // Set state to collect customer info
-    const stateKey = `state:${shop.id}:${customerPhone}`;
+    const stateKey = `order_state:${shop.id}:${customerPhone}`;
     await redis.set(stateKey, 'waiting_name', { ex: 600 });
     
     console.log(`✅ Website order processed for ${customerPhone}, ${cart.length} items, ${total} EGP`);

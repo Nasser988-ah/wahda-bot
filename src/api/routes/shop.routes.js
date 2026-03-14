@@ -156,41 +156,6 @@ router.post("/qr/refresh", async (req, res) => {
   }
 });
 
-// Public Store API - No authentication required
-router.get("/store/:shopId", async (req, res) => {
-  try {
-    const shop = await prisma.shop.findUnique({
-      where: { id: req.params.shopId },
-      select: {
-        id: true,
-        name: true,
-        whatsappNumber: true,
-        products: {
-          where: { isAvailable: true },
-          select: {
-            id: true,
-            name: true,
-            price: true,
-            description: true,
-            imageUrl: true,
-            category: true,
-            isAvailable: true
-          }
-        }
-      }
-    });
-
-    if (!shop) {
-      return res.status(404).json({ error: "المتجر غير موجود" });
-    }
-
-    res.json(shop);
-  } catch (err) {
-    console.error("Get store error:", err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
 // Apply auth middleware to remaining routes
 router.use(authenticateToken);
 

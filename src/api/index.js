@@ -1,5 +1,7 @@
 const express = require("express");
 const router = express.Router();
+const { PrismaClient } = require("@prisma/client");
+const prisma = new PrismaClient();
 
 // Import middleware
 const { requireDatabase } = require("./middleware/database.middleware");
@@ -10,6 +12,42 @@ const shopRoutes = require("./routes/shop.routes");
 const productRoutes = require("./routes/product.routes");
 const orderRoutes = require("./routes/order.routes");
 const adminRoutes = require("./routes/admin.routes");
+
+// PUBLIC STORE API - No authentication required
+// This must be before auth middleware
+router.get("/store/:shopId", async (req, res) => {
+  try {
+    const shop = await prisma.shop.findUnique({
+      where: { id: req.params.shopId },
+      select: {
+        id: true,
+        name: true,
+        whatsappNumber: true,
+        products: {
+          where: { isAvailable: true },
+          select: {
+            id: true,
+            name: true,
+            price: true,
+            description: true,
+            imageUrl: true,
+            category: true,
+            isAvailable: true
+          }
+        }
+      }
+    });
+
+    if (!shop) {
+      return res.status(404).json({ error: "المتجر غير موجود" });
+    }
+
+    res.json(shop);
+  } catch (err) {
+    console.error("Get store error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // Mount routes
 // Auth routes handle their own database checks

@@ -1103,21 +1103,25 @@ class BotManager {
     const cartKey = `cart:${shop.id}:${customerPhone}`;
     await redis.set(cartKey, JSON.stringify(cart), { ex: 3600 });
     
-    // Show cart summary and ask for customer info
+    // Show cart summary and ask if they want more items (using askForMoreItems format)
     const total = cart.reduce((s, i) => s + i.price * i.quantity, 0);
     
-    await sock.sendMessage(from, {
-      text: `تم استلام طلبك من المتجر! ✅\n\n` +
-            `*ملخص الطلب:*\n` +
-            cart.map(i => `• ${i.name} × ${i.quantity} = ${i.price * i.quantity} جنيه`).join('\n') +
-            `\n\n💰 *الإجمالي: ${total} جنيه*\n\n` +
-            `لإتمام الطلب، يرجى إرسال بيانات التوصيل:\n\n` +
-            `الاسم:____________\nالهاتف:____________\nالعنوان:____________`
+    let message = `🛒 سلة التسوق:\n\n`;
+    cart.forEach((item, i) => {
+      message += `${i + 1}. ${item.name}\n`;
+      message += `   الكمية: ${item.quantity} × ${item.price} = ${item.price * item.quantity} جنيه\n\n`;
     });
+    message += `💰 الإجمالي: ${total} جنيه\n\n`;
+    message += `━━━━━━━━━━━━━━━━━━━━━\n\n`;
+    message += `هل ترغب في إضافة شيء آخر؟ 🤔\n\n`;
+    message += `👍 اكتب "نعم" إذا كنت ترغب في إضافة منتج آخر\n`;
+    message += `✅ اكتب "لا" إذا كان هذا كل شيء وترغب في إكمال الطلب`;
     
-    // Set state to collect customer info
+    await sock.sendMessage(from, { text: message });
+    
+    // Set state to waiting_for_more (same as askForMoreItems)
     const stateKey = `order_state:${shop.id}:${customerPhone}`;
-    await redis.set(stateKey, 'waiting_name', { ex: 600 });
+    await redis.set(stateKey, 'waiting_for_more', { ex: 600 });
     
     console.log(`✅ Website order processed for ${customerPhone}, ${cart.length} items, ${total} EGP`);
   }

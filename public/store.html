@@ -9,39 +9,131 @@
     
     body {
       font-family: 'Segoe UI', Tahoma, sans-serif;
-      background: #f5f5f5;
+      background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
       color: #333;
+      min-height: 100vh;
     }
     
+    /* Header Styles */
     .header {
-      background: linear-gradient(135deg, #25D366, #128C7E);
+      background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
       color: white;
-      padding: 20px;
+      padding: 16px 20px;
       text-align: center;
       position: sticky;
       top: 0;
       z-index: 100;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      box-shadow: 0 4px 20px rgba(37, 211, 102, 0.3);
     }
     
-    .header h1 { font-size: 24px; font-weight: 700; }
-    .header p { font-size: 14px; opacity: 0.95; margin-top: 4px; }
+    .header h1 { 
+      font-size: 22px; 
+      font-weight: 700; 
+      text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
     
+    .header p { 
+      font-size: 13px; 
+      opacity: 0.95; 
+      margin-top: 4px; 
+      font-weight: 400;
+    }
+    
+    /* Search Bar */
+    .search-container {
+      background: white;
+      padding: 12px 16px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      position: sticky;
+      top: 60px;
+      z-index: 98;
+    }
+    
+    .search-box {
+      display: flex;
+      align-items: center;
+      background: #f5f5f5;
+      border-radius: 25px;
+      padding: 10px 16px;
+      border: 2px solid transparent;
+      transition: all 0.3s;
+    }
+    
+    .search-box:focus-within {
+      background: white;
+      border-color: #25D366;
+      box-shadow: 0 0 0 3px rgba(37, 211, 102, 0.1);
+    }
+    
+    .search-box input {
+      flex: 1;
+      border: none;
+      background: none;
+      font-size: 15px;
+      outline: none;
+      color: #333;
+      font-family: inherit;
+    }
+    
+    .search-box input::placeholder {
+      color: #999;
+    }
+    
+    .search-icon {
+      font-size: 18px;
+      margin-left: 8px;
+      color: #999;
+    }
+    
+    .search-clear {
+      font-size: 20px;
+      color: #999;
+      cursor: pointer;
+      padding: 0 4px;
+      display: none;
+    }
+    
+    .search-clear.visible {
+      display: block;
+    }
+    
+    /* Cart Bar */
     .cart-bar {
-      background: #128C7E;
+      background: linear-gradient(135deg, #128C7E 0%, #0d6b60 100%);
       color: white;
-      padding: 12px 20px;
+      padding: 12px 16px;
       display: none;
       justify-content: space-between;
       align-items: center;
       position: sticky;
-      top: 72px;
-      z-index: 99;
+      top: 115px;
+      z-index: 97;
+      box-shadow: 0 2px 10px rgba(18, 140, 126, 0.3);
+      animation: slideDown 0.3s ease;
+    }
+    
+    @keyframes slideDown {
+      from { transform: translateY(-100%); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
     }
     
     .cart-bar.visible { display: flex; }
     
-    .cart-bar span { font-size: 16px; font-weight: bold; }
+    .cart-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    
+    .cart-count {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+    
+    .cart-total {
+      font-size: 18px;
+      font-weight: bold;
+    }
     
     .order-btn {
       background: white;
@@ -49,55 +141,145 @@
       border: none;
       padding: 10px 20px;
       border-radius: 25px;
-      font-size: 15px;
+      font-size: 14px;
       font-weight: bold;
       cursor: pointer;
-      transition: transform 0.2s;
+      transition: all 0.2s;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
-    .order-btn:hover { transform: scale(1.05); }
+    
+    .order-btn:hover { 
+      transform: translateY(-2px); 
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    
     .order-btn:active { transform: scale(0.95); }
+    
+    /* Products Grid */
+    .products-container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 16px;
+    }
     
     .products-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
       gap: 16px;
-      padding: 16px;
-      max-width: 600px;
-      margin: 0 auto;
     }
     
+    @media (max-width: 480px) {
+      .products-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+      }
+      
+      .header h1 { font-size: 18px; }
+      .header p { font-size: 12px; }
+    }
+    
+    @media (min-width: 769px) {
+      .products-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+    
+    /* Product Card */
     .product-card {
       background: white;
       border-radius: 16px;
       overflow: hidden;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      transition: all 0.3s ease;
+      display: flex;
+      flex-direction: column;
     }
-    .product-card:hover { transform: translateY(-4px); box-shadow: 0 4px 16px rgba(0,0,0,0.12); }
+    
+    .product-card:hover { 
+      transform: translateY(-4px); 
+      box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+    }
+    
+    .product-card.hidden {
+      display: none;
+    }
+    
+    .product-image-wrapper {
+      position: relative;
+      padding-top: 75%;
+      background: linear-gradient(135deg, #f0f0f0, #e8e8e8);
+      overflow: hidden;
+      cursor: pointer;
+    }
     
     .product-image {
+      position: absolute;
+      top: 0;
+      left: 0;
       width: 100%;
-      height: 140px;
+      height: 100%;
       object-fit: cover;
-      background: linear-gradient(135deg, #f0f0f0, #e0e0e0);
+      transition: transform 0.3s;
+    }
+    
+    .product-card:hover .product-image {
+      transform: scale(1.05);
     }
     
     .product-image.placeholder {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 48px;
+      background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    }
+    
+    .zoom-hint {
+      position: absolute;
+      bottom: 8px;
+      left: 8px;
+      background: rgba(0,0,0,0.6);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    
+    .product-card:hover .zoom-hint {
+      opacity: 1;
     }
     
     .product-info {
       padding: 12px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .product-category {
+      font-size: 11px;
+      color: #128C7E;
+      font-weight: 600;
+      margin-bottom: 4px;
+      text-transform: uppercase;
     }
     
     .product-name {
-      font-size: 15px;
-      font-weight: bold;
+      font-size: 14px;
+      font-weight: 700;
       margin-bottom: 4px;
       line-height: 1.3;
+      color: #1a1a1a;
     }
     
     .product-desc {
@@ -105,27 +287,38 @@
       color: #666;
       margin-bottom: 8px;
       line-height: 1.4;
+      flex: 1;
     }
     
     .product-price {
       color: #25D366;
-      font-weight: bold;
-      font-size: 16px;
+      font-weight: 800;
+      font-size: 17px;
       margin-bottom: 10px;
     }
     
+    .product-price::after {
+      content: ' جنيه';
+      font-size: 13px;
+      font-weight: 600;
+    }
+    
+    /* Quantity Control */
     .quantity-control {
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 12px;
+      background: #f8f9fa;
+      padding: 6px;
+      border-radius: 25px;
     }
     
     .qty-btn {
       width: 32px;
       height: 32px;
       border-radius: 50%;
-      border: 2px solid #25D366;
+      border: none;
       background: white;
       color: #25D366;
       font-size: 18px;
@@ -135,46 +328,68 @@
       justify-content: center;
       font-weight: bold;
       transition: all 0.2s;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     
-    .qty-btn:hover { background: #25D366; color: white; }
+    .qty-btn:hover { 
+      background: #25D366; 
+      color: white;
+      transform: scale(1.1);
+    }
+    
     .qty-btn:active { transform: scale(0.9); }
     
     .qty-display {
-      font-size: 18px;
-      font-weight: bold;
-      min-width: 24px;
+      font-size: 16px;
+      font-weight: 700;
+      min-width: 30px;
       text-align: center;
+      color: #333;
     }
     
     .unavailable {
-      opacity: 0.5;
+      opacity: 0.6;
       pointer-events: none;
     }
     
     .unavailable-label {
       text-align: center;
       color: #999;
-      font-size: 13px;
+      font-size: 12px;
       padding: 8px;
+      background: #f5f5f5;
+      border-radius: 8px;
+      margin-top: 8px;
     }
     
+    /* Empty & Loading States */
     .empty-state {
       text-align: center;
       padding: 60px 20px;
+      color: #666;
+      grid-column: 1 / -1;
+    }
+    
+    .empty-state h2 { 
+      font-size: 18px; 
+      margin-bottom: 8px;
+      color: #333;
+    }
+    
+    .empty-state p {
+      font-size: 14px;
       color: #999;
     }
     
-    .empty-state h2 { font-size: 20px; margin-bottom: 8px; }
-    
     .loader {
       display: inline-block;
-      width: 24px;
-      height: 24px;
+      width: 40px;
+      height: 40px;
       border: 3px solid #25D366;
       border-top-color: transparent;
       border-radius: 50%;
       animation: spin 1s linear infinite;
+      margin-bottom: 16px;
     }
     
     @keyframes spin { to { transform: rotate(360deg); } }
@@ -183,6 +398,92 @@
       color: #e74c3c;
       text-align: center;
       padding: 20px;
+    }
+    
+    /* Lightbox */
+    .lightbox {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.9);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+    }
+    
+    .lightbox.visible {
+      display: flex;
+      animation: fadeIn 0.3s;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    .lightbox img {
+      max-width: 90%;
+      max-height: 80vh;
+      object-fit: contain;
+      border-radius: 8px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+    
+    .lightbox-close {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      font-size: 32px;
+      color: white;
+      cursor: pointer;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.1);
+      transition: all 0.2s;
+    }
+    
+    .lightbox-close:hover {
+      background: rgba(255,255,255,0.2);
+      transform: rotate(90deg);
+    }
+    
+    .lightbox-caption {
+      color: white;
+      margin-top: 16px;
+      font-size: 16px;
+      text-align: center;
+      padding: 0 20px;
+    }
+    
+    /* No Results */
+    .no-results {
+      text-align: center;
+      padding: 40px 20px;
+      color: #666;
+      grid-column: 1 / -1;
+    }
+    
+    .no-results-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+    }
+    
+    /* Cart Badge Animation */
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+    
+    .cart-updating {
+      animation: pulse 0.3s ease;
     }
   </style>
 </head>
@@ -193,18 +494,38 @@
   <p>اختر منتجاتك وأرسل طلبك عبر واتساب</p>
 </div>
 
+<div class="search-container">
+  <div class="search-box">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="searchInput" placeholder="ابحث عن منتج..." autocomplete="off">
+    <span class="search-clear" id="searchClear">×</span>
+  </div>
+</div>
+
 <div class="cart-bar" id="cartBar">
-  <span id="cartSummary">السلة فارغة</span>
+  <div class="cart-info">
+    <span class="cart-count" id="cartCount">0 منتجات</span>
+    <span class="cart-total" id="cartTotal">0 جنيه</span>
+  </div>
   <button class="order-btn" onclick="sendOrder()">
-    أرسل الطلب عبر واتساب
+    🛒 أرسل الطلب
   </button>
 </div>
 
-<div class="products-grid" id="productsGrid">
-  <div class="empty-state">
-    <div class="loader"></div>
-    <p>جارٍ تحميل المنتجات...</p>
+<div class="products-container">
+  <div class="products-grid" id="productsGrid">
+    <div class="empty-state">
+      <div class="loader"></div>
+      <p>جارٍ تحميل المنتجات...</p>
+    </div>
   </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <span class="lightbox-close">×</span>
+  <img id="lightboxImg" src="" alt="">
+  <div class="lightbox-caption" id="lightboxCaption"></div>
 </div>
 
 <script>
@@ -212,9 +533,40 @@
   const shopId = params.get('shopId')
   const phone = params.get('phone')
   
-  let products = []
+  let allProducts = []
+  let filteredProducts = []
   let quantities = {}
   let shopData = null
+  
+  // Search functionality
+  const searchInput = document.getElementById('searchInput')
+  const searchClear = document.getElementById('searchClear')
+  
+  searchInput.addEventListener('input', (e) => {
+    const query = e.target.value.trim().toLowerCase()
+    searchClear.classList.toggle('visible', query.length > 0)
+    filterProducts(query)
+  })
+  
+  searchClear.addEventListener('click', () => {
+    searchInput.value = ''
+    searchClear.classList.remove('visible')
+    filterProducts('')
+    searchInput.focus()
+  })
+  
+  function filterProducts(query) {
+    if (!query) {
+      filteredProducts = [...allProducts]
+    } else {
+      filteredProducts = allProducts.filter(p => 
+        p.name.toLowerCase().includes(query) || 
+        (p.description && p.description.toLowerCase().includes(query)) ||
+        (p.category && p.category.toLowerCase().includes(query))
+      )
+    }
+    renderProducts()
+  }
   
   async function loadShop() {
     if (!shopId || !phone) {
@@ -233,7 +585,8 @@
       document.title = data.name
       document.getElementById('shopName').textContent = data.name
       
-      products = data.products.filter(p => p.isAvailable)
+      allProducts = data.products.filter(p => p.isAvailable)
+      filteredProducts = [...allProducts]
       renderProducts()
     } catch (err) {
       document.getElementById('productsGrid').innerHTML = 
@@ -244,37 +597,88 @@
   function renderProducts() {
     const grid = document.getElementById('productsGrid')
     
-    if (products.length === 0) {
+    if (allProducts.length === 0) {
       grid.innerHTML = '<div class="empty-state"><h2>لا توجد منتجات متاحة حالياً</h2></div>'
       return
     }
     
-    grid.innerHTML = products.map((p, i) => `
-      <div class="product-card ${p.isAvailable ? '' : 'unavailable'}">
-        ${p.imageUrl 
-          ? `<img class="product-image" src="${p.imageUrl}" alt="${p.name}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">` 
-          : '' 
-        }
-        <div class="product-image placeholder" style="display: ${p.imageUrl ? 'none' : 'flex'}">🛍️</div>
-        <div class="product-info">
-          <div class="product-name">${p.name}</div>
-          ${p.description ? `<div class="product-desc">${p.description}</div>` : ''}
-          <div class="product-price">${p.price} جنيه</div>
-          <div class="quantity-control">
-            <button class="qty-btn" onclick="changeQty(${i}, -1)">−</button>
-            <span class="qty-display" id="qty-${i}">0</span>
-            <button class="qty-btn" onclick="changeQty(${i}, 1)">+</button>
+    if (filteredProducts.length === 0) {
+      grid.innerHTML = `
+        <div class="no-results">
+          <div class="no-results-icon">🔍</div>
+          <h2>لا توجد نتائج</h2>
+          <p>جرب بحثًا مختلفًا</p>
+        </div>
+      `
+      return
+    }
+    
+    grid.innerHTML = filteredProducts.map((p, i) => {
+      const originalIndex = allProducts.findIndex(ap => ap.id === p.id)
+      return `
+        <div class="product-card" data-product-id="${p.id}">
+          <div class="product-image-wrapper" onclick="openLightbox('${p.imageUrl || ''}', '${p.name}')">
+            ${p.imageUrl 
+              ? `<img class="product-image" src="${p.imageUrl}" alt="${p.name}" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">` 
+              : ''
+            }
+            <div class="product-image placeholder" style="display: ${p.imageUrl ? 'none' : 'flex'}">🛍️</div>
+            ${p.imageUrl ? '<span class="zoom-hint">🔍 تكبير</span>' : ''}
+          </div>
+          <div class="product-info">
+            ${p.category ? `<div class="product-category">${p.category}</div>` : ''}
+            <div class="product-name">${p.name}</div>
+            ${p.description ? `<div class="product-desc">${p.description}</div>` : ''}
+            <div class="product-price">${p.price}</div>
+            <div class="quantity-control">
+              <button class="qty-btn" onclick="changeQty(${originalIndex}, -1)">−</button>
+              <span class="qty-display" id="qty-${originalIndex}">${quantities[originalIndex] || 0}</span>
+              <button class="qty-btn" onclick="changeQty(${originalIndex}, 1)">+</button>
+            </div>
           </div>
         </div>
-      </div>
-    `).join('')
+      `
+    }).join('')
   }
+  
+  // Lightbox functions
+  function openLightbox(imageUrl, caption) {
+    if (!imageUrl) return
+    const lightbox = document.getElementById('lightbox')
+    const img = document.getElementById('lightboxImg')
+    const cap = document.getElementById('lightboxCaption')
+    
+    img.src = imageUrl
+    cap.textContent = caption
+    lightbox.classList.add('visible')
+    document.body.style.overflow = 'hidden'
+  }
+  
+  function closeLightbox() {
+    const lightbox = document.getElementById('lightbox')
+    lightbox.classList.remove('visible')
+    document.body.style.overflow = ''
+  }
+  
+  // Close lightbox on escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeLightbox()
+  })
   
   function changeQty(index, delta) {
     const current = quantities[index] || 0
     const newQty = Math.max(0, current + delta)
     quantities[index] = newQty
-    document.getElementById(`qty-${index}`).textContent = newQty
+    
+    // Update display
+    const qtyElements = document.querySelectorAll(`#qty-${index}`)
+    qtyElements.forEach(el => el.textContent = newQty)
+    
+    // Animate cart
+    const cartBar = document.getElementById('cartBar')
+    cartBar.classList.add('cart-updating')
+    setTimeout(() => cartBar.classList.remove('cart-updating'), 300)
+    
     updateCartBar()
   }
   
@@ -288,12 +692,14 @@
     }
     
     const total = items.reduce((sum, [i, q]) => 
-      sum + products[i].price * q, 0
+      sum + allProducts[i].price * q, 0
     )
     const itemCount = items.reduce((sum, [_, q]) => sum + q, 0)
     
-    document.getElementById('cartSummary').textContent = 
-      `${itemCount} منتج - ${total} جنيه`
+    document.getElementById('cartCount').textContent = 
+      `${itemCount} ${itemCount === 1 ? 'منتج' : 'منتجات'}`
+    document.getElementById('cartTotal').textContent = 
+      `${total} جنيه`
     cartBar.classList.add('visible')
   }
   
@@ -307,11 +713,11 @@
     
     // Build order message
     const orderLines = items.map(([i, q]) => 
-      `${products[i].name} × ${q}`
+      `${allProducts[i].name} × ${q}`
     ).join('\n')
     
     const total = items.reduce((sum, [i, q]) => 
-      sum + products[i].price * q, 0
+      sum + allProducts[i].price * q, 0
     )
     
     const message = 

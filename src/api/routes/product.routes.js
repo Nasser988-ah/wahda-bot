@@ -1,7 +1,7 @@
 const express = require("express");
 const databaseService = require("../../services/databaseService");
 const { authenticateToken } = require("../middleware/auth.middleware");
-const { upload } = require("../middleware/upload");
+const { upload } = require("../../middleware/upload");
 const { z } = require("zod");
 const fs = require("fs");
 const router = express.Router();

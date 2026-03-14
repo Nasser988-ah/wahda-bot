@@ -316,6 +316,13 @@ class BotManager {
 
       const lowerText = text.toLowerCase().trim();
 
+      // Check if message is from the mini store website
+      if (text.includes('[ORDER_FROM_WEBSITE]')) {
+        console.log(`🛒 Website order detected from ${customerPhone}`);
+        await this.handleWebsiteOrder(sock, from, text, shop, customerPhone);
+        return;
+      }
+
       // HANDLE PENDING CONFIRMATION FIRST
       const pendingKey = `pending:${shop.id}:${customerPhone}`;
       const pendingData = await redis.get(pendingKey);
@@ -775,52 +782,35 @@ class BotManager {
     }
   }
 
+  async sendStoreLink(sock, from, shop, customerPhone) {
+    const baseUrl = process.env.APP_URL || `https://${process.env.RAILWAY_STATIC_URL || 'your-app.railway.app'}`;
+    const storeUrl = `${baseUrl}/store.html?shopId=${shop.id}&phone=${shop.whatsappNumber}`;
+    
+    const welcomeMsg = 
+      `أهلاً وسهلاً! مرحباً بك في *${shop.name}*\n\n` +
+      `*أنا ذكي، موظف خدمة العملاء*\n` +
+      `أفهم أوامرك وأساعدك في الطلب بسرعة وسهولة.\n\n` +
+      `🛍️ *تصفح متجرنا:*\n` +
+      `${storeUrl}\n\n` +
+      `━━━━━━━━━━━━━━━━━━━━\n` +
+      `*كيفية الاستخدام:*\n\n` +
+      `📋 افتح الرابط أعلاه لرؤية جميع المنتجات\n` +
+      `🛒 اختر المنتجات وأضفها إلى السلة\n` +
+      `✅ اضغط "أرسل الطلب" وسيتم إرساله تلقائياً\n\n` +
+      `━━━━━━━━━━━━━━━━━━━━\n` +
+      `أو اكتب رقم المنتج مباشرة هنا`;
+    
+    await this.safeSendMessage(sock, from, welcomeMsg, shop.name, shop.id, customerPhone);
+    console.log(`🎉 Store link sent to ${customerPhone}`);
+    
+    // Update history
+    await this.updateMessageHistory(shop.id, customerPhone, 'first_message', 'user');
+    await this.updateMessageHistory(shop.id, customerPhone, welcomeMsg, 'bot', 'welcome');
+  }
+
   async sendProductsList(sock, from, shop, customerPhone, page = 1) {
-    const availableProducts = shop.products.filter(p => p.isAvailable);
-    
-    if (availableProducts.length === 0) {
-      await this.safeSendMessage(sock, from, "لا توجد منتجات متاحة حالياً.\n\nيرجى التواصل معنا مباشرة على الهاتف.", shop.name);
-      return;
-    }
-
-    const ITEMS_PER_PAGE = 10;
-    const totalPages = Math.ceil(availableProducts.length / ITEMS_PER_PAGE);
-    
-    // Validate page number
-    if (page < 1) page = 1;
-    if (page > totalPages) page = totalPages;
-    
-    const startIndex = (page - 1) * ITEMS_PER_PAGE;
-    const endIndex = startIndex + ITEMS_PER_PAGE;
-    const pageProducts = availableProducts.slice(startIndex, endIndex);
-
-    let message = `📦 منتجات ${shop.name} - صفحة ${page} من ${totalPages}\n\n`;
-    message += `━━━━━━━━━━━━━━━━━━━━━\n\n`;
-    
-    pageProducts.forEach((p, i) => {
-      const itemNumber = startIndex + i + 1;
-      message += `${itemNumber}. ${p.name}\n`;
-      message += `💰 السعر: ${p.price} جنيه\n`;
-      if (p.description) {
-        message += `📝 ${p.description}\n`;
-      }
-      message += `\n`;
-    });
-    
-    message += `━━━━━━━━━━━━━━━━━━━━━\n\n`;
-    message += `💡 للطلب:\n`;
-    message += `اكتب رقم المنتج (مثلاً: ${startIndex + 1})\n\n`;
-    
-    if (totalPages > 1) {
-      if (page < totalPages) {
-        message += `📄 اكتب "صفحة ${page + 1}" للصفحة التالية\n`;
-      }
-      if (page > 1) {
-        message += `📄 اكتب "صفحة ${page - 1}" للصفحة السابقة\n`;
-      }
-    }
-    
-    await this.safeSendMessage(sock, from, message, shop.name);
+    // Send store link instead of text list
+    await this.sendStoreLink(sock, from, shop, customerPhone);
   }
 
   async addToCart(sock, from, shopId, customerPhone, productNum, shop) {
@@ -1084,6 +1074,73 @@ class BotManager {
       `لديك ${items.length} منتج بإجمالي ${total} جنيه\n\n` +
       `اكتب *نعم* لتأكيد المسح\n` +
       `اكتب *لا* للإلغاء والاحتفاظ بالسلة`, shop.name, shop.id, customerPhone);
+  }
+
+  // Handle orders coming from the mini store website
+  async handleWebsiteOrder(sock, from, text, shop, customerPhone) {
+    console.log(`🛒 Processing website order from ${customerPhone}`);
+    
+    // Parse the order message
+    const lines = text.split('\n').filter(l => 
+      l.trim() && 
+      !l.includes('━') && 
+      !l.includes('طلب جديد') &&
+      !l.includes('الإجمالي') &&
+      !l.includes('[ORDER_FROM_WEBSITE]')
+    );
+    
+    const cart = [];
+    
+    for (const line of lines) {
+      // Format: "اسم المنتج × 2"
+      const match = line.match(/^(.+)\s*×\s*(\d+)$/);
+      if (!match) continue;
+      
+      const productName = match[1].trim();
+      const quantity = parseInt(match[2]);
+      
+      const product = shop.products.find(p => 
+        p.name === productName && p.isAvailable
+      );
+      
+      if (product) {
+        cart.push({
+          productId: product.id,
+          name: product.name,
+          price: product.price,
+          quantity
+        });
+      }
+    }
+    
+    if (cart.length === 0) {
+      await sock.sendMessage(from, {
+        text: 'عذراً، لم نتمكن من قراءة طلبك. يرجى المحاولة مرة أخرى أو التواصل معنا مباشرة.'
+      });
+      return;
+    }
+    
+    // Save cart to Redis
+    const cartKey = `cart:${shop.id}:${customerPhone}`;
+    await redis.set(cartKey, JSON.stringify(cart), { ex: 3600 });
+    
+    // Show cart summary and ask for customer info
+    const total = cart.reduce((s, i) => s + i.price * i.quantity, 0);
+    
+    await sock.sendMessage(from, {
+      text: `تم استلام طلبك من المتجر! ✅\n\n` +
+            `*ملخص الطلب:*\n` +
+            cart.map(i => `• ${i.name} × ${i.quantity} = ${i.price * i.quantity} جنيه`).join('\n') +
+            `\n\n💰 *الإجمالي: ${total} جنيه*\n\n` +
+            `لإتمام الطلب، يرجى إرسال بيانات التوصيل:\n\n` +
+            `الاسم:____________\nالهاتف:____________\nالعنوان:____________`
+    });
+    
+    // Set state to collect customer info
+    const stateKey = `state:${shop.id}:${customerPhone}`;
+    await redis.set(stateKey, 'waiting_name', { ex: 600 });
+    
+    console.log(`✅ Website order processed for ${customerPhone}, ${cart.length} items, ${total} EGP`);
   }
 
   // Validate AI response

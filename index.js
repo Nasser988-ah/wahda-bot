@@ -85,6 +85,7 @@ app.use("/api", apiLimiter);
 
 // Serve static files (HTML dashboard)
 app.use(express.static("public"));
+app.use("/uploads", express.static("src/public/uploads"));
 
 // Health check - works without DB for Railway deployment
 app.get('/health', (req, res) => {

@@ -1,7 +1,9 @@
 const express = require("express");
 const databaseService = require("../../services/databaseService");
 const { authenticateToken } = require("../middleware/auth.middleware");
+const { upload } = require("../middleware/upload");
 const { z } = require("zod");
+const fs = require("fs");
 const router = express.Router();
 
 // Helper function to get Prisma client with error handling
@@ -344,6 +346,61 @@ router.get("/categories/list", async (req, res) => {
     }
     
     res.status(500).json({ error: "Failed to get categories" });
+  }
+});
+
+// Upload product image
+router.post("/:id/image", upload.single('image'), async (req, res) => {
+  try {
+    const prisma = getPrisma();
+    
+    if (!req.file) {
+      return res.status(400).json({ error: "No image uploaded" });
+    }
+
+    // Check if product exists and belongs to shop
+    const existingProduct = await prisma.product.findFirst({
+      where: {
+        id: req.params.id,
+        shopId: req.shop.id
+      }
+    });
+
+    if (!existingProduct) {
+      // Delete uploaded file if product not found
+      fs.unlinkSync(req.file.path);
+      return res.status(404).json({ error: "Product not found" });
+    }
+
+    const imageUrl = `/uploads/${req.file.filename}`;
+
+    const product = await prisma.product.update({
+      where: { id: req.params.id },
+      data: { imageUrl },
+      select: {
+        id: true,
+        name: true,
+        imageUrl: true
+      }
+    });
+
+    res.json({
+      message: "تم رفع الصورة بنجاح",
+      imageUrl,
+      product
+    });
+
+  } catch (error) {
+    console.error("Upload image error:", error);
+    
+    // Delete uploaded file on error
+    if (req.file) {
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (e) {}
+    }
+    
+    res.status(500).json({ error: "Failed to upload image" });
   }
 });
 

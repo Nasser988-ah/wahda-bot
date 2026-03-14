@@ -1,4 +1,9 @@
 [build]
 cmd = "apt-get update && apt-get install -y libssl1.1 || apt-get install -y libssl3 || true && export DATABASE_URL=postgresql://placeholder:placeholder@localhost:5432/postgres && npm ci && npx prisma generate"
+
 [deploy]
+# Main branch uses npm start (full SaaS platform)
 startCommand = "npm start"
+
+# NOTE: For AI-Agent branch deployment, create a separate railway-agent.toml
+# See RAILWAY_BRANCH_SETUP.md for details

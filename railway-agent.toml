@@ -1,0 +1,12 @@
+[build]
+cmd = "apt-get update && apt-get install -y libssl1.1 || apt-get install -y libssl3 || true && export DATABASE_URL=postgresql://placeholder:placeholder@localhost:5432/postgres && npm ci && npx prisma generate"
+
+[deploy]
+# AI-Agent branch uses the /start command (custom script)
+# This branch runs the standalone AI Agent with separate database
+startCommand = "node ai-agent-cli.js"
+
+[env]
+# Environment variables specific to AI-Agent branch
+# These will be merged with project-level variables
+AI_AGENT_MODE = "true"

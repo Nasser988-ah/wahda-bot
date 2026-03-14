@@ -366,6 +366,53 @@
             transition: all 0.3s ease;
         }
 
+        .product-image {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 12px;
+            margin-left: 15px;
+            background: var(--glass);
+            border: 1px solid var(--border);
+        }
+
+        .product-image-upload {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .image-upload-label {
+            cursor: pointer;
+            color: var(--secondary);
+            font-size: 13px;
+            padding: 6px 12px;
+            background: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .image-upload-label:hover {
+            background: var(--secondary);
+            color: var(--darker);
+        }
+
+        .image-upload-input {
+            display: none;
+        }
+
+        .image-upload-spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--border);
+            border-top-color: var(--secondary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            display: none;
+        }
+
         .product-card:hover {
             border-color: rgba(99, 102, 241, 0.3);
             transform: translateY(-3px);
@@ -392,6 +439,7 @@
             background: linear-gradient(135deg, var(--primary), var(--secondary));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
 
         .product-category {
@@ -788,7 +836,26 @@
             grid.innerHTML = products.map(product => `
                 <div class="product-card">
                     <div class="product-header">
-                        <div>
+                        <div class="product-image-upload">
+                            ${product.imageUrl 
+                                ? `<img id="img-${product.id}" src="${product.imageUrl}" class="product-image" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>🛍️</text></svg>'">`
+                                : `<img id="img-${product.id}" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='80'>🛍️</text></svg>" class="product-image">`
+                            }
+                            <div>
+                                <label class="image-upload-label" for="file-${product.id}">
+                                    📷 تغيير الصورة
+                                    <input 
+                                        type="file" 
+                                        id="file-${product.id}" 
+                                        class="image-upload-input"
+                                        accept="image/*"
+                                        onchange="uploadImage('${product.id}', this)"
+                                    >
+                                </label>
+                                <div class="image-upload-spinner" id="spinner-${product.id}"></div>
+                            </div>
+                        </div>
+                        <div style="flex: 1;">
                             <div class="product-name">${product.name}</div>
                             <div class="product-price">${product.price} ج.م</div>
                         </div>
@@ -966,6 +1033,61 @@
             setTimeout(() => {
                 toast.classList.remove('show');
             }, 3000);
+        }
+
+        // Upload product image
+        async function uploadImage(productId, input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            // Validate file type
+            const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+            if (!allowedTypes.includes(file.type)) {
+                showToast('يُسمح فقط بصور JPG و PNG و WebP', 'error');
+                input.value = '';
+                return;
+            }
+
+            // Validate file size (2MB max)
+            if (file.size > 2 * 1024 * 1024) {
+                showToast('حجم الصورة يجب أن يكون أقل من 2 ميجابايت', 'error');
+                input.value = '';
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('image', file);
+
+            // Show spinner
+            const spinner = document.getElementById(`spinner-${productId}`);
+            spinner.style.display = 'inline-block';
+            input.disabled = true;
+
+            try {
+                const response = await fetch(`${API_BASE}/products/${productId}/image`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.imageUrl) {
+                    document.getElementById(`img-${productId}`).src = data.imageUrl;
+                    showToast('تم رفع الصورة بنجاح', 'success');
+                } else {
+                    showToast(data.error || 'فشل رفع الصورة', 'error');
+                }
+            } catch (error) {
+                console.error('Upload error:', error);
+                showToast('حدث خطأ أثناء رفع الصورة', 'error');
+            } finally {
+                spinner.style.display = 'none';
+                input.disabled = false;
+                input.value = '';
+            }
         }
 
         // Logout

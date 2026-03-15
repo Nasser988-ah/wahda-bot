@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إعدادات المتجر - وصلة</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg: #0f0f13;
+            --card: #1a1a22;
+            --card-hover: #1f1f2a;
+            --gold: #f5c842;
+            --gold-light: #fde98a;
+            --gold-dim: rgba(245, 200, 66, 0.12);
+            --text: #ffffff;
+            --muted: #8a8a9a;
+            --border: rgba(255, 255, 255, 0.07);
+            --radius: 20px;
+            --success: #10b981;
+            --error: #ef4444;
+            --warning: #f59e0b;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--gold);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header h1 i {
+            font-size: 1.5rem;
+        }
+
+        .back-btn {
+            background: var(--card);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 10px 20px;
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-family: 'Cairo', sans-serif;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .back-btn:hover {
+            background: var(--card-hover);
+            border-color: var(--gold);
+        }
+
+        .settings-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 30px;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--gold);
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: var(--text);
+            margin-bottom: 10px;
+        }
+
+        .form-label i {
+            color: var(--gold);
+            margin-left: 8px;
+            width: 20px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 15px 20px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text);
+            font-family: 'Cairo', sans-serif;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--gold);
+            box-shadow: 0 0 0 3px var(--gold-dim);
+        }
+
+        .form-input::placeholder {
+            color: var(--muted);
+        }
+
+        .form-hint {
+            font-size: 0.8rem;
+            color: var(--muted);
+            margin-top: 8px;
+        }
+
+        .form-hint i {
+            color: var(--warning);
+            margin-left: 5px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .input-group .form-input {
+            flex: 1;
+        }
+
+        .input-prefix {
+            display: flex;
+            align-items: center;
+            padding: 0 15px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--muted);
+            font-weight: 600;
+        }
+
+        .save-btn {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
+            color: #0f0f13;
+            border: none;
+            border-radius: 14px;
+            font-family: 'Cairo', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 30px;
+        }
+
+        .save-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(245, 200, 66, 0.3);
+        }
+
+        .save-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .save-btn i {
+            font-size: 1.1rem;
+        }
+
+        .alert {
+            padding: 15px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: none;
+            align-items: center;
+            gap: 12px;
+            animation: slideIn 0.3s ease;
+        }
+
+        .alert.show {
+            display: flex;
+        }
+
+        .alert-success {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid var(--success);
+            color: var(--success);
+        }
+
+        .alert-error {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid var(--error);
+            color: var(--error);
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .info-box {
+            background: var(--gold-dim);
+            border: 1px solid var(--gold);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+
+        .info-box p {
+            font-size: 0.9rem;
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .info-box i {
+            color: var(--gold);
+            margin-left: 8px;
+        }
+
+        .shop-id-display {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .shop-id-label {
+            font-size: 0.9rem;
+            color: var(--muted);
+        }
+
+        .shop-id-value {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            color: var(--gold);
+            direction: ltr;
+        }
+
+        .copy-btn {
+            background: var(--card-hover);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+        }
+
+        .copy-btn:hover {
+            border-color: var(--gold);
+            color: var(--gold);
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(15, 15, 19, 0.9);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .loading-overlay.show {
+            display: flex;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid var(--border);
+            border-top-color: var(--gold);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-cog"></i> إعدادات المتجر</h1>
+            <button class="back-btn" onclick="goBack()">
+                <i class="fas fa-arrow-right"></i>
+                العودة للوحة التحكم
+            </button>
+        </div>
+
+        <div class="alert alert-success" id="successAlert">
+            <i class="fas fa-check-circle"></i>
+            <span id="successMessage">تم حفظ الإعدادات بنجاح</span>
+        </div>
+
+        <div class="alert alert-error" id="errorAlert">
+            <i class="fas fa-exclamation-circle"></i>
+            <span id="errorMessage">حدث خطأ أثناء الحفظ</span>
+        </div>
+
+        <div class="settings-card">
+            <div class="card-title">
+                <i class="fas fa-store"></i>
+                معلومات المتجر
+            </div>
+
+            <div class="info-box">
+                <p><i class="fas fa-info-circle"></i> معرف المتجر الخاص بك (مطلوب عند الاتصال بالبوت)</p>
+            </div>
+
+            <div class="shop-id-display" style="margin-bottom: 25px;">
+                <span class="shop-id-label">معرف المتجر:</span>
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <span class="shop-id-value" id="shopIdDisplay">-</span>
+                    <button class="copy-btn" onclick="copyShopId()">
+                        <i class="fas fa-copy"></i> نسخ
+                    </button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="fas fa-store"></i>
+                    اسم المتجر
+                </label>
+                <input type="text" class="form-input" id="shopName" placeholder="أدخل اسم المتجر">
+                <p class="form-hint">اسم المتجر الذي سيظهر للعملاء في البوت</p>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="fas fa-user"></i>
+                    اسم صاحب المتجر
+                </label>
+                <input type="text" class="form-input" id="ownerName" placeholder="أدخل اسمك">
+            </div>
+        </div>
+
+        <div class="settings-card">
+            <div class="card-title">
+                <i class="fas fa-phone-alt"></i>
+                أرقام الاتصال
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="fas fa-mobile-alt"></i>
+                    رقم البوت (واتساب)
+                </label>
+                <div class="input-group">
+                    <span class="input-prefix">+20</span>
+                    <input type="tel" class="form-input" id="whatsappNumber" placeholder="1XXXXXXXXX" maxlength="10">
+                </div>
+                <p class="form-hint">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    رقم واتساب الخاص بالبوت (يجب أن يبدأ بـ 1)
+                </p>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="fas fa-phone"></i>
+                    رقم الهاتف الأساسي
+                </label>
+                <div class="input-group">
+                    <span class="input-prefix">+20</span>
+                    <input type="tel" class="form-input" id="phoneNumber" placeholder="1XXXXXXXXX" maxlength="10">
+                </div>
+            </div>
+        </div>
+
+        <div class="settings-card">
+            <div class="card-title">
+                <i class="fas fa-shield-alt"></i>
+                معلومات الاشتراك
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="fas fa-crown"></i>
+                    حالة الاشتراك
+                </label>
+                <input type="text" class="form-input" id="subscriptionStatus" disabled style="background: var(--bg); cursor: not-allowed;">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="fas fa-calendar-alt"></i>
+                    تاريخ انتهاء الاشتراك
+                </label>
+                <input type="text" class="form-input" id="subscriptionEnd" disabled style="background: var(--bg); cursor: not-allowed;">
+            </div>
+        </div>
+
+        <button class="save-btn" id="saveBtn" onclick="saveSettings()">
+            <i class="fas fa-save"></i>
+            حفظ الإعدادات
+        </button>
+    </div>
+
+    <script>
+        const API_BASE_URL = window.location.origin;
+        let currentShop = null;
+
+        // Check authentication and load shop data
+        document.addEventListener('DOMContentLoaded', async () => {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = '/login.html';
+                return;
+            }
+
+            await loadShopData();
+        });
+
+        // Load shop data from API
+        async function loadShopData() {
+            showLoading(true);
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/shop/me`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        localStorage.removeItem('token');
+                        window.location.href = '/login.html';
+                        return;
+                    }
+                    throw new Error('Failed to load shop data');
+                }
+
+                currentShop = await response.json();
+                populateForm(currentShop);
+            } catch (error) {
+                showError('فشل في تحميل بيانات المتجر');
+                console.error('Error loading shop:', error);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Populate form with shop data
+        function populateForm(shop) {
+            document.getElementById('shopIdDisplay').textContent = shop.id;
+            document.getElementById('shopName').value = shop.name || '';
+            document.getElementById('ownerName').value = shop.ownerName || '';
+            document.getElementById('whatsappNumber').value = shop.whatsappNumber ? shop.whatsappNumber.replace(/^20/, '') : '';
+            document.getElementById('phoneNumber').value = shop.phone ? shop.phone.replace(/^20/, '') : '';
+            document.getElementById('subscriptionStatus').value = translateStatus(shop.subscriptionStatus);
+            document.getElementById('subscriptionEnd').value = shop.subscriptionEnd 
+                ? new Date(shop.subscriptionEnd).toLocaleDateString('ar-EG') 
+                : 'غير محدد';
+        }
+
+        // Translate subscription status
+        function translateStatus(status) {
+            const statuses = {
+                'ACTIVE': 'نشط',
+                'INACTIVE': 'غير نشط',
+                'FREE': 'مجاني',
+                'TRIAL': 'فترة تجريبية',
+                'EXPIRED': 'منتهي'
+            };
+            return statuses[status] || status;
+        }
+
+        // Copy shop ID to clipboard
+        function copyShopId() {
+            if (!currentShop) return;
+            navigator.clipboard.writeText(currentShop.id).then(() => {
+                showSuccess('تم نسخ معرف المتجر');
+            }).catch(() => {
+                showError('فشل في النسخ');
+            });
+        }
+
+        // Save settings
+        async function saveSettings() {
+            const shopName = document.getElementById('shopName').value.trim();
+            const ownerName = document.getElementById('ownerName').value.trim();
+            const whatsappNumber = document.getElementById('whatsappNumber').value.trim();
+            const phoneNumber = document.getElementById('phoneNumber').value.trim();
+
+            // Validation
+            if (!shopName || shopName.length < 2) {
+                showError('اسم المتجر يجب أن يكون على الأقل 2 أحرف');
+                return;
+            }
+
+            if (whatsappNumber && !/^1\d{9}$/.test(whatsappNumber)) {
+                showError('رقم واتساب يجب أن يبدأ بـ 1 ويتكون من 10 أرقام');
+                return;
+            }
+
+            if (phoneNumber && !/^1\d{9}$/.test(phoneNumber)) {
+                showError('رقم الهاتف يجب أن يبدأ بـ 1 ويتكون من 10 أرقام');
+                return;
+            }
+
+            const updateData = {
+                name: shopName,
+                ownerName: ownerName || null,
+                whatsappNumber: whatsappNumber ? `20${whatsappNumber}` : null
+            };
+
+            // Only include phone if it changed
+            if (phoneNumber && `20${phoneNumber}` !== currentShop?.phone) {
+                // Phone changes might require special handling
+                console.log('Phone number change detected');
+            }
+
+            showLoading(true);
+            document.getElementById('saveBtn').disabled = true;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/shop/me`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify(updateData)
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.error || result.details?.[0]?.message || 'فشل في حفظ الإعدادات');
+                }
+
+                currentShop = result.shop;
+                showSuccess('تم حفظ الإعدادات بنجاح');
+                
+                // Refresh data after a short delay
+                setTimeout(() => loadShopData(), 500);
+
+            } catch (error) {
+                showError(error.message || 'حدث خطأ أثناء الحفظ');
+                console.error('Error saving settings:', error);
+            } finally {
+                showLoading(false);
+                document.getElementById('saveBtn').disabled = false;
+            }
+        }
+
+        // Show/hide loading overlay
+        function showLoading(show) {
+            document.getElementById('loadingOverlay').classList.toggle('show', show);
+        }
+
+        // Show success alert
+        function showSuccess(message) {
+            const alert = document.getElementById('successAlert');
+            document.getElementById('successMessage').textContent = message;
+            alert.classList.add('show');
+            setTimeout(() => alert.classList.remove('show'), 4000);
+        }
+
+        // Show error alert
+        function showError(message) {
+            const alert = document.getElementById('errorAlert');
+            document.getElementById('errorMessage').textContent = message;
+            alert.classList.add('show');
+            setTimeout(() => alert.classList.remove('show'), 4000);
+        }
+
+        // Go back to dashboard
+        function goBack() {
+            window.location.href = '/dashboard.html';
+        }
+
+        // Allow Enter key to save
+        document.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+                saveSettings();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -767,6 +767,15 @@
                     if (pendingElement) {
                         pendingElement.textContent = pendingCount;
                     }
+                    
+                    // Calculate and update revenue from delivered orders
+                    const revenue = data.orders
+                        .filter(o => o.status === 'DELIVERED')
+                        .reduce((sum, o) => sum + (o.totalPrice || 0), 0);
+                    const revenueElement = document.getElementById('revenueValue');
+                    if (revenueElement) {
+                        revenueElement.textContent = revenue.toLocaleString() + ' ج.م';
+                    }
                 } else {
                     displayOrders([]);
                 }

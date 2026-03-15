@@ -1,6 +1,6 @@
 const express = require("express");
 const prisma = require("../../db/index");
-const { authenticateToken } = require("../middleware/auth.middleware");
+const { authenticateToken, authenticateTokenWithPending } = require("../middleware/auth.middleware");
 const { z } = require("zod");
 const qrService = require("../../services/qrService");
 const router = express.Router();
@@ -156,22 +156,14 @@ router.post("/qr/refresh", async (req, res) => {
   }
 });
 
-// Apply auth middleware to remaining routes
-router.use(authenticateToken);
-
-// Validation schemas
-const updateShopSchema = z.object({
-  name: z.string().min(2, "Shop name must be at least 2 characters").optional(),
-  ownerName: z.string().min(2, "Owner name must be at least 2 characters").optional(),
-  whatsappNumber: z.string().regex(/^20\d{10}$/, "WhatsApp number must be Egyptian number starting with 20").optional(),
-  phone: z.string().regex(/^20\d{10}$/, "Phone number must be Egyptian number starting with 20").optional(),
-});
-
-// Get shop details
-router.get("/me", async (req, res) => {
+// Get current shop (allows pending payment accounts) - MUST be before auth middleware
+router.get("/me", authenticateTokenWithPending, async (req, res) => {
   try {
+    const prisma = getPrisma();
+    const shopId = req.shop.id;
+
     const shop = await prisma.shop.findUnique({
-      where: { id: req.shop.id },
+      where: { id: shopId },
       select: {
         id: true,
         name: true,
@@ -185,7 +177,7 @@ router.get("/me", async (req, res) => {
         _count: {
           select: {
             products: true,
-            orders: true,
+            orders: true
           }
         }
       }
@@ -196,10 +188,22 @@ router.get("/me", async (req, res) => {
     }
 
     res.json(shop);
+
   } catch (error) {
     console.error("Get shop error:", error);
     res.status(500).json({ error: "Failed to get shop details" });
   }
+});
+
+// Apply auth middleware to remaining routes
+router.use(authenticateToken);
+
+// Validation schemas
+const updateShopSchema = z.object({
+  name: z.string().min(2, "Shop name must be at least 2 characters").optional(),
+  ownerName: z.string().min(2, "Owner name must be at least 2 characters").optional(),
+  whatsappNumber: z.string().regex(/^20\d{10}$/, "WhatsApp number must be Egyptian number starting with 20").optional(),
+  phone: z.string().regex(/^20\d{10}$/, "Phone number must be Egyptian number starting with 20").optional(),
 });
 
 // Update shop info

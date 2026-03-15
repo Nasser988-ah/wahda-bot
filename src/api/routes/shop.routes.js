@@ -159,7 +159,6 @@ router.post("/qr/refresh", async (req, res) => {
 // Get current shop (allows pending payment accounts) - MUST be before auth middleware
 router.get("/me", authenticateTokenWithPending, async (req, res) => {
   try {
-    const prisma = getPrisma();
     const shopId = req.shop.id;
 
     const shop = await prisma.shop.findUnique({

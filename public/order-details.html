@@ -514,22 +514,26 @@
             // Order items
             const itemsContainer = document.getElementById('orderItems');
             if (currentOrder.orderItems && currentOrder.orderItems.length > 0) {
-                itemsContainer.innerHTML = currentOrder.orderItems.map(item => `
+                itemsContainer.innerHTML = currentOrder.orderItems.map(item => {
+                    const price = item.priceAtTime || item.product?.price || 0;
+                    return `
                     <div class="item-row">
                         <div class="item-info">
                             <div class="item-name">${item.product?.name || 'منتج غير متوفر'}</div>
-                            <div class="item-qty">الكمية: ${item.quantity} × ${item.priceAtTime} ج.م</div>
+                            <div class="item-qty">الكمية: ${item.quantity} × ${price} ج.م</div>
                         </div>
-                        <div class="item-price">${(item.quantity * item.priceAtTime).toLocaleString()} ج.م</div>
+                        <div class="item-price">${(item.quantity * price).toLocaleString()} ج.م</div>
                     </div>
-                `).join('');
+                `}).join('');
             } else {
                 itemsContainer.innerHTML = '<div style="color: var(--muted); text-align: center; padding: 20px;">لا توجد منتجات</div>';
             }
 
             // Totals
-            const subtotal = currentOrder.orderItems?.reduce((sum, item) => 
-                sum + (item.quantity * item.priceAtTime), 0) || 0;
+            const subtotal = currentOrder.orderItems?.reduce((sum, item) => {
+                const price = item.priceAtTime || item.product?.price || 0;
+                return sum + (item.quantity * price);
+            }, 0) || 0;
             document.getElementById('subtotal').textContent = subtotal.toLocaleString() + ' ج.م';
             document.getElementById('totalPrice').textContent = currentOrder.totalPrice?.toLocaleString() + ' ج.م' || subtotal.toLocaleString() + ' ج.م';
 

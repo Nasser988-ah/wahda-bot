@@ -51,7 +51,10 @@ router.get("/", async (req, res) => {
         orderBy: { createdAt: "desc" },
         include: {
           orderItems: {
-            include: {
+            select: {
+              id: true,
+              quantity: true,
+              priceAtTime: true,
               product: {
                 select: {
                   id: true,
@@ -91,20 +94,23 @@ router.get("/:id", async (req, res) => {
         shopId: req.shop.id
       },
       include: {
-        orderItems: {
-          include: {
-            product: {
-              select: {
-                id: true,
-                name: true,
-                price: true,
-                description: true,
-                category: true
+          orderItems: {
+            select: {
+              id: true,
+              quantity: true,
+              priceAtTime: true,
+              product: {
+                select: {
+                  id: true,
+                  name: true,
+                  price: true,
+                  description: true,
+                  category: true
+                }
               }
             }
           }
         }
-      }
     });
 
     if (!order) {

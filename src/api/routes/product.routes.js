@@ -6,6 +6,7 @@ const { z } = require("zod");
 const fs = require("fs");
 const router = express.Router();
 const botManager = require('../../bot/botManager');
+const { uploadImage, isStorageConfigured } = require('../../services/storageService');
 
 // Helper function to get Prisma client with error handling
 function getPrisma() {
@@ -381,12 +382,42 @@ router.post("/:id/image", upload.single('image'), async (req, res) => {
     });
 
     if (!existingProduct) {
-      // Delete uploaded file if product not found
+      // Delete uploaded temp file if product not found
       fs.unlinkSync(req.file.path);
       return res.status(404).json({ error: "Product not found" });
     }
 
-    const imageUrl = `/uploads/${req.file.filename}`;
+    let imageUrl;
+    
+    // Use Supabase Storage if configured, otherwise fall back to local
+    if (isStorageConfigured()) {
+      // Generate unique filename
+      const timestamp = Date.now();
+      const filename = `${req.shop.id}/${req.params.id}_${timestamp}.jpg`;
+      
+      // Upload to Supabase Storage
+      imageUrl = await uploadImage(req.file.path, filename);
+    } else {
+      // Fall back to local storage (for development)
+      const localFilename = `${Date.now()}_${req.file.originalname || 'image.jpg'}`;
+      const localPath = `public/uploads/${localFilename}`;
+      
+      // Ensure uploads directory exists
+      if (!fs.existsSync('public/uploads')) {
+        fs.mkdirSync('public/uploads', { recursive: true });
+      }
+      
+      // Move file to uploads directory
+      fs.renameSync(req.file.path, localPath);
+      imageUrl = `/uploads/${localFilename}`;
+      
+      console.log(`⚠️ Supabase not configured. Image saved locally: ${imageUrl}`);
+    }
+
+    // Clean up temp file if still exists
+    if (fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
 
     const product = await prisma.product.update({
       where: { id: req.params.id },
@@ -410,14 +441,14 @@ router.post("/:id/image", upload.single('image'), async (req, res) => {
   } catch (error) {
     console.error("Upload image error:", error);
     
-    // Delete uploaded file on error
-    if (req.file) {
+    // Delete temp uploaded file on error
+    if (req.file && fs.existsSync(req.file.path)) {
       try {
         fs.unlinkSync(req.file.path);
       } catch (e) {}
     }
     
-    res.status(500).json({ error: "Failed to upload image" });
+    res.status(500).json({ error: "Failed to upload image", details: error.message });
   }
 });
 

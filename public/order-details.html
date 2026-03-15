@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تفاصيل الطلب - وصلة</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0f0f13;
+            --card: #1a1a22;
+            --card-hover: #1f1f2a;
+            --gold: #f5c842;
+            --gold-light: #fde98a;
+            --gold-dim: rgba(245, 200, 66, 0.12);
+            --text: #ffffff;
+            --muted: #8a8a9a;
+            --border: rgba(255, 255, 255, 0.07);
+            --radius: 20px;
+            --success: #10b981;
+            --error: #ef4444;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .header h1 span {
+            color: var(--gold);
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-family: 'Cairo', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+        .btn-secondary {
+            background: var(--card);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--gold);
+            background: var(--gold-dim);
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 30px;
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--gold);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-bar {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: var(--bg);
+            border-radius: 15px;
+        }
+
+        .status-info {
+            flex: 1;
+        }
+
+        .status-label {
+            font-size: 0.85rem;
+            color: var(--muted);
+            margin-bottom: 5px;
+        }
+
+        .status-value {
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 8px 20px;
+            border-radius: 25px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .status-pending {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--warning);
+            border: 1px solid var(--warning);
+        }
+
+        .status-confirmed {
+            background: rgba(59, 130, 246, 0.15);
+            color: var(--info);
+            border: 1px solid var(--info);
+        }
+
+        .status-delivered {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+
+        .status-cancelled {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--error);
+            border: 1px solid var(--error);
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .info-item {
+            background: var(--bg);
+            padding: 15px 20px;
+            border-radius: 12px;
+        }
+
+        .info-label {
+            font-size: 0.85rem;
+            color: var(--muted);
+            margin-bottom: 5px;
+        }
+
+        .info-value {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .info-value.phone {
+            font-family: 'Courier New', monospace;
+            direction: ltr;
+            text-align: right;
+        }
+
+        .order-items {
+            margin-top: 20px;
+        }
+
+        .item-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: var(--bg);
+            border-radius: 12px;
+            margin-bottom: 10px;
+        }
+
+        .item-info {
+            flex: 1;
+        }
+
+        .item-name {
+            font-weight: 600;
+            margin-bottom: 3px;
+        }
+
+        .item-qty {
+            font-size: 0.85rem;
+            color: var(--muted);
+        }
+
+        .item-price {
+            font-weight: 700;
+            color: var(--gold);
+            font-size: 1.1rem;
+        }
+
+        .summary-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            font-size: 0.95rem;
+        }
+
+        .summary-row.total {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--gold);
+            padding-top: 15px;
+            border-top: 1px solid var(--border);
+            margin-top: 10px;
+        }
+
+        .actions-section {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-top: 30px;
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-success:hover {
+            opacity: 0.85;
+        }
+
+        .btn-info {
+            background: var(--info);
+            color: white;
+        }
+
+        .btn-info:hover {
+            opacity: 0.85;
+        }
+
+        .btn-danger {
+            background: var(--error);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            opacity: 0.85;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--muted);
+        }
+
+        .error-message {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--error);
+        }
+
+        .alert {
+            padding: 15px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .alert.show {
+            display: block;
+        }
+
+        .alert-success {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid var(--success);
+            color: var(--success);
+        }
+
+        .alert-error {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid var(--error);
+            color: var(--error);
+        }
+
+        .timestamp {
+            font-size: 0.85rem;
+            color: var(--muted);
+            margin-top: 5px;
+        }
+
+        @media (max-width: 600px) {
+            .card {
+                padding: 20px;
+            }
+
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .status-bar {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📦 تفاصيل الطلب <span id="orderId">-</span></h1>
+            <a href="orders.html" class="btn btn-secondary">← العودة للطلبات</a>
+        </div>
+
+        <div class="alert alert-success" id="successAlert"></div>
+        <div class="alert alert-error" id="errorAlert"></div>
+
+        <div class="loading" id="loading">جاري تحميل تفاصيل الطلب...</div>
+
+        <div id="orderContent" style="display: none;">
+            <!-- Status Section -->
+            <div class="card">
+                <div class="section-title">📊 حالة الطلب</div>
+                <div class="status-bar">
+                    <div class="status-info">
+                        <div class="status-label">الحالة الحالية</div>
+                        <div class="status-value" id="orderStatus">-</div>
+                        <div class="timestamp" id="orderDate">-</div>
+                    </div>
+                    <span class="status-badge" id="statusBadge">-</span>
+                </div>
+            </div>
+
+            <!-- Customer Info -->
+            <div class="card">
+                <div class="section-title">👤 معلومات العميل</div>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">اسم العميل</div>
+                        <div class="info-value" id="customerName">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">رقم الهاتف</div>
+                        <div class="info-value phone" id="customerPhone">-</div>
+                    </div>
+                    <div class="info-item" id="addressSection" style="display: none;">
+                        <div class="info-label">العنوان</div>
+                        <div class="info-value" id="customerAddress">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Order Items -->
+            <div class="card">
+                <div class="section-title">🛒 منتجات الطلب</div>
+                <div class="order-items" id="orderItems">
+                    <!-- Items will be loaded here -->
+                </div>
+                <div class="summary-section">
+                    <div class="summary-row">
+                        <span>إجمالي المنتجات</span>
+                        <span id="subtotal">-</span>
+                    </div>
+                    <div class="summary-row total">
+                        <span>الإجمالي النهائي</span>
+                        <span id="totalPrice">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="card">
+                <div class="section-title">⚡ إجراءات سريعة</div>
+                <div class="actions-section" id="actionButtons">
+                    <button class="btn btn-success" onclick="updateStatus('CONFIRMED')" id="btnConfirm">
+                        ✅ تأكيد الطلب
+                    </button>
+                    <button class="btn btn-info" onclick="updateStatus('DELIVERED')" id="btnDeliver">
+                        🚚 تم التوصيل
+                    </button>
+                    <button class="btn btn-danger" onclick="updateStatus('CANCELLED')" id="btnCancel">
+                        ❌ إلغاء الطلب
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = window.location.origin;
+        let currentOrderId = null;
+        let currentOrder = null;
+
+        // Status translations
+        const statusTranslations = {
+            'PENDING': { text: 'معلق', class: 'status-pending' },
+            'CONFIRMED': { text: 'مؤكد', class: 'status-confirmed' },
+            'DELIVERED': { text: 'تم التوصيل', class: 'status-delivered' },
+            'CANCELLED': { text: 'ملغي', class: 'status-cancelled' }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            // Get order ID from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            currentOrderId = urlParams.get('id');
+
+            if (!currentOrderId) {
+                showError('رقم الطلب غير محدد');
+                return;
+            }
+
+            document.getElementById('orderId').textContent = '#' + currentOrderId;
+            loadOrder();
+        });
+
+        async function loadOrder() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/orders/${currentOrderId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        localStorage.removeItem('token');
+                        window.location.href = 'login.html';
+                        return;
+                    }
+                    throw new Error('Failed to load order');
+                }
+
+                currentOrder = await response.json();
+                renderOrder();
+
+            } catch (error) {
+                console.error('Error loading order:', error);
+                document.getElementById('loading').innerHTML = 
+                    '<div style="color: var(--error);">فشل في تحميل تفاصيل الطلب. <a href="orders.html" style="color: var(--gold);">العودة للطلبات</a></div>';
+            }
+        }
+
+        function renderOrder() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('orderContent').style.display = 'block';
+
+            const status = statusTranslations[currentOrder.status] || { text: currentOrder.status, class: '' };
+
+            // Status
+            document.getElementById('orderStatus').textContent = status.text;
+            const badge = document.getElementById('statusBadge');
+            badge.textContent = status.text;
+            badge.className = 'status-badge ' + status.class;
+
+            // Date - Format correctly for Arabic
+            const date = new Date(currentOrder.createdAt);
+            document.getElementById('orderDate').textContent = formatDateTime(date);
+
+            // Customer info
+            document.getElementById('customerName').textContent = currentOrder.customerName || 'غير محدد';
+            document.getElementById('customerPhone').textContent = currentOrder.customerPhone || '-';
+            
+            if (currentOrder.customerAddress) {
+                document.getElementById('addressSection').style.display = 'block';
+                document.getElementById('customerAddress').textContent = currentOrder.customerAddress;
+            }
+
+            // Order items
+            const itemsContainer = document.getElementById('orderItems');
+            if (currentOrder.orderItems && currentOrder.orderItems.length > 0) {
+                itemsContainer.innerHTML = currentOrder.orderItems.map(item => `
+                    <div class="item-row">
+                        <div class="item-info">
+                            <div class="item-name">${item.product?.name || 'منتج غير متوفر'}</div>
+                            <div class="item-qty">الكمية: ${item.quantity} × ${item.priceAtTime} ج.م</div>
+                        </div>
+                        <div class="item-price">${(item.quantity * item.priceAtTime).toLocaleString()} ج.م</div>
+                    </div>
+                `).join('');
+            } else {
+                itemsContainer.innerHTML = '<div style="color: var(--muted); text-align: center; padding: 20px;">لا توجد منتجات</div>';
+            }
+
+            // Totals
+            const subtotal = currentOrder.orderItems?.reduce((sum, item) => 
+                sum + (item.quantity * item.priceAtTime), 0) || 0;
+            document.getElementById('subtotal').textContent = subtotal.toLocaleString() + ' ج.م';
+            document.getElementById('totalPrice').textContent = currentOrder.totalPrice?.toLocaleString() + ' ج.م' || subtotal.toLocaleString() + ' ج.م';
+
+            // Update buttons visibility based on current status
+            updateActionButtons();
+        }
+
+        function updateActionButtons() {
+            const btnConfirm = document.getElementById('btnConfirm');
+            const btnDeliver = document.getElementById('btnDeliver');
+            const btnCancel = document.getElementById('btnCancel');
+
+            // Hide/show buttons based on current status
+            if (currentOrder.status === 'DELIVERED' || currentOrder.status === 'CANCELLED') {
+                btnConfirm.style.display = 'none';
+                btnDeliver.style.display = 'none';
+                btnCancel.style.display = 'none';
+            } else if (currentOrder.status === 'CONFIRMED') {
+                btnConfirm.style.display = 'none';
+                btnDeliver.style.display = 'inline-flex';
+                btnCancel.style.display = 'inline-flex';
+            } else if (currentOrder.status === 'PENDING') {
+                btnConfirm.style.display = 'inline-flex';
+                btnDeliver.style.display = 'none';
+                btnCancel.style.display = 'inline-flex';
+            }
+        }
+
+        async function updateStatus(newStatus) {
+            const confirmMessages = {
+                'CONFIRMED': 'هل أنت متأكد من تأكيد هذا الطلب؟',
+                'DELIVERED': 'هل أنت متأكد من تحديث حالة الطلب إلى "تم التوصيل"؟',
+                'CANCELLED': 'هل أنت متأكد من إلغاء هذا الطلب؟ لا يمكن التراجع!'
+            };
+
+            if (!confirm(confirmMessages[newStatus])) return;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/orders/${currentOrderId}/status`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({ status: newStatus })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to update status');
+                }
+
+                currentOrder.status = newStatus;
+                renderOrder();
+                showSuccess(`تم تحديث حالة الطلب بنجاح إلى: ${statusTranslations[newStatus].text}`);
+
+            } catch (error) {
+                console.error('Error updating status:', error);
+                showError('فشل في تحديث حالة الطلب');
+            }
+        }
+
+        function formatDateTime(date) {
+            const options = {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+            };
+            return date.toLocaleString('ar-EG', options);
+        }
+
+        function showSuccess(message) {
+            const alert = document.getElementById('successAlert');
+            alert.textContent = message;
+            alert.classList.add('show');
+            setTimeout(() => alert.classList.remove('show'), 3000);
+        }
+
+        function showError(message) {
+            const alert = document.getElementById('errorAlert');
+            alert.textContent = message;
+            alert.classList.add('show');
+            setTimeout(() => alert.classList.remove('show'), 5000);
+        }
+    </script>
+</body>
+</html>

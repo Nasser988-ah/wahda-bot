@@ -866,8 +866,7 @@
 
         // View order details
         function viewOrder(orderId) {
-            // For now, just show an alert
-            alert(`تفاصيل الطلب #${orderId.slice(-8)} - قيد التطوير`);
+            window.location.href = `order-details.html?id=${orderId}`;
         }
 
         // Refresh data

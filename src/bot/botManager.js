@@ -457,8 +457,9 @@ class BotManager {
       
       if (orderState === 'waiting_for_name' || orderState === 'waiting_for_phone' || orderState === 'waiting_for_address') {
         // Check if customer wants to cancel during info collection
-        const cancelWords = /الغاء|إلغاء|الغي|إلغي|امسح|cancel|لا|مش عايز|بطل|اوقف|لأ|لا اريد|مش عايز اكمل|الغي الطلب/;
-        if (cancelWords.test(lowerText)) {
+        // CRITICAL FIX: Only match EXACT cancel words as standalone commands
+        const exactCancelPattern = /^(الغاء|إلغاء|الغي|إلغي|cancel|الغاء الطلب|إلغاء الطلب)$/i;
+        if (exactCancelPattern.test(text.trim())) {
           // Clear all order states and cart
           await redis.del(`order_state:${shop.id}:${customerPhone}`);
           await redis.del(`customer_name:${shop.id}:${customerPhone}`);

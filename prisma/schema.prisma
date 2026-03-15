@@ -23,6 +23,7 @@ model Shop {
   orders            Order[]
   sessions          BotSession[]
   messages          Message[]
+  whatsappSession   WhatsAppSession?
 
   @@map("shops")
 }
@@ -132,4 +133,15 @@ enum OrderStatus {
 enum Direction {
   INCOMING
   OUTGOING
+}
+
+model WhatsAppSession {
+  id        String   @id
+  shopId    String   @unique
+  creds     String   @db.Text
+  keys      String   @db.Text
+  updatedAt DateTime @updatedAt
+  shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@map("whatsapp_sessions")
 }

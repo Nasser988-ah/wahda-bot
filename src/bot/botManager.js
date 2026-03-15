@@ -1,15 +1,13 @@
 const {
   default: makeWASocket,
-  useMultiFileAuthState,
   DisconnectReason,
 } = require("@whiskeysockets/baileys");
 const pino = require("pino");
-const path = require("path");
-const fs = require("fs");
 const databaseService = require("../services/databaseService");
 const redis = require("../db/redis");
 const { HfInference } = require("@huggingface/inference");
 const Groq = require("groq-sdk");
+const { useDBAuthState } = require("../services/dbAuthState");
 
 const HF_TOKEN = process.env.HUGGINGFACE_TOKEN;
 const hf = HF_TOKEN ? new HfInference(HF_TOKEN) : null;
@@ -116,7 +114,8 @@ class BotManager {
     this.qrCallbacks = new Map();
     this.connectionStates = new Map();
     this.qrReceived = new Map();
-    this.currentQrs = new Map(); // Store current QR codes
+    this.currentQrs = new Map();
+    this.reconnectAttempts = new Map();
   }
 
   async connectShop(shopId, qrCallback) {
@@ -144,21 +143,9 @@ class BotManager {
       // Mark as connecting
       this.connectionStates.set(shopId, 'connecting');
       this.qrReceived.set(shopId, false);
-
-      // Setup session directory
-      const sessionDir = path.resolve(`./sessions/${shopId}`);
       
-      // NEVER clear existing session - only create if doesn't exist
-      // Session should only be deleted on explicit logout
-      if (!fs.existsSync(sessionDir)) {
-        console.log(`📁 Creating new session directory for ${shop.name}`);
-        fs.mkdirSync(sessionDir, { recursive: true });
-      } else {
-        console.log(`📁 Using existing session for ${shop.name}`);
-      }
-      
-      // Initialize auth state
-      const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
+      // Initialize auth state from database
+      const { state, saveCreds, deleteSession } = await useDBAuthState(shopId);
 
       // Create socket with proper configuration for QR generation
       const sock = makeWASocket({
@@ -185,96 +172,63 @@ class BotManager {
         console.log(`💾 Session credentials saved for ${shop.name} (${shopId})`);
       });
 
-      // Handle connection updates
-      sock.ev.on('connection.update', async (update) => {
-        const { connection, lastDisconnect, qr } = update;
-
-        // Handle QR code
-        if (qr && qrCallback && !this.qrReceived.get(shopId)) {
-          console.log(`📱 QR received for ${shop.name}`);
+      // Handle connection updates with smart reconnect
+      sock.ev.on('connection.update', async ({ connection, lastDisconnect, qr }) => {
+        
+        // New QR generated
+        if (qr) {
+          console.log(`📱 QR generated for ${shop.name}`);
+          this.connectionStates.set(shopId, 'qr');
           this.qrReceived.set(shopId, true);
-          this.setCurrentQr(shopId, qr); // Store QR for later retrieval
-          qrCallback(qr);
+          this.setCurrentQr(shopId, qr);
+          if (qrCallback) qrCallback(qr);
+          return;
         }
-
-        // Handle successful connection
+        
+        // Successfully connected
         if (connection === 'open') {
-          console.log(`✅ ${shop.name} connected successfully!`);
-          console.log(`📊 Connection state for ${shopId}: ${connection}`);
+          console.log(`✅ ${shop.name} connected!`);
           this.connectionStates.set(shopId, 'connected');
-          // Verify state was set
-          console.log(`📊 Verified state: ${this.connectionStates.get(shopId)}`);
+          this.reconnectAttempts.set(shopId, 0);
+          return;
         }
-
-        // Handle connection close
+        
+        // Connection closed
         if (connection === 'close') {
-          const statusCode = lastDisconnect?.error?.output?.statusCode;
-          const errorMessage = lastDisconnect?.error?.message;
+          const code = lastDisconnect?.error?.output?.statusCode;
+          const reason = lastDisconnect?.error?.message || 'unknown';
           
-          console.log(`🔌 ${shop.name} disconnected. Code: ${statusCode}, Error: ${errorMessage}`);
-          
-          // Clean up
+          console.log(`🔌 ${shop.name} disconnected. Code: ${code}, Reason: ${reason}`);
+          this.connectionStates.set(shopId, 'disconnected');
           this.connections.delete(shopId);
           
-          // Handle timeout errors specifically
-          if (errorMessage?.includes('Timed Out') || statusCode === 408) {
-            console.log(`⏱️ Timeout detected, will retry connection...`);
-            this.connectionStates.set(shopId, 'not_started');
-            
-            // Retry after 5 seconds
-            setTimeout(() => {
-              console.log(`🔄 Retrying connection after timeout...`);
-              this.connectShop(shopId, qrCallback).catch(err => {
-                console.log(`⚠️ Retry failed: ${err.message}`);
-              });
-            }, 5000);
+          // Logged out explicitly - need new QR
+          if (code === DisconnectReason.loggedOut) {
+            console.log(`🚪 ${shop.name} logged out - need new QR`);
+            await deleteSession();
+            this.qrCallbacks.delete(shopId);
             return;
           }
           
-          if (statusCode === DisconnectReason.loggedOut) {
-            // Clear session on logout
-            try {
-              fs.rmSync(sessionDir, { recursive: true, force: true });
-            } catch (e) {}
-            this.connectionStates.set(shopId, 'not_started');
-            this.qrCallbacks.delete(shopId);
-            console.log('🗑️ Session cleared after logout');
-          } else if (statusCode === 405) {
-            // 405 = needs QR scan - DON'T delete callback, keep it for retry
-            console.log(`⏳ Not logged in (405) - will retry`);
-            this.connectionStates.set(shopId, 'not_started');
-            // Note: we keep the qrCallback so the next attempt can use it
-          } else if (statusCode === 515) {
-            // 515 = Restart Required (normal after QR scan)
-            // The session is now authenticated, need to reconnect to complete
-            console.log(`🔄 Restart required (515) - QR scanned, reconnecting...`);
-            this.connectionStates.set(shopId, 'reconnecting');
-            
-            // Wait 3 seconds then reconnect with saved credentials
-            setTimeout(() => {
-              console.log(`🔄 Auto-reconnecting after QR scan...`);
-              this.connectShop(shopId, qrCallback).then(() => {
-                // Set a timeout to check if connection actually opened
-                setTimeout(() => {
-                  if (this.connectionStates.get(shopId) === 'connecting') {
-                    console.log(`⚠️ Connection stuck in connecting state, forcing status check...`);
-                    // Force check if we're actually connected
-                    const sock = this.connections.get(shopId);
-                    if (sock && sock.user) {
-                      console.log(`✅ Socket has user, marking as connected`);
-                      this.connectionStates.set(shopId, 'connected');
-                    }
-                  }
-                }, 5000);
-              }).catch(err => {
-                console.log(`⚠️ Auto-reconnect failed: ${err.message}`);
-              });
-            }, 3000);
-          } else {
-            // Other errors
-            this.connectionStates.set(shopId, 'disconnected');
-            this.qrCallbacks.delete(shopId);
-          }
+          // Any other reason - reconnect automatically
+          const attempts = this.reconnectAttempts.get(shopId) || 0;
+          
+          // Exponential backoff
+          const delays = [5000, 10000, 20000, 60000];
+          const delay = delays[Math.min(attempts, delays.length - 1)];
+          
+          console.log(`🔄 Reconnecting ${shop.name} in ${delay/1000}s (attempt ${attempts + 1})`);
+          this.reconnectAttempts.set(shopId, attempts + 1);
+          
+          setTimeout(async () => {
+            if (this.connectionStates.get(shopId) !== 'connected') {
+              try {
+                await this.connectShop(shopId, qrCallback);
+              } catch (err) {
+                console.error(`Reconnect failed for ${shop.name}:`, err);
+              }
+            }
+          }, delay);
         }
       });
 

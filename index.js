@@ -169,13 +169,13 @@ async function main() {
     // await initBot();
     logger.info('WhatsApp bot initialized');
     
-    // Reconnect all previously connected shops (non-blocking)
+    // Reconnect all previously connected shops from database (non-blocking)
     if (databaseService.isConnected) {
-      reconnectAllShops().catch(err => {
-        logger.error('Shop reconnection failed:', err.message);
+      restoreAllSessions().catch(err => {
+        logger.error('Session restoration failed:', err.message);
       });
     } else {
-      logger.warn('Skipping shop reconnection - database not connected');
+      logger.warn('Skipping session restoration - database not connected');
     }
     
     logger.info('Application started successfully');
@@ -185,51 +185,40 @@ async function main() {
   }
 }
 
-// Reconnect all shops with existing sessions on startup
-async function reconnectAllShops() {
+// Restore all WhatsApp sessions from database on startup
+async function restoreAllSessions() {
   try {
     const prisma = databaseService.getClient();
     if (!prisma) {
-      console.warn('⚠️  Cannot reconnect shops - database not configured');
+      console.warn('⚠️ Cannot restore sessions - database not configured');
       return;
     }
 
-    const shops = await prisma.shop.findMany({
-      where: { 
-        subscriptionStatus: { 
-          in: ['TRIAL', 'ACTIVE'] 
-        } 
-      }
+    // Find all shops that have saved sessions in database
+    const sessions = await prisma.whatsAppSession.findMany({
+      include: { shop: true }
     });
-    
-    console.log(`🔄 Checking ${shops.length} shops for session restoration...`);
-    
+
+    console.log(`🔄 Restoring ${sessions.length} WhatsApp sessions from database...`);
+
     const botManager = require('./src/bot/botManager');
-    
-    for (const shop of shops) {
-      const sessionDir = path.resolve(`./sessions/${shop.id}`);
-      
-      // Only reconnect if session folder exists and has credentials
-      if (fs.existsSync(sessionDir)) {
-        const credsPath = path.join(sessionDir, 'creds.json');
-        if (fs.existsSync(credsPath)) {
-          console.log(`🔄 Restoring session for ${shop.name} (${shop.id})`);
-          try {
-            await botManager.connectShop(shop.id, (qr) => {
-              botManager.setCurrentQr(shop.id, qr);
-            });
-          } catch (err) {
-            console.log(`⚠️ Could not restore ${shop.name}: ${err.message}`);
-          }
-        } else {
-          console.log(`ℹ️ No credentials found for ${shop.name}, skipping`);
-        }
+
+    for (const session of sessions) {
+      try {
+        console.log(`🔄 Restoring ${session.shop.name} (${session.shopId})...`);
+        await botManager.connectShop(session.shopId, (qr) => {
+          botManager.setCurrentQr(session.shopId, qr);
+        });
+        // Small delay between connections to avoid overwhelming the system
+        await new Promise(r => setTimeout(r, 2000));
+      } catch (err) {
+        console.error(`❌ Failed to restore ${session.shop.name}:`, err.message);
       }
     }
-    
-    console.log(`✅ Shop reconnection complete`);
+
+    console.log('✅ All sessions restored!');
   } catch (err) {
-    console.error('❌ Error reconnecting shops:', err);
+    console.error('❌ Error restoring sessions:', err);
   }
 }
 

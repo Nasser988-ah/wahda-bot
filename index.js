@@ -1,5 +1,17 @@
 require("dotenv").config();
 
+// FIX 4: Global error handlers to prevent crashes
+process.on('uncaughtException', (err) => {
+  console.error('💥 Uncaught Exception:', err.message);
+  console.error(err.stack);
+  // Don't exit - just log
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('💥 Unhandled Rejection at:', promise, 'reason:', reason);
+  // Don't exit - just log
+});
+
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");

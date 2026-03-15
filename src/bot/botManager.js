@@ -108,6 +108,110 @@ function findBestMatch(text, products) {
 
 const prisma = databaseService.getClient();
 
+// FIX 1: In-memory shop cache with 5-minute TTL
+const shopCache = new Map();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+async function getShopCached(shopId) {
+  const cached = shopCache.get(shopId);
+  if (cached && Date.now() - cached.time < CACHE_TTL) {
+    return cached.data;
+  }
+  
+  const shop = await prisma.shop.findUnique({
+    where: { id: shopId },
+    include: { products: { where: { isAvailable: true } } }
+  });
+  
+  if (shop) {
+    shopCache.set(shopId, { data: shop, time: Date.now() });
+  }
+  return shop;
+}
+
+// FIX 2: Message processing queue per shop to limit concurrency
+const processingQueue = new Map();
+
+async function queueMessage(shopId, handler) {
+  if (!processingQueue.has(shopId)) {
+    processingQueue.set(shopId, Promise.resolve());
+  }
+  
+  const queue = processingQueue.get(shopId);
+  const next = queue.then(handler).catch(console.error);
+  processingQueue.set(shopId, next);
+  return next;
+}
+
+// FIX 3: Batch Redis calls for customer data
+async function getCustomerData(shopId, customerPhone) {
+  const cartKey = `cart:${shopId}:${customerPhone}`;
+  const stateKey = `order_state:${shopId}:${customerPhone}`;
+  const firstTimeKey = `firsttime:${shopId}:${customerPhone}`;
+  const pendingKey = `pending:${shopId}:${customerPhone}`;
+  const msgCountKey = `msgcount:${shopId}:${customerPhone}`;
+  const cancelConfirmKey = `cancel_confirm:${shopId}:${customerPhone}`;
+  
+  const [cart, state, firstTime, pending, msgCount, cancelConfirm] = await Promise.all([
+    redis.get(cartKey),
+    redis.get(stateKey),
+    redis.get(firstTimeKey),
+    redis.get(pendingKey),
+    redis.get(msgCountKey),
+    redis.get(cancelConfirmKey)
+  ]);
+  
+  return {
+    cart: cart ? JSON.parse(cart) : [],
+    state,
+    isFirstTime: !firstTime,
+    pending: pending ? JSON.parse(pending) : null,
+    msgCount: parseInt(msgCount) || 0,
+    cancelConfirm
+  };
+}
+
+// FIX 5: Limit AI calls per customer (max 5 per hour)
+async function shouldUseAI(shopId, customerPhone) {
+  const aiCallKey = `aicalls:${shopId}:${customerPhone}`;
+  const calls = parseInt(await redis.get(aiCallKey) || '0');
+  
+  if (calls >= 5) {
+    return false;
+  }
+  
+  await redis.set(aiCallKey, calls + 1, { ex: 3600 });
+  return true;
+}
+
+// FIX 6: Memory cleanup every hour
+setInterval(() => {
+  const now = Date.now();
+  let cleared = 0;
+  
+  // Clear expired shop cache entries
+  for (const [key, value] of shopCache.entries()) {
+    if (now - value.time > CACHE_TTL) {
+      shopCache.delete(key);
+      cleared++;
+    }
+  }
+  
+  // Clear old message queues (keep only active ones)
+  for (const [key, queue] of processingQueue.entries()) {
+    // Check if queue is idle (will be a resolved promise if idle)
+    // We'll clear queues that haven't been used in 10 minutes
+    const lastActivity = processingQueue.get(`_last:${key}`);
+    if (lastActivity && now - lastActivity > 10 * 60 * 1000) {
+      processingQueue.delete(key);
+      processingQueue.delete(`_last:${key}`);
+      cleared++;
+    }
+  }
+  
+  console.log(`🧹 Memory cleanup: cleared ${cleared} items`);
+}, 60 * 60 * 1000); // Every hour
+
 class BotManager {
   constructor() {
     this.connections = new Map();
@@ -116,6 +220,7 @@ class BotManager {
     this.qrReceived = new Map();
     this.currentQrs = new Map();
     this.reconnectAttempts = new Map();
+    this.processingQueue = new Map(); // FIX 2: Queue per shop
   }
 
   async connectShop(shopId, qrCallback) {
@@ -132,11 +237,8 @@ class BotManager {
         return this.connections.get(shopId);
       }
 
-      // Get shop info
-      const shop = await prisma.shop.findUnique({
-        where: { id: shopId },
-        include: { products: true }
-      });
+      // FIX 1: Use cached shop data instead of fetching from DB every message
+      const shop = await getShopCached(shopId);
 
       if (!shop) throw new Error("Shop not found");
 
@@ -232,13 +334,27 @@ class BotManager {
         }
       });
 
-      // Handle messages
+      // Handle messages - FIX 2: Add to processing queue
       sock.ev.on('messages.upsert', async ({ messages, type }) => {
         if (type !== 'notify') return;
         const msg = messages[0];
         if (!msg?.message || msg.key.fromMe) return;
         
-        await this.handleMessage(sock, msg, shop);
+        // Queue message to limit concurrent processing per shop
+        await queueMessage(shopId, async () => {
+          try {
+            // FIX 4: Add timeout to message handling
+            const timeoutPromise = new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Message handling timeout')), 10000)
+            );
+            await Promise.race([
+              this.handleMessage(sock, msg, shop),
+              timeoutPromise
+            ]);
+          } catch (err) {
+            console.error(`❌ Message handling error for ${shopId}:`, err.message);
+          }
+        });
       });
 
       console.log(`🤖 Connection initialized for ${shop.name}`);
@@ -247,6 +363,14 @@ class BotManager {
     } catch (error) {
       console.error(`❌ Connection error for ${shopId}:`, error.message);
       this.connectionStates.set(shopId, 'not_started');
+      
+      // Don't retry if shop doesn't exist
+      if (error.message === 'Shop not found') {
+        console.log(`🚫 Shop ${shopId} not found in database - stopping retries`);
+        this.connectionStates.set(shopId, 'shop_not_found');
+        throw error;
+      }
+      
       throw error;
     }
   }

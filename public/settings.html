@@ -7,8 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
+        <style>
         :root {
             --bg: #0f0f13;
             --card: #1a1a22;
@@ -347,31 +346,27 @@
 
     <div class="container">
         <div class="header">
-            <h1><i class="fas fa-cog"></i> إعدادات المتجر</h1>
+            <h1>⚙️ إعدادات المتجر</h1>
             <button class="back-btn" onclick="goBack()">
-                <i class="fas fa-arrow-right"></i>
-                العودة للوحة التحكم
+                ← العودة للوحة التحكم
             </button>
         </div>
 
         <div class="alert alert-success" id="successAlert">
-            <i class="fas fa-check-circle"></i>
-            <span id="successMessage">تم حفظ الإعدادات بنجاح</span>
+            ✓ <span id="successMessage">تم حفظ الإعدادات بنجاح</span>
         </div>
 
         <div class="alert alert-error" id="errorAlert">
-            <i class="fas fa-exclamation-circle"></i>
-            <span id="errorMessage">حدث خطأ أثناء الحفظ</span>
+            ⚠ <span id="errorMessage">حدث خطأ أثناء الحفظ</span>
         </div>
 
         <div class="settings-card">
             <div class="card-title">
-                <i class="fas fa-store"></i>
-                معلومات المتجر
+                🏪 معلومات المتجر
             </div>
 
             <div class="info-box">
-                <p><i class="fas fa-info-circle"></i> معرف المتجر الخاص بك (مطلوب عند الاتصال بالبوت)</p>
+                <p>ℹ️ معرف المتجر الخاص بك (مطلوب عند الاتصال بالبوت)</p>
             </div>
 
             <div class="shop-id-display" style="margin-bottom: 25px;">
@@ -379,15 +374,14 @@
                 <div style="display: flex; align-items: center; gap: 15px;">
                     <span class="shop-id-value" id="shopIdDisplay">-</span>
                     <button class="copy-btn" onclick="copyShopId()">
-                        <i class="fas fa-copy"></i> نسخ
+                        📋 نسخ
                     </button>
                 </div>
             </div>
 
             <div class="form-group">
                 <label class="form-label">
-                    <i class="fas fa-store"></i>
-                    اسم المتجر
+                    🏪 اسم المتجر
                 </label>
                 <input type="text" class="form-input" id="shopName" placeholder="أدخل اسم المتجر">
                 <p class="form-hint">اسم المتجر الذي سيظهر للعملاء في البوت</p>
@@ -395,8 +389,7 @@
 
             <div class="form-group">
                 <label class="form-label">
-                    <i class="fas fa-user"></i>
-                    اسم صاحب المتجر
+                    👤 اسم صاحب المتجر
                 </label>
                 <input type="text" class="form-input" id="ownerName" placeholder="أدخل اسمك">
             </div>
@@ -404,29 +397,25 @@
 
         <div class="settings-card">
             <div class="card-title">
-                <i class="fas fa-phone-alt"></i>
-                أرقام الاتصال
+                📞 أرقام الاتصال
             </div>
 
             <div class="form-group">
                 <label class="form-label">
-                    <i class="fas fa-mobile-alt"></i>
-                    رقم البوت (واتساب)
+                    📱 رقم البوت (واتساب)
                 </label>
                 <div class="input-group">
                     <span class="input-prefix">+20</span>
                     <input type="tel" class="form-input" id="whatsappNumber" placeholder="1XXXXXXXXX" maxlength="10">
                 </div>
                 <p class="form-hint">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    رقم واتساب الخاص بالبوت (يجب أن يبدأ بـ 1)
+                    ⚠️ رقم واتساب الخاص بالبوت (يجب أن يبدأ بـ 1)
                 </p>
             </div>
 
             <div class="form-group">
                 <label class="form-label">
-                    <i class="fas fa-phone"></i>
-                    رقم الهاتف الأساسي
+                    📞 رقم الهاتف الأساسي
                 </label>
                 <div class="input-group">
                     <span class="input-prefix">+20</span>
@@ -437,30 +426,26 @@
 
         <div class="settings-card">
             <div class="card-title">
-                <i class="fas fa-shield-alt"></i>
-                معلومات الاشتراك
+                🛡️ معلومات الاشتراك
             </div>
 
             <div class="form-group">
                 <label class="form-label">
-                    <i class="fas fa-crown"></i>
-                    حالة الاشتراك
+                    👑 حالة الاشتراك
                 </label>
                 <input type="text" class="form-input" id="subscriptionStatus" disabled style="background: var(--bg); cursor: not-allowed;">
             </div>
 
             <div class="form-group">
                 <label class="form-label">
-                    <i class="fas fa-calendar-alt"></i>
-                    تاريخ انتهاء الاشتراك
+                    📅 تاريخ انتهاء الاشتراك
                 </label>
                 <input type="text" class="form-input" id="subscriptionEnd" disabled style="background: var(--bg); cursor: not-allowed;">
             </div>
         </div>
 
         <button class="save-btn" id="saveBtn" onclick="saveSettings()">
-            <i class="fas fa-save"></i>
-            حفظ الإعدادات
+            💾 حفظ الإعدادات
         </button>
     </div>
 
@@ -569,14 +554,9 @@
             const updateData = {
                 name: shopName,
                 ownerName: ownerName || null,
-                whatsappNumber: whatsappNumber ? `20${whatsappNumber}` : null
+                whatsappNumber: whatsappNumber ? `20${whatsappNumber}` : null,
+                phone: phoneNumber ? `20${phoneNumber}` : null
             };
-
-            // Only include phone if it changed
-            if (phoneNumber && `20${phoneNumber}` !== currentShop?.phone) {
-                // Phone changes might require special handling
-                console.log('Phone number change detected');
-            }
 
             showLoading(true);
             document.getElementById('saveBtn').disabled = true;

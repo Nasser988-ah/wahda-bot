@@ -164,6 +164,7 @@ const updateShopSchema = z.object({
   name: z.string().min(2, "Shop name must be at least 2 characters").optional(),
   ownerName: z.string().min(2, "Owner name must be at least 2 characters").optional(),
   whatsappNumber: z.string().regex(/^20\d{10}$/, "WhatsApp number must be Egyptian number starting with 20").optional(),
+  phone: z.string().regex(/^20\d{10}$/, "Phone number must be Egyptian number starting with 20").optional(),
 });
 
 // Get shop details

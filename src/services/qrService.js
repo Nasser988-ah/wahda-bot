@@ -1,11 +1,11 @@
 const QRCode = require('qrcode');
-const BotManager = require('../bot/botManager');
+const botManager = require('../bot/botManager');
 const fs = require('fs');
 const path = require('path');
 
 class QRService {
   constructor() {
-    this.botManager = new BotManager();
+    this.botManager = botManager;
     this.activeConnections = new Map(); // shopId -> connection info
     this.qrCallbacks = new Map(); // shopId -> callback function
   }

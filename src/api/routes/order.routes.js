@@ -94,23 +94,18 @@ router.get("/:id", async (req, res) => {
         shopId: req.shop.id
       },
       include: {
-          orderItems: {
-            select: {
-              id: true,
-              quantity: true,
-              priceAtTime: true,
-              product: {
-                select: {
-                  id: true,
-                  name: true,
-                  price: true,
-                  description: true,
-                  category: true
-                }
+        orderItems: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                price: true
               }
             }
           }
         }
+      }
     });
 
     if (!order) {

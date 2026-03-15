@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تفعيل الحساب - وصلة</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0f0f13;
+            --card: #1a1a22;
+            --card-hover: #1f1f2a;
+            --gold: #f5c842;
+            --gold-light: #fde98a;
+            --gold-dim: rgba(245, 200, 66, 0.12);
+            --text: #ffffff;
+            --muted: #8a8a9a;
+            --border: rgba(255, 255, 255, 0.07);
+            --radius: 20px;
+            --success: #10b981;
+            --error: #ef4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 40px;
+            text-align: center;
+        }
+
+        .icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+
+        .title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--gold);
+            margin-bottom: 15px;
+        }
+
+        .description {
+            font-size: 1rem;
+            color: var(--muted);
+            line-height: 1.8;
+            margin-bottom: 30px;
+        }
+
+        .highlight {
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        .contact-box {
+            background: var(--bg);
+            border: 1px solid var(--gold);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+
+        .contact-label {
+            font-size: 0.9rem;
+            color: var(--muted);
+            margin-bottom: 10px;
+        }
+
+        .phone-number {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--gold);
+            font-family: 'Courier New', monospace;
+            margin-bottom: 20px;
+            direction: ltr;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            border-radius: 12px;
+            font-family: 'Cairo', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+            color: white;
+            border: none;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(37, 211, 102, 0.3);
+        }
+
+        .btn-secondary {
+            background: var(--card-hover);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--gold);
+            background: var(--gold-dim);
+        }
+
+        .steps {
+            text-align: right;
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 1px solid var(--border);
+        }
+
+        .steps-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 20px;
+        }
+
+        .step {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+            color: var(--muted);
+        }
+
+        .step-number {
+            width: 30px;
+            height: 30px;
+            background: var(--gold-dim);
+            border: 1px solid var(--gold);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: var(--gold);
+            flex-shrink: 0;
+        }
+
+        .logout {
+            margin-top: 20px;
+            color: var(--muted);
+            font-size: 0.9rem;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        .logout:hover {
+            color: var(--gold);
+        }
+
+        .shop-info {
+            background: var(--gold-dim);
+            border: 1px solid var(--gold);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            text-align: right;
+        }
+
+        .shop-info-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .shop-info-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .shop-info-label {
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+
+        .shop-info-value {
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        @media (max-width: 480px) {
+            .card {
+                padding: 25px;
+            }
+
+            .phone-number {
+                font-size: 1.5rem;
+            }
+
+            .buttons {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">
+            <h1>وصلة</h1>
+        </div>
+
+        <div class="card">
+            <div class="icon">⏳</div>
+            <h2 class="title">الحساب قيد المراجعة</h2>
+            
+            <p class="description">
+                مرحباً <span class="highlight" id="ownerName">-</span>!<br>
+                تم إنشاء حسابك بنجاح، ولكن يجب <span class="highlight">إتمام عملية الدفع</span> أولاً لتفعيل حسابك وبدء استخدام البوت.
+            </p>
+
+            <div class="shop-info">
+                <div class="shop-info-item">
+                    <span class="shop-info-label">اسم المتجر:</span>
+                    <span class="shop-info-value" id="shopName">-</span>
+                </div>
+                <div class="shop-info-item">
+                    <span class="shop-info-label">معرف المتجر:</span>
+                    <span class="shop-info-value" id="shopId">-</span>
+                </div>
+            </div>
+
+            <div class="contact-box">
+                <div class="contact-label">للدفع والتفعيل، تواصل معنا عبر:</div>
+                <div class="phone-number">01128511900</div>
+                
+                <div class="buttons">
+                    <a href="https://wa.me/201128511900" target="_blank" class="btn btn-primary">
+                        💬 واتساب
+                    </a>
+                    <a href="tel:01128511900" class="btn btn-secondary">
+                        📞 اتصال
+                    </a>
+                </div>
+            </div>
+
+            <div class="steps">
+                <div class="steps-title">خطوات التفعيل:</div>
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div>تواصل معنا عبر واتساب أو اتصال على الرقم أعلاه</div>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div>أرسل معرف المتجر الخاص بك (مطلوب للتفعيل)</div>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div>سيتم تفعيل حسابك بعد تأكيد الدفع</div>
+                </div>
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <div>سيتم إشعارك بالتفعيل ويمكنك البدء فوراً!</div>
+                </div>
+            </div>
+
+            <div class="logout" onclick="logout()">
+                تسجيل الخروج
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = window.location.origin;
+
+        // Check if user is logged in
+        document.addEventListener('DOMContentLoaded', async () => {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = '/login.html';
+                return;
+            }
+
+            await loadShopData();
+        });
+
+        async function loadShopData() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/shop/me`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        localStorage.removeItem('token');
+                        window.location.href = '/login.html';
+                        return;
+                    }
+                    throw new Error('Failed to load shop data');
+                }
+
+                const shop = await response.json();
+                
+                // If subscription is active, redirect to dashboard
+                if (shop.subscriptionStatus !== 'PENDING_PAYMENT') {
+                    window.location.href = '/dashboard.html';
+                    return;
+                }
+
+                document.getElementById('ownerName').textContent = shop.ownerName || 'عزيزي العميل';
+                document.getElementById('shopName').textContent = shop.name;
+                document.getElementById('shopId').textContent = shop.id;
+
+            } catch (error) {
+                console.error('Error loading shop:', error);
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            window.location.href = '/login.html';
+        }
+
+        // Check status periodically
+        setInterval(async () => {
+            const token = localStorage.getItem('token');
+            if (!token) return;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/shop/me`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const shop = await response.json();
+                    if (shop.subscriptionStatus !== 'PENDING_PAYMENT') {
+                        window.location.href = '/dashboard.html';
+                    }
+                }
+            } catch (error) {
+                console.error('Status check error:', error);
+            }
+        }, 30000); // Check every 30 seconds
+    </script>
+</body>
+</html>

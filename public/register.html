@@ -599,12 +599,8 @@
                     localStorage.setItem('token', data.token);
                     localStorage.setItem('shop', JSON.stringify(data.shop));
                     
-                    showSuccess('تم إنشاء الحساب بنجاح! جاري التحويل إلى لوحة التحكم...');
-                    
-                    // Redirect to dashboard
-                    setTimeout(() => {
-                        window.location.href = 'dashboard.html';
-                    }, 2000);
+                    // New accounts are pending payment - redirect to payment page
+                    window.location.href = 'payment-required.html';
                 } else {
                     if (data.details && Array.isArray(data.details) && data.details.length > 0) {
                         const errorMessages = data.details.map(err => err.message).join(', ');

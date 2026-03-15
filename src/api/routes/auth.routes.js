@@ -57,15 +57,15 @@ router.post("/register", async (req, res) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create shop
+    // Create shop with pending payment status
     const shop = await prisma.shop.create({
       data: {
         name,
         ownerName,
         phone,
         whatsappNumber,
-        subscriptionStatus: "TRIAL",
-        subscriptionEnd: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days trial
+        subscriptionStatus: "PENDING_PAYMENT",
+        subscriptionEnd: null,
       },
       select: {
         id: true,
@@ -168,6 +168,22 @@ router.post("/login", async (req, res) => {
     }
 
     // Check subscription
+    if (shop.subscriptionStatus === "PENDING_PAYMENT") {
+      const token = jwt.sign(
+        { shopId: shop.id, phone: shop.phone },
+        process.env.JWT_SECRET,
+        { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
+      );
+
+      return res.status(402).json({ 
+        error: "Payment required",
+        paymentRequired: true,
+        message: "Your account is pending payment approval",
+        shop,
+        token
+      });
+    }
+
     if (shop.subscriptionStatus === "EXPIRED") {
       return res.status(403).json({ error: "Subscription expired" });
     }

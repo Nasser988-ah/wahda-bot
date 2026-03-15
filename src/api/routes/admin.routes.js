@@ -290,6 +290,81 @@ router.delete("/shops/:id", authenticateAdmin, async (req, res) => {
   }
 });
 
+// Get pending payment shops
+router.get("/pending-shops", authenticateAdmin, async (req, res) => {
+  try {
+    const prisma = getPrisma();
+    
+    const pendingShops = await prisma.shop.findMany({
+      where: { subscriptionStatus: "PENDING_PAYMENT" },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        ownerName: true,
+        phone: true,
+        whatsappNumber: true,
+        createdAt: true
+      }
+    });
+
+    res.json({ shops: pendingShops });
+  } catch (error) {
+    console.error("Get pending shops error:", error);
+    res.status(500).json({ error: "Failed to fetch pending shops" });
+  }
+});
+
+// Approve a shop (activate subscription)
+router.post("/approve-shop/:id", authenticateAdmin, async (req, res) => {
+  try {
+    const prisma = getPrisma();
+    const { id } = req.params;
+    const { days = 30 } = req.body; // Default 30 days subscription
+
+    const shop = await prisma.shop.update({
+      where: { id },
+      data: {
+        subscriptionStatus: "ACTIVE",
+        subscriptionEnd: new Date(Date.now() + days * 24 * 60 * 60 * 1000)
+      },
+      select: {
+        id: true,
+        name: true,
+        ownerName: true,
+        phone: true,
+        whatsappNumber: true,
+        subscriptionStatus: true,
+        subscriptionEnd: true
+      }
+    });
+
+    res.json({
+      message: "Shop approved and activated successfully",
+      shop
+    });
+  } catch (error) {
+    console.error("Approve shop error:", error);
+    res.status(500).json({ error: "Failed to approve shop" });
+  }
+});
+
+// Reject/Delete a pending shop
+router.post("/reject-shop/:id", authenticateAdmin, async (req, res) => {
+  try {
+    const prisma = getPrisma();
+    const { id } = req.params;
+
+    // Delete the shop and all related data
+    await prisma.shop.delete({ where: { id } });
+
+    res.json({ message: "Shop rejected and removed successfully" });
+  } catch (error) {
+    console.error("Reject shop error:", error);
+    res.status(500).json({ error: "Failed to reject shop" });
+  }
+});
+
 // Get all orders
 router.get("/orders", authenticateAdmin, async (req, res) => {
   try {

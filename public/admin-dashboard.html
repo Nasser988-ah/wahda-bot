@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة تحكم المشرف - وصلة</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0f0f13;
+            --card: #1a1a22;
+            --card-hover: #1f1f2a;
+            --gold: #f5c842;
+            --gold-light: #fde98a;
+            --gold-dim: rgba(245, 200, 66, 0.12);
+            --text: #ffffff;
+            --muted: #8a8a9a;
+            --border: rgba(255, 255, 255, 0.07);
+            --radius: 20px;
+            --success: #10b981;
+            --error: #ef4444;
+            --warning: #f59e0b;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--gold);
+        }
+
+        .header-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .logout-btn {
+            background: var(--error);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-family: 'Cairo', sans-serif;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            opacity: 0.8;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 25px;
+        }
+
+        .stat-card.pending {
+            border-left: 4px solid var(--warning);
+        }
+
+        .stat-card.active {
+            border-left: 4px solid var(--success);
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--muted);
+            margin-bottom: 10px;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .section {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--gold);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .pending-badge {
+            background: var(--warning);
+            color: var(--bg);
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }
+
+        .pending-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .pending-item {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .pending-info {
+            flex: 1;
+        }
+
+        .pending-name {
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 5px;
+        }
+
+        .pending-details {
+            font-size: 0.9rem;
+            color: var(--muted);
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .pending-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-family: 'Cairo', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+        }
+
+        .btn-approve {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-approve:hover {
+            opacity: 0.8;
+        }
+
+        .btn-reject {
+            background: var(--error);
+            color: white;
+        }
+
+        .btn-reject:hover {
+            opacity: 0.8;
+        }
+
+        .btn-whatsapp {
+            background: #25d366;
+            color: white;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: var(--muted);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--muted);
+        }
+
+        .alert {
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .alert.show {
+            display: block;
+        }
+
+        .alert-success {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid var(--success);
+            color: var(--success);
+        }
+
+        .alert-error {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid var(--error);
+            color: var(--error);
+        }
+
+        @media (max-width: 768px) {
+            .pending-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .pending-actions {
+                width: 100%;
+                justify-content: stretch;
+            }
+
+            .btn {
+                flex: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛡️ لوحة تحكم المشرف</h1>
+            <div class="header-info">
+                <button class="logout-btn" onclick="logout()">تسجيل الخروج</button>
+            </div>
+        </div>
+
+        <div class="alert alert-success" id="successAlert"></div>
+        <div class="alert alert-error" id="errorAlert"></div>
+
+        <div class="stats-grid">
+            <div class="stat-card pending">
+                <div class="stat-label">الحسابات في انتظار الدفع</div>
+                <div class="stat-value" id="pendingCount">-</div>
+            </div>
+            <div class="stat-card active">
+                <div class="stat-label">الحسابات النشطة</div>
+                <div class="stat-value" id="activeCount">-</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">
+                ⏳ طلبات التفعيل المعلقة
+                <span class="pending-badge" id="pendingBadge">0</span>
+            </div>
+            
+            <div class="loading" id="loading">جاري التحميل...</div>
+            
+            <div class="pending-list" id="pendingList" style="display: none;">
+                <!-- Pending items will be loaded here -->
+            </div>
+
+            <div class="empty-state" id="emptyState" style="display: none;">
+                لا توجد طلبات تفعيل معلقة حالياً ✅
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = window.location.origin;
+        const ADMIN_PHONE = '201128511900';
+
+        // Check admin auth
+        document.addEventListener('DOMContentLoaded', () => {
+            const token = localStorage.getItem('adminToken');
+            if (!token) {
+                window.location.href = '/admin-login.html';
+                return;
+            }
+
+            loadData();
+            // Refresh every 30 seconds
+            setInterval(loadData, 30000);
+        });
+
+        async function loadData() {
+            await Promise.all([
+                loadStats(),
+                loadPendingShops()
+            ]);
+        }
+
+        async function loadStats() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/admin/stats`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` }
+                });
+
+                if (response.ok) {
+                    const stats = await response.json();
+                    document.getElementById('pendingCount').textContent = 
+                        (stats.shops.total || 0) - (stats.shops.active || 0) - (stats.shops.expired || 0);
+                    document.getElementById('activeCount').textContent = stats.shops.active || 0;
+                }
+            } catch (error) {
+                console.error('Stats error:', error);
+            }
+        }
+
+        async function loadPendingShops() {
+            const loadingEl = document.getElementById('loading');
+            const listEl = document.getElementById('pendingList');
+            const emptyEl = document.getElementById('emptyState');
+            const badgeEl = document.getElementById('pendingBadge');
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/admin/pending-shops`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` }
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        localStorage.removeItem('adminToken');
+                        window.location.href = '/admin-login.html';
+                        return;
+                    }
+                    throw new Error('Failed to load');
+                }
+
+                const { shops } = await response.json();
+                
+                loadingEl.style.display = 'none';
+                badgeEl.textContent = shops.length;
+
+                if (shops.length === 0) {
+                    listEl.style.display = 'none';
+                    emptyEl.style.display = 'block';
+                    return;
+                }
+
+                listEl.style.display = 'flex';
+                emptyEl.style.display = 'none';
+                listEl.innerHTML = shops.map(shop => `
+                    <div class="pending-item" id="shop-${shop.id}">
+                        <div class="pending-info">
+                            <div class="pending-name">${shop.name}</div>
+                            <div class="pending-details">
+                                <span>👤 ${shop.ownerName || '-'}</span>
+                                <span>📱 ${shop.phone || '-'}</span>
+                                <span>📞 ${shop.whatsappNumber || '-'}</span>
+                                <span>🕐 ${new Date(shop.createdAt).toLocaleString('ar-EG')}</span>
+                                <span style="color: var(--gold);">🆔 ${shop.id}</span>
+                            </div>
+                        </div>
+                        <div class="pending-actions">
+                            <a href="https://wa.me/${shop.whatsappNumber || ADMIN_PHONE}" 
+                               target="_blank" class="btn btn-whatsapp">💬 واتساب</a>
+                            <button class="btn btn-approve" onclick="approveShop('${shop.id}')">✅ قبول</button>
+                            <button class="btn btn-reject" onclick="rejectShop('${shop.id}')">❌ رفض</button>
+                        </div>
+                    </div>
+                `).join('');
+
+            } catch (error) {
+                console.error('Error loading pending shops:', error);
+                loadingEl.textContent = 'فشل في التحميل، حاول مرة أخرى';
+            }
+        }
+
+        async function approveShop(shopId) {
+            if (!confirm('هل أنت متأكد من قبول هذا المتجر؟')) return;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/admin/approve-shop/${shopId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+                    },
+                    body: JSON.stringify({ days: 30 })
+                });
+
+                if (response.ok) {
+                    showSuccess('تم قبول المتجر بنجاح');
+                    document.getElementById(`shop-${shopId}`).remove();
+                    loadStats();
+                    // Check if list is now empty
+                    if (document.querySelectorAll('.pending-item').length === 0) {
+                        document.getElementById('pendingList').style.display = 'none';
+                        document.getElementById('emptyState').style.display = 'block';
+                        document.getElementById('pendingBadge').textContent = '0';
+                    }
+                } else {
+                    throw new Error('Failed to approve');
+                }
+            } catch (error) {
+                showError('فشل في قبول المتجر');
+                console.error(error);
+            }
+        }
+
+        async function rejectShop(shopId) {
+            if (!confirm('هل أنت متأكد من رفض وحذف هذا المتجر؟ لا يمكن التراجع!')) return;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/admin/reject-shop/${shopId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+                    }
+                });
+
+                if (response.ok) {
+                    showSuccess('تم رفض وحذف المتجر بنجاح');
+                    document.getElementById(`shop-${shopId}`).remove();
+                    loadStats();
+                    // Check if list is now empty
+                    if (document.querySelectorAll('.pending-item').length === 0) {
+                        document.getElementById('pendingList').style.display = 'none';
+                        document.getElementById('emptyState').style.display = 'block';
+                        document.getElementById('pendingBadge').textContent = '0';
+                    }
+                } else {
+                    throw new Error('Failed to reject');
+                }
+            } catch (error) {
+                showError('فشل في رفض المتجر');
+                console.error(error);
+            }
+        }
+
+        function showSuccess(message) {
+            const alert = document.getElementById('successAlert');
+            alert.textContent = message;
+            alert.classList.add('show');
+            setTimeout(() => alert.classList.remove('show'), 3000);
+        }
+
+        function showError(message) {
+            const alert = document.getElementById('errorAlert');
+            alert.textContent = message;
+            alert.classList.add('show');
+            setTimeout(() => alert.classList.remove('show'), 3000);
+        }
+
+        function logout() {
+            localStorage.removeItem('adminToken');
+            window.location.href = '/admin-login.html';
+        }
+    </script>
+</body>
+</html>

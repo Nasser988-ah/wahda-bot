@@ -526,6 +526,11 @@
                     setTimeout(() => {
                         window.location.href = 'dashboard.html';
                     }, 1500);
+                } else if (response.status === 402 && data.paymentRequired) {
+                    // Payment required - save token and redirect to payment page
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('shop', JSON.stringify(data.shop));
+                    window.location.href = 'payment-required.html';
                 } else {
                     showError(data.error || 'فشل تسجيل الدخول');
                 }

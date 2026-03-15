@@ -118,6 +118,7 @@ model Message {
 }
 
 enum SubscriptionStatus {
+  PENDING_PAYMENT
   TRIAL
   ACTIVE
   EXPIRED

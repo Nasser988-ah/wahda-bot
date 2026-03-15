@@ -48,6 +48,14 @@ const authenticateToken = async (req, res, next) => {
     }
 
     // Check subscription status
+    if (shop.subscriptionStatus === "PENDING_PAYMENT") {
+      return res.status(402).json({ 
+        error: "Payment required",
+        paymentRequired: true,
+        message: "Your account is pending payment approval. Please complete payment to access dashboard."
+      });
+    }
+
     if (shop.subscriptionStatus === "EXPIRED") {
       return res.status(403).json({ error: "Subscription expired" });
     }

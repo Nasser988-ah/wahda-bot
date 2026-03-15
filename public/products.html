@@ -1075,7 +1075,9 @@
                 const data = await response.json();
 
                 if (response.ok && data.imageUrl) {
-                    document.getElementById(`img-${productId}`).src = data.imageUrl;
+                    // Add timestamp to prevent caching
+                    const imgUrl = data.imageUrl + '?t=' + Date.now();
+                    document.getElementById(`img-${productId}`).src = imgUrl;
                     showToast('تم رفع الصورة بنجاح', 'success');
                 } else {
                     showToast(data.error || 'فشل رفع الصورة', 'error');

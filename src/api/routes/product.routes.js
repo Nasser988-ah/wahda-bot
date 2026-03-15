@@ -5,6 +5,7 @@ const { upload } = require("../../middleware/upload");
 const { z } = require("zod");
 const fs = require("fs");
 const router = express.Router();
+const botManager = require('../../bot/botManager');
 
 // Helper function to get Prisma client with error handling
 function getPrisma() {
@@ -176,6 +177,9 @@ router.post("/", async (req, res) => {
       }
     });
 
+    // BUG 2 FIX: Invalidate cache so bot sees new product immediately
+    botManager.invalidateShopCache(req.shop.id);
+
     res.status(201).json({
       message: "Product created successfully",
       product
@@ -234,6 +238,9 @@ router.put("/:id", async (req, res) => {
       }
     });
 
+    // BUG 2 FIX: Invalidate cache so bot sees updated product
+    botManager.invalidateShopCache(req.shop.id);
+
     res.json({
       message: "Product updated successfully",
       product
@@ -284,6 +291,9 @@ router.delete("/:id", async (req, res) => {
         data: { isAvailable: false }
       });
 
+      // BUG 2 FIX: Invalidate cache so bot sees product is unavailable
+      botManager.invalidateShopCache(req.shop.id);
+
       return res.json({
         message: "تم إخفاء المنتج بنجاح (يحتوي على طلبات سابقة)",
         product: updatedProduct,
@@ -295,6 +305,9 @@ router.delete("/:id", async (req, res) => {
     await prisma.product.delete({
       where: { id: req.params.id }
     });
+
+    // BUG 2 FIX: Invalidate cache so bot sees product is deleted
+    botManager.invalidateShopCache(req.shop.id);
 
     res.json({
       message: "تم حذف المنتج بنجاح"
@@ -383,6 +396,9 @@ router.post("/:id/image", upload.single('image'), async (req, res) => {
         imageUrl: true
       }
     });
+
+    // BUG 2 FIX: Invalidate cache so bot sees new image
+    botManager.invalidateShopCache(req.shop.id);
 
     res.json({
       message: "تم رفع الصورة بنجاح",

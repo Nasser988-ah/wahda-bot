@@ -223,6 +223,12 @@ class BotManager {
     this.processingQueue = new Map(); // FIX 2: Queue per shop
   }
 
+  // BUG 2 FIX: Invalidate shop cache when products change
+  invalidateShopCache(shopId) {
+    shopCache.delete(shopId);
+    console.log(`🔄 Cache cleared for shop ${shopId}`);
+  }
+
   async connectShop(shopId, qrCallback) {
     try {
       // Check if already connected

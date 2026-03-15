@@ -2269,4 +2269,4 @@ ${productsList}
   }
 }
 
-module.exports = BotManager;
+module.exports = new BotManager();

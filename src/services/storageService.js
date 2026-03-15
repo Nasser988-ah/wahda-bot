@@ -4,17 +4,50 @@ const path = require('path');
 
 // Initialize Supabase client
 const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
+const supabaseKey = process.env.SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseServiceKey) {
+if (!supabaseUrl || !supabaseKey) {
   console.warn('⚠️ Supabase credentials not configured. Images will be stored locally.');
 }
 
-const supabase = supabaseUrl && supabaseServiceKey 
-  ? createClient(supabaseUrl, supabaseServiceKey)
+const supabase = supabaseUrl && supabaseKey 
+  ? createClient(supabaseUrl, supabaseKey)
   : null;
 
 const BUCKET_NAME = 'product-images';
+
+let bucketChecked = false;
+
+/**
+ * Ensure the bucket exists, create if not
+ */
+async function ensureBucket() {
+  if (!supabase || bucketChecked) return;
+  
+  try {
+    // Check if bucket exists
+    const { data: buckets } = await supabase.storage.listBuckets();
+    const exists = buckets?.find(b => b.name === BUCKET_NAME);
+    
+    if (!exists) {
+      console.log(`📦 Creating Supabase bucket: ${BUCKET_NAME}`);
+      const { error } = await supabase.storage.createBucket(BUCKET_NAME, {
+        public: true,
+        fileSizeLimit: 5242880 // 5MB
+      });
+      
+      if (error) {
+        console.error('Failed to create bucket:', error.message);
+      } else {
+        console.log(`✅ Bucket ${BUCKET_NAME} created successfully`);
+      }
+    }
+    
+    bucketChecked = true;
+  } catch (error) {
+    console.error('Error checking/creating bucket:', error.message);
+  }
+}
 
 /**
  * Upload image to Supabase Storage
@@ -27,6 +60,9 @@ async function uploadImage(filePath, filename) {
     throw new Error('Supabase not configured');
   }
 
+  // Ensure bucket exists first
+  await ensureBucket();
+
   try {
     // Read file
     const fileBuffer = fs.readFileSync(filePath);
@@ -36,11 +72,11 @@ async function uploadImage(filePath, filename) {
       .from(BUCKET_NAME)
       .upload(filename, fileBuffer, {
         contentType: getContentType(filename),
-        upsert: true // Overwrite if exists
+        upsert: true
       });
 
     if (error) {
-      console.error('Supabase upload error:', error);
+      console.error('❌ Supabase upload error:', error.message);
       throw error;
     }
 
@@ -49,10 +85,10 @@ async function uploadImage(filePath, filename) {
       .from(BUCKET_NAME)
       .getPublicUrl(filename);
 
-    console.log(`✅ Image uploaded to Supabase: ${publicUrlData.publicUrl}`);
+    console.log(`✅ Image uploaded: ${publicUrlData.publicUrl}`);
     return publicUrlData.publicUrl;
   } catch (error) {
-    console.error('Failed to upload image to Supabase:', error);
+    console.error('❌ Supabase upload failed:', error.message);
     throw error;
   }
 }

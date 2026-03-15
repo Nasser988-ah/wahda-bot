@@ -388,35 +388,56 @@ router.post("/:id/image", upload.single('image'), async (req, res) => {
     }
 
     let imageUrl;
+    let storageType = 'local';
     
-    // Use Supabase Storage if configured, otherwise fall back to local
+    // Try Supabase Storage first if configured
     if (isStorageConfigured()) {
-      // Generate unique filename
-      const timestamp = Date.now();
-      const filename = `${req.shop.id}/${req.params.id}_${timestamp}.jpg`;
-      
-      // Upload to Supabase Storage
-      imageUrl = await uploadImage(req.file.path, filename);
-    } else {
-      // Fall back to local storage (for development)
+      try {
+        // Generate unique filename with shopId as folder
+        const timestamp = Date.now();
+        const filename = `${req.shop.id}/${req.params.id}_${timestamp}.jpg`;
+        
+        // Upload to Supabase Storage
+        imageUrl = await uploadImage(req.file.path, filename);
+        storageType = 'supabase';
+        console.log(`✅ Image uploaded to Supabase: ${imageUrl}`);
+      } catch (supabaseError) {
+        console.warn('⚠️ Supabase upload failed, falling back to local storage:', supabaseError.message);
+        // Fall through to local storage
+      }
+    }
+    
+    // Fall back to local storage if Supabase failed or not configured
+    if (!imageUrl) {
       const localFilename = `${Date.now()}_${req.file.originalname || 'image.jpg'}`;
-      const localPath = `public/uploads/${localFilename}`;
+      const localDir = 'public/uploads';
+      const localPath = `${localDir}/${localFilename}`;
       
       // Ensure uploads directory exists
-      if (!fs.existsSync('public/uploads')) {
-        fs.mkdirSync('public/uploads', { recursive: true });
+      if (!fs.existsSync(localDir)) {
+        fs.mkdirSync(localDir, { recursive: true });
       }
       
       // Move file to uploads directory
-      fs.renameSync(req.file.path, localPath);
+      fs.copyFileSync(req.file.path, localPath);
       imageUrl = `/uploads/${localFilename}`;
       
-      console.log(`⚠️ Supabase not configured. Image saved locally: ${imageUrl}`);
+      console.log(`💾 Image saved locally: ${imageUrl} (⚠️ will be lost on server restart)`);
     }
 
     // Clean up temp file if still exists
     if (fs.existsSync(req.file.path)) {
       fs.unlinkSync(req.file.path);
+    }
+
+    // Delete old image from Supabase if it was stored there
+    if (existingProduct.imageUrl && existingProduct.imageUrl.includes('supabase.co') && storageType === 'supabase') {
+      try {
+        const { deleteImage } = require('../../services/storageService');
+        await deleteImage(existingProduct.imageUrl);
+      } catch (e) {
+        // Ignore errors when deleting old image
+      }
     }
 
     const product = await prisma.product.update({
@@ -429,12 +450,13 @@ router.post("/:id/image", upload.single('image'), async (req, res) => {
       }
     });
 
-    // BUG 2 FIX: Invalidate cache so bot sees new image
+    // Invalidate cache so bot sees new image
     botManager.invalidateShopCache(req.shop.id);
 
     res.json({
       message: "تم رفع الصورة بنجاح",
       imageUrl,
+      storageType,
       product
     });
 

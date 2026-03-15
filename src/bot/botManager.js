@@ -115,9 +115,11 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 async function getShopCached(shopId) {
   const cached = shopCache.get(shopId);
   if (cached && Date.now() - cached.time < CACHE_TTL) {
+    console.log(`📦 Cache HIT for shop ${shopId} (age: ${Math.round((Date.now() - cached.time)/1000)}s)`);
     return cached.data;
   }
   
+  console.log(`🔄 Cache MISS for shop ${shopId} - fetching from DB...`);
   const shop = await prisma.shop.findUnique({
     where: { id: shopId },
     include: { products: { where: { isAvailable: true } } }
@@ -125,6 +127,7 @@ async function getShopCached(shopId) {
   
   if (shop) {
     shopCache.set(shopId, { data: shop, time: Date.now() });
+    console.log(`✅ Cached shop ${shopId} with ${shop.products?.length || 0} products`);
   }
   return shop;
 }
@@ -225,8 +228,12 @@ class BotManager {
 
   // BUG 2 FIX: Invalidate shop cache when products change
   invalidateShopCache(shopId) {
+    const hadCache = shopCache.has(shopId);
     shopCache.delete(shopId);
-    console.log(`🔄 Cache cleared for shop ${shopId}`);
+    console.log(`🔄 Cache cleared for shop ${shopId} (had cache: ${hadCache}, cache size: ${shopCache.size})`);
+    
+    // Also log stack trace to see who's calling this
+    console.log(`🔄 invalidateShopCache called from:`, new Error().stack.split('\n')[2]?.trim());
   }
 
   async connectShop(shopId, qrCallback) {
@@ -385,6 +392,17 @@ class BotManager {
     try {
       const from = msg.key.remoteJid;
       const customerPhone = from.split('@')[0];
+      
+      // FIX: Fetch fresh shop data to get latest products
+      // The 'shop' parameter is from connection time and may be stale
+      console.log(`🔄 handleMessage: Refreshing shop data for ${shop.id} (current products: ${shop.products?.length || 0})`);
+      const freshShop = await getShopCached(shop.id);
+      if (freshShop) {
+        console.log(`✅ handleMessage: Got fresh shop with ${freshShop.products?.length || 0} products`);
+        shop = freshShop;
+      } else {
+        console.log(`⚠️ handleMessage: Failed to get fresh shop data, using stale data`);
+      }
       
       // Extract and normalize text (convert Arabic numbers to English)
       const rawText = msg.message?.conversation || 

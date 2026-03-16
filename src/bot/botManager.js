@@ -917,7 +917,7 @@ class BotManager {
 
   async sendStoreLink(sock, from, shop, customerPhone) {
     const baseUrl = process.env.APP_URL || `https://${process.env.RAILWAY_STATIC_URL || 'your-app.railway.app'}`;
-    const storeUrl = `${baseUrl}/store.html?shopId=${shop.id}&phone=${shop.whatsappNumber}`;
+    const storeUrl = `${baseUrl}/store/${shop.id}`;
     
     const welcomeMsg = 
       `أهلاً وسهلاً! مرحباً بك في *${shop.name}*\n\n` +

@@ -5,12 +5,18 @@ const { z } = require("zod");
 const qrService = require("../../services/qrService");
 const multer = require("multer");
 const path = require("path");
+const fs = require("fs");
+const { uploadImage, isStorageConfigured } = require("../../services/storageService");
 const router = express.Router();
 
-// Configure multer for image uploads
+// Configure multer for temp storage
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, 'public/uploads/');
+    const tmpDir = 'tmp/';
+    if (!fs.existsSync(tmpDir)) {
+      fs.mkdirSync(tmpDir, { recursive: true });
+    }
+    cb(null, tmpDir);
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
@@ -344,9 +350,28 @@ router.post('/upload-image', authenticateToken, upload.single('image'), async (r
     if (!req.file) {
       return res.status(400).json({ error: 'لم يتم رفع أي صورة' });
     }
-    const imageUrl = `/uploads/${req.file.filename}`; 
+
+    if (!isStorageConfigured()) {
+      return res.status(500).json({ error: 'Cloudinary not configured' });
+    }
+
+    // Upload to Cloudinary
+    const timestamp = Date.now();
+    const publicId = `wahda-products/variant-${req.shop.id}-${timestamp}`;
+    const imageUrl = await uploadImage(req.file.path, publicId);
+
+    // Clean up temp file
+    if (fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+
     res.json({ success: true, imageUrl });
   } catch (err) {
+    console.error('Variant image upload error:', err);
+    // Clean up temp file on error
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
     res.status(500).json({ error: err.message });
   }
 });

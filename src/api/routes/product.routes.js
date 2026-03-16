@@ -30,6 +30,9 @@ const createProductSchema = z.object({
   description: z.string().optional(),
   category: z.string().optional(),
   isAvailable: z.boolean().default(true),
+  stock: z.number().int().min(0).nullable().optional(),
+  variants: z.string().optional(),
+  variantImages: z.string().optional(),
 });
 
 const updateProductSchema = z.object({
@@ -38,6 +41,9 @@ const updateProductSchema = z.object({
   description: z.string().optional(),
   category: z.string().optional(),
   isAvailable: z.boolean().optional(),
+  stock: z.number().int().min(0).nullable().optional(),
+  variants: z.string().optional(),
+  variantImages: z.string().optional(),
 });
 
 // Get all products for the shop

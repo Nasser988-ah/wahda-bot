@@ -582,10 +582,138 @@
             }
         }
 
-        @media (hover: none) {
-            .btn:hover, .action-card:hover, .stat-card:hover {
-                transform: none;
-            }
+        /* Bottom Navigation - Mobile App Style */
+        .bottom-nav {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(10, 10, 15, 0.95);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid var(--border);
+            padding: 10px 0;
+            z-index: 1000;
+        }
+
+        .bottom-nav-items {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .bottom-nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 8px 20px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 11px;
+            transition: all 0.3s ease;
+            border-radius: 12px;
+        }
+
+        .bottom-nav-item:hover,
+        .bottom-nav-item.active {
+            color: var(--primary);
+            background: rgba(99, 102, 241, 0.1);
+        }
+
+        .bottom-nav-item .icon {
+            font-size: 22px;
+        }
+
+        /* Header Nav Links */
+        .nav-links {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .nav-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            padding: 8px 16px;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .nav-link:hover {
+            color: var(--text);
+            background: var(--glass);
+        }
+
+        .nav-link.active {
+            color: var(--primary);
+            background: rgba(99, 102, 241, 0.15);
+        }
+
+        /* Enhanced Stats */
+        .stat-card {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, transparent, rgba(255,255,255,0.03), transparent);
+            transform: rotate(45deg);
+            transition: all 0.5s ease;
+        }
+
+        .stat-card:hover::after {
+            top: -30%;
+            right: -30%;
+        }
+
+        /* Revenue display fix */
+        .stat-value#revenueValue {
+            font-size: 24px;
+        }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--card);
+            border: 1px solid var(--border);
+            color: white;
+            padding: 14px 28px;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            z-index: 2000;
+            opacity: 0;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .toast.success {
+            background: rgba(34, 197, 94, 0.95);
+            border-color: var(--success);
+        }
+
+        .toast.error {
+            background: rgba(239, 68, 68, 0.95);
+            border-color: var(--danger);
         }
     </style>
 </head>
@@ -630,6 +758,11 @@
                     <div class="action-title">إدارة المنتجات</div>
                     <div class="action-desc">إضافة وتعديل المنتجات</div>
                 </a>
+                <a href="#" class="action-card" onclick="previewStore(); return false;">
+                    <div class="action-icon">🌐</div>
+                    <div class="action-title">معاينة المتجر</div>
+                    <div class="action-desc">عرض موقع المتجر الإلكتروني</div>
+                </a>
                 <a href="qr.html" class="action-card">
                     <div class="action-icon">📱</div>
                     <div class="action-title">ربط واتساب</div>
@@ -639,11 +772,6 @@
                     <div class="action-icon">⚙️</div>
                     <div class="action-title">إعدادات المتجر</div>
                     <div class="action-desc">تعديل بيانات المتجر والأرقام</div>
-                </a>
-                <a href="#" class="action-card" onclick="refreshData()">
-                    <div class="action-icon">🔄</div>
-                    <div class="action-title">تحديث البيانات</div>
-                    <div class="action-desc">تحديث الإحصائيات والطلبات</div>
                 </a>
             </div>
         </div>
@@ -662,6 +790,28 @@
             </div>
         </div>
     </div>
+
+    <!-- Bottom Navigation - Mobile App Style -->
+    <nav class="bottom-nav">
+        <div class="bottom-nav-items">
+            <a href="dashboard.html" class="bottom-nav-item active">
+                <span class="icon">🏠</span>
+                <span>الرئيسية</span>
+            </a>
+            <a href="products.html" class="bottom-nav-item">
+                <span class="icon">📦</span>
+                <span>المنتجات</span>
+            </a>
+            <a href="#" class="bottom-nav-item" onclick="previewStore(); return false;">
+                <span class="icon">🌐</span>
+                <span>المتجر</span>
+            </a>
+            <a href="settings.html" class="bottom-nav-item">
+                <span class="icon">⚙️</span>
+                <span>الإعدادات</span>
+            </a>
+        </div>
+    </nav>
 
     <script>
         const API_BASE = window.location.origin + '/api';
@@ -895,6 +1045,15 @@
                 localStorage.removeItem('token');
                 localStorage.removeItem('shop');
                 window.location.href = 'login.html';
+            }
+        }
+
+        // Preview store website
+        function previewStore() {
+            if (currentShop && currentShop.id) {
+                window.open(`/store/${currentShop.id}`, '_blank');
+            } else {
+                alert('لم يتم العثور على معلومات المتجر');
             }
         }
     </script>

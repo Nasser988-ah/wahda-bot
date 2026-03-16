@@ -178,6 +178,38 @@
             margin-bottom: 30px;
             flex-wrap: wrap;
             gap: 15px;
+            background: var(--card);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 20px 25px;
+        }
+
+        .page-header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .page-header-actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--primary);
+            color: var(--primary);
+        }
+
+        .btn-outline:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-icon {
+            font-size: 16px;
         }
 
         .page-title {
@@ -602,6 +634,61 @@
                 transform: none;
             }
         }
+
+        /* Bottom Navigation - Mobile App Style */
+        .bottom-nav {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(10, 10, 15, 0.95);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid var(--border);
+            padding: 10px 0;
+            z-index: 1000;
+        }
+
+        .bottom-nav-items {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .bottom-nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 8px 20px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 11px;
+            transition: all 0.3s ease;
+            border-radius: 12px;
+        }
+
+        .bottom-nav-item:hover,
+        .bottom-nav-item.active {
+            color: var(--primary);
+            background: rgba(99, 102, 241, 0.1);
+        }
+
+        .bottom-nav-item .icon {
+            font-size: 22px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px 15px 90px 15px;
+            }
+
+            .bottom-nav {
+                display: block;
+            }
+        }
     </style>
 </head>
 <body>
@@ -627,8 +714,17 @@
 
     <div class="container">
         <div class="page-header">
-            <h1 class="page-title">إدارة المنتجات</h1>
-            <button class="btn" onclick="showAddForm()">إضافة منتج جديد</button>
+            <div class="page-header-left">
+                <h1 class="page-title">📦 المنتجات</h1>
+            </div>
+            <div class="page-header-actions">
+                <button class="btn btn-outline" onclick="previewWebsite()">
+                    <span class="btn-icon">🌐</span> معاينة المتجر
+                </button>
+                <button class="btn" onclick="showAddForm()">
+                    <span class="btn-icon">➕</span> منتج جديد
+                </button>
+            </div>
         </div>
 
         <div class="main-content">
@@ -720,6 +816,28 @@
             </div>
         </div>
     </div>
+
+    <!-- Bottom Navigation - Mobile App Style -->
+    <nav class="bottom-nav">
+        <div class="bottom-nav-items">
+            <a href="dashboard.html" class="bottom-nav-item">
+                <span class="icon">🏠</span>
+                <span>الرئيسية</span>
+            </a>
+            <a href="products.html" class="bottom-nav-item active">
+                <span class="icon">📦</span>
+                <span>المنتجات</span>
+            </a>
+            <a href="#" class="bottom-nav-item" onclick="previewWebsite(); return false;">
+                <span class="icon">🌐</span>
+                <span>المتجر</span>
+            </a>
+            <a href="settings.html" class="bottom-nav-item">
+                <span class="icon">⚙️</span>
+                <span>الإعدادات</span>
+            </a>
+        </div>
+    </nav>
 
     <div class="toast" id="toast"></div>
 
@@ -1138,6 +1256,16 @@
                 localStorage.removeItem('token');
                 localStorage.removeItem('shop');
                 window.location.href = 'login.html';
+            }
+        }
+
+        // Preview website/store
+        function previewWebsite() {
+            const shop = JSON.parse(localStorage.getItem('shop') || '{}');
+            if (shop && shop.id) {
+                window.open(`/store/${shop.id}`, '_blank');
+            } else {
+                showToast('لم يتم العثور على معلومات المتجر', 'error');
             }
         }
 

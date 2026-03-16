@@ -715,6 +715,103 @@
             background: rgba(239, 68, 68, 0.95);
             border-color: var(--danger);
         }
+
+        /* Mobile-specific improvements */
+        @media (max-width: 768px) {
+            .header-content {
+                padding: 0 10px;
+            }
+
+            .logo {
+                font-size: 18px;
+            }
+
+            .logo-icon {
+                width: 30px;
+                height: 30px;
+                font-size: 14px;
+            }
+
+            .nav-links {
+                display: none; /* Hide desktop nav on mobile */
+            }
+
+            .container {
+                padding: 15px 10px 90px 10px;
+            }
+
+            .page-title {
+                font-size: 22px;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 12px;
+            }
+
+            .stat-card {
+                padding: 16px;
+            }
+
+            .stat-icon {
+                width: 40px;
+                height: 40px;
+                font-size: 18px;
+            }
+
+            .stat-value {
+                font-size: 20px;
+            }
+
+            .quick-actions {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 12px;
+            }
+
+            .action-card {
+                padding: 16px;
+            }
+
+            .action-icon {
+                width: 40px;
+                height: 40px;
+                font-size: 18px;
+            }
+
+            .action-title {
+                font-size: 13px;
+            }
+
+            .action-desc {
+                font-size: 11px;
+            }
+
+            .recent-orders {
+                padding: 20px;
+            }
+
+            .order-item {
+                padding: 12px;
+            }
+
+            .bottom-nav {
+                display: block;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .quick-actions {
+                grid-template-columns: 1fr;
+            }
+
+            .container {
+                padding: 10px 5px 90px 5px;
+            }
+        }
     </style>
 </head>
 <body>

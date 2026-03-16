@@ -128,6 +128,11 @@ app.get("/", (req, res) => {
   res.redirect("/login.html");
 });
 
+// Store page route
+app.get("/store/:shopId", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "store.html"));
+});
+
 // Graceful shutdown
 process.on("SIGINT", async () => {
   logger.info("Graceful shutdown initiated (SIGINT)");

@@ -1188,12 +1188,13 @@ class BotManager {
     const cart = [];
     
     for (const line of lines) {
-      // Format: "اسم المنتج × 2"
-      const match = line.match(/^(.+)\s*×\s*(\d+)$/);
+      // Format: "اسم المنتج (اللون: أحمر) × 2" or "اسم المنتج × 2"
+      const match = line.match(/^(.+?)\s*(?:\(([^)]+)\))?\s*×\s*(\d+)$/);
       if (!match) continue;
       
       const productName = match[1].trim();
-      const quantity = parseInt(match[2]);
+      const variantInfo = match[2] ? match[2].trim() : null;
+      const quantity = parseInt(match[3]);
       
       const product = shop.products.find(p => 
         p.name === productName && p.isAvailable
@@ -1204,7 +1205,8 @@ class BotManager {
           productId: product.id,
           name: product.name,
           price: product.price,
-          quantity
+          quantity,
+          variantInfo  // Include variant info in cart
         });
       }
     }
@@ -1225,7 +1227,7 @@ class BotManager {
     
     let message = `🛒 سلة التسوق:\n\n`;
     cart.forEach((item, i) => {
-      message += `${i + 1}. ${item.name}\n`;
+      message += `${i + 1}. ${item.name}${item.variantInfo ? ` (${item.variantInfo})` : ''}\n`;
       message += `   الكمية: ${item.quantity} × ${item.price} = ${item.price * item.quantity} جنيه\n\n`;
     });
     message += `💰 الإجمالي: ${total} جنيه\n\n`;

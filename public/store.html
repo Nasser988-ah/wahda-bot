@@ -948,6 +948,9 @@
       
       shopData = data
       
+      // Apply customization
+      applyCustomization(data)
+      
       document.title = data.name
       document.getElementById('shopName').textContent = data.name
       

@@ -68,6 +68,9 @@ router.get("/", async (req, res) => {
           category: true,
           isAvailable: true,
           imageUrl: true,
+          stock: true,
+          variants: true,
+          variantImages: true,
           createdAt: true,
           updatedAt: true,
           _count: {

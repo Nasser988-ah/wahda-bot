@@ -1903,7 +1903,7 @@ ${contextMessage}
       
       let message = `🛒 سلة التسوق:\n\n`;
       items.forEach((item, i) => {
-        message += `${i + 1}. ${item.name}\n`;
+        message += `${i + 1}. ${item.name}${item.variantInfo ? ` (${item.variantInfo})` : ''}\n`;
         message += `   الكمية: ${item.quantity} × ${item.price} = ${item.price * item.quantity} جنيه\n\n`;
       });
       message += `💰 الإجمالي: ${total} جنيه\n\n`;

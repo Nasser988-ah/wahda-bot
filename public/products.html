@@ -1428,6 +1428,10 @@
 
         // When loading product for edit
         function loadProductVariants(product) {
+            // Reset variants first to avoid showing previous product's data
+            productVariants = []
+            variantImages = {}
+            
             const stockInput = document.getElementById('productStock')
             if (stockInput && product.stock !== null && 
                 product.stock !== undefined) {
@@ -1436,15 +1440,15 @@
             if (product.variants) {
                 try {
                     productVariants = JSON.parse(product.variants)
-                    renderVariantGroups()
                 } catch {}
             }
             if (product.variantImages) {
                 try {
                     variantImages = JSON.parse(product.variantImages)
-                    renderVariantGroups()
                 } catch {}
             }
+            // Render after setting all data
+            renderVariantGroups()
         }
 
         // Reset on form clear

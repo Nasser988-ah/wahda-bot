@@ -951,7 +951,8 @@
       document.title = data.name
       document.getElementById('shopName').textContent = data.name
       
-      allProducts = data.products.filter(p => p.isAvailable)
+      // Show all products including out of stock
+      allProducts = data.products
       filteredProducts = [...allProducts]
       renderProducts()
     } catch (err) {
@@ -1053,6 +1054,14 @@
             showToast('يرجى اختيار جميع الخيارات أولاً')
             return
           }
+        }
+      }
+      // NEW: Check stock limit
+      if (p?.stock !== null && p?.stock !== undefined) {
+        const current = quantities[index] || 0
+        if (current >= p.stock) {
+          showToast(`الكمية المتاحة: ${p.stock} فقط`)
+          return
         }
       }
     }

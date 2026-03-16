@@ -2295,6 +2295,17 @@ ${productsList}
       i => i.cartItemKey === cartItemKey
     )
 
+    // NEW: Check stock limit before adding
+    if (product.stock !== null && product.stock !== undefined) {
+      const currentQty = existingIndex >= 0 ? cart[existingIndex].quantity : 0
+      if (currentQty >= product.stock) {
+        await sock.sendMessage(from, {
+          text: `عذراً، الكمية المتاحة من *${product.name}* هي ${product.stock} فقط.`
+        })
+        return
+      }
+    }
+
     if (existingIndex >= 0) {
       cart[existingIndex].quantity += 1
     } else {

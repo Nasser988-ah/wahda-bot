@@ -426,6 +426,118 @@
 
         <div class="settings-card">
             <div class="card-title">
+                🎨 تخصيص المتجر
+            </div>
+
+            <!-- Logo Upload -->
+            <div class="form-group">
+                <label class="form-label">🖼️ شعار المتجر</label>
+                <div class="logo-upload-section" style="text-align: center; padding: 20px; background: var(--bg); border-radius: 12px; border: 2px dashed var(--border);">
+                    <img id="logoPreview" src="" alt="Logo" style="display: none; width: 120px; height: 120px; object-fit: cover; border-radius: 16px; margin-bottom: 15px;">
+                    <div id="logoPlaceholder" style="font-size: 60px; margin-bottom: 15px;">🏪</div>
+                    <input type="file" id="logoInput" accept="image/*" style="display: none;">
+                    <button type="button" class="copy-btn" onclick="document.getElementById('logoInput').click()" style="padding: 12px 24px; font-size: 14px;">
+                        📷 رفع شعار جديد
+                    </button>
+                    <p class="form-hint" style="margin-top: 10px;">الصورة الموصى بها: مربعة، 500×500 بكسل</p>
+                </div>
+            </div>
+
+            <!-- Color Customization -->
+            <div class="form-group">
+                <label class="form-label">🎨 ألوان المتجر</label>
+                <div class="color-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+                    <div class="color-item">
+                        <label style="font-size: 13px; color: var(--muted); margin-bottom: 6px; display: block;">اللون الرئيسي</label>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <input type="color" id="primaryColor" value="#f5c842" style="width: 50px; height: 50px; border: none; border-radius: 10px; cursor: pointer;">
+                            <input type="text" id="primaryColorText" value="#f5c842" style="flex: 1; padding: 10px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: monospace; font-size: 13px;">
+                        </div>
+                    </div>
+                    <div class="color-item">
+                        <label style="font-size: 13px; color: var(--muted); margin-bottom: 6px; display: block;">لون الخلفية</label>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <input type="color" id="backgroundColor" value="#0f0f13" style="width: 50px; height: 50px; border: none; border-radius: 10px; cursor: pointer;">
+                            <input type="text" id="backgroundColorText" value="#0f0f13" style="flex: 1; padding: 10px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: monospace; font-size: 13px;">
+                        </div>
+                    </div>
+                    <div class="color-item">
+                        <label style="font-size: 13px; color: var(--muted); margin-bottom: 6px; display: block;">لون البطاقات</label>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <input type="color" id="secondaryColor" value="#1a1a22" style="width: 50px; height: 50px; border: none; border-radius: 10px; cursor: pointer;">
+                            <input type="text" id="secondaryColorText" value="#1a1a22" style="flex: 1; padding: 10px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: monospace; font-size: 13px;">
+                        </div>
+                    </div>
+                    <div class="color-item">
+                        <label style="font-size: 13px; color: var(--muted); margin-bottom: 6px; display: block;">لون النص</label>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <input type="color" id="textColor" value="#ffffff" style="width: 50px; height: 50px; border: none; border-radius: 10px; cursor: pointer;">
+                            <input type="text" id="textColorText" value="#ffffff" style="flex: 1; padding: 10px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: monospace; font-size: 13px;">
+                        </div>
+                    </div>
+                    <div class="color-item">
+                        <label style="font-size: 13px; color: var(--muted); margin-bottom: 6px; display: block;">لون التمييز</label>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <input type="color" id="accentColor" value="#fde98a" style="width: 50px; height: 50px; border: none; border-radius: 10px; cursor: pointer;">
+                            <input type="text" id="accentColorText" value="#fde98a" style="flex: 1; padding: 10px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: monospace; font-size: 13px;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Font Selection -->
+            <div class="form-group">
+                <label class="form-label">🔤 خط المتجر</label>
+                <div class="font-options" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 12px;">
+                    <div class="font-option selected" data-font="Cairo" onclick="selectFont('Cairo')" style="padding: 16px; border: 2px solid var(--gold); border-radius: 12px; text-align: center; cursor: pointer; background: var(--gold-dim);">
+                        <div style="font-family: 'Cairo'; font-size: 24px; margin-bottom: 8px;">أبجد</div>
+                        <div style="font-size: 12px; color: var(--muted);">Cairo</div>
+                    </div>
+                    <div class="font-option" data-font="Tajawal" onclick="selectFont('Tajawal')" style="padding: 16px; border: 2px solid var(--border); border-radius: 12px; text-align: center; cursor: pointer;">
+                        <div style="font-family: 'Tajawal'; font-size: 24px; margin-bottom: 8px;">أبجد</div>
+                        <div style="font-size: 12px; color: var(--muted);">Tajawal</div>
+                    </div>
+                    <div class="font-option" data-font="Almarai" onclick="selectFont('Almarai')" style="padding: 16px; border: 2px solid var(--border); border-radius: 12px; text-align: center; cursor: pointer;">
+                        <div style="font-family: 'Almarai'; font-size: 24px; margin-bottom: 8px;">أبجد</div>
+                        <div style="font-size: 12px; color: var(--muted);">Almarai</div>
+                    </div>
+                    <div class="font-option" data-font="Noto Sans Arabic" onclick="selectFont('Noto Sans Arabic')" style="padding: 16px; border: 2px solid var(--border); border-radius: 12px; text-align: center; cursor: pointer;">
+                        <div style="font-family: 'Noto Sans Arabic'; font-size: 24px; margin-bottom: 8px;">أبجد</div>
+                        <div style="font-size: 12px; color: var(--muted);">Noto Sans</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Preview -->
+            <div class="form-group">
+                <label class="form-label">👁️ معاينة المتجر</label>
+                <div id="storePreview" style="background: #0f0f13; border-radius: 16px; padding: 20px; min-height: 200px; border: 1px solid var(--border);">
+                    <div style="text-align: center; padding: 20px; border-bottom: 1px solid #1a1a22;">
+                        <div id="previewLogo" style="font-size: 50px; margin-bottom: 10px;">🏪</div>
+                        <div id="previewShopName" style="color: #f5c842; font-size: 20px; font-weight: 700;">متجرك</div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 20px;">
+                        <div style="background: #1a1a22; border-radius: 12px; padding: 16px; text-align: center;">
+                            <div style="font-size: 30px; margin-bottom: 8px;">🛍️</div>
+                            <div style="color: #ffffff; font-size: 14px; font-weight: 600; margin-bottom: 4px;">منتج 1</div>
+                            <div style="color: #f5c842; font-size: 16px; font-weight: 700;">100 ج.م</div>
+                        </div>
+                        <div style="background: #1a1a22; border-radius: 12px; padding: 16px; text-align: center;">
+                            <div style="font-size: 30px; margin-bottom: 8px;">👕</div>
+                            <div style="color: #ffffff; font-size: 14px; font-weight: 600; margin-bottom: 4px;">منتج 2</div>
+                            <div style="color: #f5c842; font-size: 16px; font-weight: 700;">150 ج.م</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button type="button" class="save-btn" onclick="saveCustomization()" style="margin-top: 20px;">
+                💾 حفظ تخصيص المتجر
+            </button>
+        </div>
+
+        <div class="settings-card">
+            <div class="card-title">
                 🛡️ معلومات الاشتراك
             </div>
 
@@ -617,6 +729,227 @@
         function goBack() {
             window.location.href = '/dashboard.html';
         }
+
+        // ==================== Store Customization Functions ====================
+        let selectedFont = 'Cairo';
+        let currentLogoUrl = null;
+
+        // Load customization settings
+        async function loadCustomization() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/shop/customization`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Apply colors
+                    document.getElementById('primaryColor').value = data.primaryColor || '#f5c842';
+                    document.getElementById('primaryColorText').value = data.primaryColor || '#f5c842';
+                    document.getElementById('backgroundColor').value = data.backgroundColor || '#0f0f13';
+                    document.getElementById('backgroundColorText').value = data.backgroundColor || '#0f0f13';
+                    document.getElementById('secondaryColor').value = data.secondaryColor || '#1a1a22';
+                    document.getElementById('secondaryColorText').value = data.secondaryColor || '#1a1a22';
+                    document.getElementById('textColor').value = data.textColor || '#ffffff';
+                    document.getElementById('textColorText').value = data.textColor || '#ffffff';
+                    document.getElementById('accentColor').value = data.accentColor || '#fde98a';
+                    document.getElementById('accentColorText').value = data.accentColor || '#fde98a';
+                    
+                    // Apply font
+                    if (data.fontFamily) {
+                        selectFont(data.fontFamily);
+                    }
+                    
+                    // Apply logo
+                    if (data.logoUrl) {
+                        currentLogoUrl = data.logoUrl;
+                        document.getElementById('logoPreview').src = data.logoUrl;
+                        document.getElementById('logoPreview').style.display = 'inline-block';
+                        document.getElementById('logoPlaceholder').style.display = 'none';
+                        document.getElementById('previewLogo').innerHTML = `<img src="${data.logoUrl}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 12px;">`;
+                    }
+                    
+                    updatePreview();
+                }
+            } catch (error) {
+                console.error('Error loading customization:', error);
+            }
+        }
+
+        // Setup color input listeners
+        function setupColorListeners() {
+            const colors = ['primaryColor', 'backgroundColor', 'secondaryColor', 'textColor', 'accentColor'];
+            
+            colors.forEach(color => {
+                const picker = document.getElementById(color);
+                const text = document.getElementById(color + 'Text');
+                
+                picker.addEventListener('input', () => {
+                    text.value = picker.value;
+                    updatePreview();
+                });
+                
+                text.addEventListener('change', () => {
+                    picker.value = text.value;
+                    updatePreview();
+                });
+            });
+        }
+
+        // Select font
+        function selectFont(font) {
+            selectedFont = font;
+            document.querySelectorAll('.font-option').forEach(el => {
+                el.classList.remove('selected');
+                el.style.borderColor = 'var(--border)';
+                el.style.background = 'transparent';
+            });
+            
+            const selected = document.querySelector(`[data-font="${font}"]`);
+            if (selected) {
+                selected.classList.add('selected');
+                selected.style.borderColor = 'var(--gold)';
+                selected.style.background = 'var(--gold-dim)';
+            }
+            
+            updatePreview();
+        }
+
+        // Update preview
+        function updatePreview() {
+            const primaryColor = document.getElementById('primaryColor').value;
+            const backgroundColor = document.getElementById('backgroundColor').value;
+            const secondaryColor = document.getElementById('secondaryColor').value;
+            const textColor = document.getElementById('textColor').value;
+            const accentColor = document.getElementById('accentColor').value;
+            
+            const preview = document.getElementById('storePreview');
+            preview.style.background = backgroundColor;
+            preview.style.fontFamily = selectedFont;
+            
+            // Update header
+            const header = preview.querySelector('div:first-child');
+            header.style.borderBottomColor = secondaryColor;
+            
+            // Update shop name color
+            const shopName = document.getElementById('previewShopName');
+            if (shopName) {
+                shopName.style.color = primaryColor;
+            }
+            
+            // Update product cards
+            const cards = preview.querySelectorAll('div[style*="background: #1a1a22"]');
+            cards.forEach(card => {
+                card.style.background = secondaryColor;
+            });
+            
+            // Update product names
+            const names = preview.querySelectorAll('div[style*="color: #ffffff"]');
+            names.forEach(name => {
+                name.style.color = textColor;
+            });
+            
+            // Update prices
+            const prices = preview.querySelectorAll('div[style*="color: #f5c842"]');
+            prices.forEach(price => {
+                price.style.color = primaryColor;
+            });
+        }
+
+        // Setup logo upload
+        function setupLogoUpload() {
+            const logoInput = document.getElementById('logoInput');
+            logoInput.addEventListener('change', async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                // Show preview immediately
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    document.getElementById('logoPreview').src = e.target.result;
+                    document.getElementById('logoPreview').style.display = 'inline-block';
+                    document.getElementById('logoPlaceholder').style.display = 'none';
+                    document.getElementById('previewLogo').innerHTML = `<img src="${e.target.result}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 12px;">`;
+                };
+                reader.readAsDataURL(file);
+                
+                // Upload to server
+                const formData = new FormData();
+                formData.append('image', file);
+                
+                try {
+                    const response = await fetch(`${API_BASE_URL}/api/shop/logo`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('token')}`
+                        },
+                        body: formData
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        currentLogoUrl = data.imageUrl;
+                        showSuccess('تم رفع الشعار بنجاح');
+                    } else {
+                        showError('فشل في رفع الشعار');
+                    }
+                } catch (error) {
+                    console.error('Logo upload error:', error);
+                    showError('حدث خطأ أثناء رفع الشعار');
+                }
+            });
+        }
+
+        // Save customization
+        async function saveCustomization() {
+            const customization = {
+                logoUrl: currentLogoUrl,
+                primaryColor: document.getElementById('primaryColor').value,
+                backgroundColor: document.getElementById('backgroundColor').value,
+                secondaryColor: document.getElementById('secondaryColor').value,
+                textColor: document.getElementById('textColor').value,
+                accentColor: document.getElementById('accentColor').value,
+                fontFamily: selectedFont
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/shop/customization`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify(customization)
+                });
+                
+                if (response.ok) {
+                    showSuccess('تم حفظ تخصيص المتجر بنجاح');
+                } else {
+                    const error = await response.json();
+                    showError(error.error || 'فشل في حفظ التخصيص');
+                }
+            } catch (error) {
+                console.error('Save customization error:', error);
+                showError('حدث خطأ أثناء حفظ التخصيص');
+            }
+        }
+
+        // Initialize customization on page load
+        document.addEventListener('DOMContentLoaded', async () => {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = '/login.html';
+                return;
+            }
+            
+            await loadShopData();
+            await loadCustomization();
+            setupColorListeners();
+            setupLogoUpload();
+        });
 
         // Allow Enter key to save
         document.addEventListener('keypress', (e) => {

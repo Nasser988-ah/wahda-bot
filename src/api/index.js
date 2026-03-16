@@ -23,6 +23,13 @@ router.get("/store/:shopId", async (req, res) => {
         id: true,
         name: true,
         whatsappNumber: true,
+        logoUrl: true,
+        primaryColor: true,
+        secondaryColor: true,
+        backgroundColor: true,
+        textColor: true,
+        accentColor: true,
+        fontFamily: true,
         products: {
           where: { isAvailable: true },
           select: {

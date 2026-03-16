@@ -951,6 +951,9 @@
       document.title = data.name
       document.getElementById('shopName').textContent = data.name
       
+      // Apply customization
+      applyCustomization(data)
+      
       // Show all products including out of stock
       allProducts = data.products
       filteredProducts = [...allProducts]

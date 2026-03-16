@@ -376,4 +376,124 @@ router.post('/upload-image', authenticateToken, upload.single('image'), async (r
   }
 });
 
+// Get store customization settings
+router.get('/customization', authenticateToken, async (req, res) => {
+  try {
+    const prisma = getPrisma();
+    const shop = await prisma.shop.findUnique({
+      where: { id: req.shop.id },
+      select: {
+        logoUrl: true,
+        primaryColor: true,
+        secondaryColor: true,
+        backgroundColor: true,
+        textColor: true,
+        accentColor: true,
+        fontFamily: true
+      }
+    });
+
+    if (!shop) {
+      return res.status(404).json({ error: 'المتجر غير موجود' });
+    }
+
+    res.json({
+      logoUrl: shop.logoUrl,
+      primaryColor: shop.primaryColor || '#f5c842',
+      secondaryColor: shop.secondaryColor || '#1a1a22',
+      backgroundColor: shop.backgroundColor || '#0f0f13',
+      textColor: shop.textColor || '#ffffff',
+      accentColor: shop.accentColor || '#fde98a',
+      fontFamily: shop.fontFamily || 'Cairo'
+    });
+  } catch (error) {
+    console.error('Get customization error:', error);
+    res.status(500).json({ error: 'فشل في تحميل الإعدادات' });
+  }
+});
+
+// Update store customization settings
+router.put('/customization', authenticateToken, async (req, res) => {
+  try {
+    const prisma = getPrisma();
+    const {
+      logoUrl,
+      primaryColor,
+      secondaryColor,
+      backgroundColor,
+      textColor,
+      accentColor,
+      fontFamily
+    } = req.body;
+
+    const updatedShop = await prisma.shop.update({
+      where: { id: req.shop.id },
+      data: {
+        logoUrl,
+        primaryColor,
+        secondaryColor,
+        backgroundColor,
+        textColor,
+        accentColor,
+        fontFamily
+      },
+      select: {
+        logoUrl: true,
+        primaryColor: true,
+        secondaryColor: true,
+        backgroundColor: true,
+        textColor: true,
+        accentColor: true,
+        fontFamily: true
+      }
+    });
+
+    res.json({
+      message: 'تم تحديث الإعدادات بنجاح',
+      customization: updatedShop
+    });
+  } catch (error) {
+    console.error('Update customization error:', error);
+    res.status(500).json({ error: 'فشل في تحديث الإعدادات' });
+  }
+});
+
+// Upload store logo
+router.post('/logo', authenticateToken, upload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'لم يتم رفع أي صورة' });
+    }
+
+    if (!isStorageConfigured()) {
+      return res.status(500).json({ error: 'Cloudinary not configured' });
+    }
+
+    // Upload to Cloudinary
+    const timestamp = Date.now();
+    const publicId = `wahda-shops/logo-${req.shop.id}-${timestamp}`;
+    const imageUrl = await uploadImage(req.file.path, publicId);
+
+    // Clean up temp file
+    if (fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+
+    // Update shop with new logo URL
+    const prisma = getPrisma();
+    await prisma.shop.update({
+      where: { id: req.shop.id },
+      data: { logoUrl: imageUrl }
+    });
+
+    res.json({ success: true, imageUrl });
+  } catch (err) {
+    console.error('Logo upload error:', err);
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

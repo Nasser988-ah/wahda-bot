@@ -18,6 +18,15 @@ model Shop {
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
 
+  // Store Customization
+  logoUrl           String?             // Store logo URL
+  primaryColor      String?             @default("#f5c842") // Gold theme default
+  secondaryColor    String?             @default("#1a1a22") // Dark card default
+  backgroundColor   String?             @default("#0f0f13") // Dark bg default
+  textColor         String?             @default("#ffffff") // White text default
+  accentColor       String?             @default("#fde98a") // Light gold accent
+  fontFamily        String?             @default("Cairo")   // Default Arabic font
+  
   // Relations
   products          Product[]
   orders            Order[]

@@ -703,9 +703,10 @@
 </div>
 
 <script>
-  const params = new URLSearchParams(window.location.search)
-  const shopId = params.get('shopId')
-  const phone = params.get('phone')
+  // Extract shopId from URL path (e.g., /store/cmmsk09t1000a136jwrgk01jg)
+  const pathParts = window.location.pathname.split('/')
+  const shopId = pathParts[pathParts.length - 1] // Get the last part of the path
+  const phone = '' // Phone is not needed for public store
   
   let allProducts = []
   let filteredProducts = []
@@ -743,9 +744,9 @@
   }
   
   async function loadShop() {
-    if (!shopId || !phone) {
+    if (!shopId) {
       document.getElementById('productsGrid').innerHTML = 
-        '<div class="empty-state error-message"><h2>رابط غير صحيح</h2><p>معرّف المتجر أو الهاتف غير موجود</p></div>'
+        '<div class="empty-state error-message"><h2>رابط غير صحيح</h2><p>معرّف المتجر غير موجود</p></div>'
       return
     }
     

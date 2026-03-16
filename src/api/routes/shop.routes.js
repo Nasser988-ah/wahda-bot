@@ -379,7 +379,6 @@ router.post('/upload-image', authenticateToken, upload.single('image'), async (r
 // Get store customization settings
 router.get('/customization', authenticateToken, async (req, res) => {
   try {
-    const prisma = getPrisma();
     const shop = await prisma.shop.findUnique({
       where: { id: req.shop.id },
       select: {
@@ -415,7 +414,6 @@ router.get('/customization', authenticateToken, async (req, res) => {
 // Update store customization settings
 router.put('/customization', authenticateToken, async (req, res) => {
   try {
-    const prisma = getPrisma();
     const {
       logoUrl,
       primaryColor,
@@ -480,7 +478,6 @@ router.post('/logo', authenticateToken, upload.single('image'), async (req, res)
     }
 
     // Update shop with new logo URL
-    const prisma = getPrisma();
     await prisma.shop.update({
       where: { id: req.shop.id },
       data: { logoUrl: imageUrl }

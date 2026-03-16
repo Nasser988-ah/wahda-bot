@@ -920,17 +920,17 @@
     }
     
     // Build order message with variants
-    const lines = items.map(([id, q]) => {
-      const p = allProducts.find(p => p.id === id)
+    const lines = items.map(([index, q]) => {
+      const p = allProducts[index]
       if (!p) return null
-      const variantInfo = getVariantInfo(id)
+      const variantInfo = getVariantInfo(p.id)
       return variantInfo
         ? `${p.name} (${variantInfo}) × ${q}` 
         : `${p.name} × ${q}` 
     }).filter(Boolean)
     
-    const total = items.reduce((sum, [i, q]) => 
-      sum + allProducts[i].price * q, 0
+    const total = items.reduce((sum, [index, q]) => 
+      sum + allProducts[index].price * q, 0
     )
     
     const message = 

@@ -32,7 +32,10 @@ router.get("/store/:shopId", async (req, res) => {
             description: true,
             imageUrl: true,
             category: true,
-            isAvailable: true
+            isAvailable: true,
+            stock: true,
+            variants: true,
+            variantImages: true
           }
         }
       }

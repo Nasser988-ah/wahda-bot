@@ -531,9 +531,14 @@
                 </div>
             </div>
 
-            <button type="button" class="save-btn" onclick="saveCustomization()" style="margin-top: 20px;">
-                💾 حفظ تخصيص المتجر
-            </button>
+            <div style="display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap;">
+                <button type="button" class="save-btn" onclick="saveCustomization()">
+                    💾 حفظ تخصيص المتجر
+                </button>
+                <button type="button" class="copy-btn" onclick="resetToDefault()" style="background: #ef4444;">
+                    � استعادة التصميم الافتراضي
+                </button>
+            </div>
         </div>
 
         <div class="settings-card">
@@ -935,6 +940,35 @@
                 console.error('Save customization error:', error);
                 showError('حدث خطأ أثناء حفظ التخصيص');
             }
+        }
+
+        // Reset to default design
+        function resetToDefault() {
+            if (!confirm('هل أنت متأكد من استعادة التصميم الافتراضي؟')) return;
+            
+            // Reset colors to defaults
+            document.getElementById('primaryColor').value = '#f5c842';
+            document.getElementById('primaryColorText').value = '#f5c842';
+            document.getElementById('backgroundColor').value = '#0f0f13';
+            document.getElementById('backgroundColorText').value = '#0f0f13';
+            document.getElementById('secondaryColor').value = '#1a1a22';
+            document.getElementById('secondaryColorText').value = '#1a1a22';
+            document.getElementById('textColor').value = '#ffffff';
+            document.getElementById('textColorText').value = '#ffffff';
+            document.getElementById('accentColor').value = '#fde98a';
+            document.getElementById('accentColorText').value = '#fde98a';
+            
+            // Reset font
+            selectFont('Cairo');
+            
+            // Reset logo
+            currentLogoUrl = null;
+            document.getElementById('logoPreview').style.display = 'none';
+            document.getElementById('logoPlaceholder').style.display = 'block';
+            document.getElementById('previewLogo').innerHTML = '🏪';
+            
+            updatePreview();
+            showSuccess('تم استعادة التصميم الافتراضي - اضغط حفظ لتطبيق التغييرات');
         }
 
         // Initialize customization on page load

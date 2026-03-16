@@ -1257,6 +1257,38 @@
     setTimeout(() => toast.remove(), 3000)
   }
   
+  // Apply customization from shop data
+  function applyCustomization(data) {
+    const root = document.documentElement;
+    
+    // Apply colors
+    if (data.backgroundColor) root.style.setProperty('--bg', data.backgroundColor);
+    if (data.secondaryColor) root.style.setProperty('--card', data.secondaryColor);
+    if (data.primaryColor) root.style.setProperty('--gold', data.primaryColor);
+    if (data.textColor) root.style.setProperty('--text', data.textColor);
+    if (data.accentColor) root.style.setProperty('--gold-light', data.accentColor);
+    
+    // Apply font
+    if (data.fontFamily) {
+      document.body.style.fontFamily = `'${data.fontFamily}', 'Segoe UI', Tahoma, sans-serif`;
+    }
+    
+    // Apply logo
+    if (data.logoUrl) {
+      const header = document.querySelector('.header');
+      const shopName = document.getElementById('shopName');
+      
+      // Check if logo already exists
+      let existingLogo = header.querySelector('img');
+      if (!existingLogo) {
+        const logoImg = document.createElement('img');
+        logoImg.src = data.logoUrl;
+        logoImg.style.cssText = 'width: 50px; height: 50px; object-fit: cover; border-radius: 50%; margin-bottom: 10px;';
+        header.insertBefore(logoImg, shopName);
+      }
+    }
+  }
+  
   loadShop()
 </script>
 

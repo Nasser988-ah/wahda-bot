@@ -929,6 +929,8 @@
   }
   
   async function loadShop() {
+    console.log('Loading shop with ID:', shopId)
+    
     if (!shopId) {
       document.getElementById('productsGrid').innerHTML = 
         '<div class="empty-state error-message"><h2>رابط غير صحيح</h2><p>معرّف المتجر غير موجود</p></div>'
@@ -937,9 +939,13 @@
     
     try {
       const res = await fetch(`/api/store/${shopId}`)
+      console.log('API response status:', res.status)
+      
       if (!res.ok) throw new Error('Failed to load')
       
       const data = await res.json()
+      console.log('Shop data loaded:', data)
+      
       shopData = data
       
       document.title = data.name
@@ -949,6 +955,7 @@
       filteredProducts = [...allProducts]
       renderProducts()
     } catch (err) {
+      console.error('Error loading shop:', err)
       document.getElementById('productsGrid').innerHTML = 
         '<div class="empty-state error-message"><h2>خطأ في التحميل</h2><p>يرجى المحاولة مرة أخرى</p></div>'
     }
@@ -1129,12 +1136,22 @@
     
     // Use shop's WhatsApp number from API response
     const phoneNumber = shopData?.whatsappNumber || ''
+    
+    // Debug: Log the phone number to see what we're getting
+    console.log('Shop WhatsApp number:', phoneNumber)
+    console.log('Shop data:', shopData)
+    
     if (!phoneNumber) {
       alert('رقم الواتساب غير متاح لهذا المتجر')
       return
     }
     
-    const waUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`
+    // Clean phone number - remove any non-digits and ensure proper format
+    const cleanPhone = phoneNumber.replace(/\D/g, '')
+    console.log('Clean phone number:', cleanPhone)
+    
+    const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`
+    console.log('WhatsApp URL:', waUrl)
     window.open(waUrl, '_blank')
   }
 

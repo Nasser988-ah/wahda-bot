@@ -587,6 +587,191 @@
     /* Mobile hidden scrollbar */
     @media (max-width: 768px) {
       ::-webkit-scrollbar { display: none; }
+      
+      /* Mobile Header */
+      .header {
+        padding: 15px 16px;
+      }
+      
+      .header h1 {
+        font-size: 20px;
+      }
+      
+      .header p {
+        font-size: 12px;
+      }
+      
+      /* Mobile Search */
+      .search-container {
+        top: 65px;
+        padding: 10px 12px;
+      }
+      
+      .search-box {
+        padding: 10px 14px;
+        border-radius: 12px;
+      }
+      
+      .search-box input {
+        font-size: 14px;
+      }
+      
+      /* Mobile Products Grid */
+      .products-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        padding: 12px;
+      }
+      
+      .product-card {
+        border-radius: 16px;
+        padding: 12px;
+        transition: all 0.3s ease;
+      }
+      
+      .product-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+      }
+      
+      .product-image-wrapper {
+        height: 140px;
+        border-radius: 12px;
+      }
+      
+      .product-image {
+        border-radius: 12px;
+      }
+      
+      .product-name {
+        font-size: 14px;
+        margin-bottom: 4px;
+      }
+      
+      .product-price {
+        font-size: 16px;
+        margin-bottom: 8px;
+      }
+      
+      .product-actions {
+        gap: 6px;
+      }
+      
+      .qty-btn {
+        width: 32px;
+        height: 32px;
+        font-size: 14px;
+        border-radius: 8px;
+      }
+      
+      .qty-display {
+        font-size: 14px;
+        min-width: 24px;
+      }
+      
+      /* Mobile Cart Bar */
+      .cart-bar {
+        padding: 12px 16px;
+        border-radius: 20px 20px 0 0;
+      }
+      
+      .cart-bar button {
+        padding: 10px 20px;
+        font-size: 14px;
+        border-radius: 12px;
+      }
+      
+      /* Mobile Empty States */
+      .empty-state {
+        padding: 40px 16px;
+      }
+      
+      .empty-state h2 {
+        font-size: 16px;
+      }
+      
+      .empty-state p {
+        font-size: 13px;
+      }
+      
+      /* Mobile Lightbox */
+      .lightbox-close {
+        top: 12px;
+        right: 12px;
+        width: 36px;
+        height: 36px;
+        font-size: 24px;
+      }
+      
+      .lightbox img {
+        max-width: 95%;
+        border-radius: 12px;
+      }
+      
+      .lightbox-caption {
+        font-size: 14px;
+        padding: 0 16px;
+      }
+      
+      /* Mobile Variant Styles */
+      .variant-group-label {
+        font-size: 10px;
+        margin-bottom: 4px;
+      }
+      
+      .variant-chip {
+        font-size: 11px;
+        padding: 4px 8px;
+        border-radius: 6px;
+        min-height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      
+      .variant-chip-img {
+        width: 24px;
+        height: 24px;
+        border-radius: 4px;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      /* Small Phone Styles */
+      .products-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+        padding: 10px;
+      }
+      
+      .product-card {
+        padding: 10px;
+      }
+      
+      .product-image-wrapper {
+        height: 180px;
+      }
+      
+      .header {
+        padding: 12px 12px;
+      }
+      
+      .header h1 {
+        font-size: 18px;
+      }
+      
+      .search-container {
+        padding: 8px 10px;
+      }
+      
+      .cart-bar {
+        padding: 10px 12px;
+      }
+      
+      .cart-bar button {
+        padding: 8px 16px;
+        font-size: 13px;
+      }
     }
 
     .variant-group { margin-bottom: 10px; }
@@ -942,7 +1127,14 @@
       `الإجمالي: ${total} جنيه\n` +
       `[ORDER_FROM_WEBSITE]`
     
-    const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
+    // Use shop's WhatsApp number from API response
+    const phoneNumber = shopData?.whatsappNumber || ''
+    if (!phoneNumber) {
+      alert('رقم الواتساب غير متاح لهذا المتجر')
+      return
+    }
+    
+    const waUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`
     window.open(waUrl, '_blank')
   }
 

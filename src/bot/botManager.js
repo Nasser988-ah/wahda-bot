@@ -418,6 +418,57 @@ class BotManager {
 
       const lowerText = text.toLowerCase().trim();
 
+      // Check pending variant selection
+      const pendingVariantKey =
+        `pendingvariant:${shop.id}:${customerPhone}` 
+      const pendingVariantData = await redis.get(pendingVariantKey)
+
+      if (pendingVariantData) {
+        const pendingVariant = JSON.parse(pendingVariantData)
+
+        // Allow cancel
+        if (/^(الغاء|إلغاء|إلغي|الغي|cancel)$/i.test(text.trim())) {
+          await redis.del(pendingVariantKey)
+          await sock.sendMessage(from, {
+            text: 'تم الإلغاء. اكتب *قائمة* لعرض المنتجات.'
+          })
+          return
+        }
+
+        // Parse variant choices (customer sends "اللون: أحمر\nالمقاس: L")
+        const lines = text.split('\n').filter(l => l.includes(':'))
+
+        if (lines.length > 0) {
+          const variantInfo = lines.map(l => l.trim()).join(' - ')
+          await redis.del(pendingVariantKey)
+
+          const product = await prisma.product.findUnique({
+            where: { id: pendingVariant.productId }
+          })
+
+          if (product) {
+            await this.addProductToCartWithVariant(
+              sock, from, shop, customerPhone, product, variantInfo
+            )
+          }
+          return
+        }
+
+        // Customer didn't follow format - remind them
+        await sock.sendMessage(from, {
+          text: `يرجى إرسال اختياراتك بهذا الشكل:\n\n` +
+                pendingVariant.variants.map(g =>
+                  `${g.name}: (اختيارك)` 
+                ).join('\n') +
+                `\n\nالخيارات المتاحة:\n` +
+                pendingVariant.variants.map(g =>
+                  `*${g.name}:* ${g.options.join('، ')}` 
+                ).join('\n') +
+                `\n\nأو اكتب *إلغاء* للرجوع` 
+        })
+        return
+      }
+
       // Check if message is from the mini store website
       if (text.includes('[ORDER_FROM_WEBSITE]')) {
         console.log(`🛒 Website order detected from ${customerPhone}`);
@@ -436,7 +487,7 @@ class BotManager {
         // Confirmed with yes
         if (t.match(/^(نعم|اه|أه|yes|ن|تمام|صح|أجل|بالتأكيد|بالتاكيد)$/i)) {
           await redis.del(pendingKey);
-          await this.addProductToCart(sock, from, shop, customerPhone, pending[0]);
+          await this.addProductToCartWithVariant(sock, from, shop, customerPhone, pending[0]);
           return;
         }
 
@@ -445,7 +496,7 @@ class BotManager {
           const index = parseInt(t) - 1;
           if (index >= 0 && index < pending.length) {
             await redis.del(pendingKey);
-            await this.addProductToCart(sock, from, shop, customerPhone, pending[index]);
+            await this.addProductToCartWithVariant(sock, from, shop, customerPhone, pending[index]);
             return;
           }
         }
@@ -915,48 +966,10 @@ class BotManager {
         return;
       }
 
-      const cartKey = `cart:${shopId}:${customerPhone}`;
-      let cart;
-      try {
-        cart = await redis.get(cartKey);
-        console.log(`🛒 Cart data for ${customerPhone}:`, cart);
-      } catch (e) {
-        console.log(`⚠️ Redis error: ${e.message}`);
-        cart = null;
-      }
-      
-      let items = [];
-      if (cart) {
-        try {
-          // Handle both string and object responses
-          if (typeof cart === 'string') {
-            items = JSON.parse(cart);
-          } else if (typeof cart === 'object') {
-            items = cart;
-          }
-        } catch (e) {
-          console.log(`⚠️ JSON parse error, resetting cart: ${e.message}`);
-          items = [];
-        }
-      }
-      
-      const existing = items.find(i => i.productId === product.id);
-      if (existing) {
-        existing.quantity++;
-      } else {
-        items.push({ productId: product.id, name: product.name, price: product.price, quantity: 1 });
-      }
-      
-      await redis.set(cartKey, JSON.stringify(items), { ex: 3600 });
-      
-      // Calculate total items in cart
-      const totalItems = items.reduce((sum, i) => sum + i.quantity, 0);
-      
-      await this.safeSendMessage(sock, from, 
-        `تمت إضافة ${product.name} إلى السلة ✅\n\n` +
-        `لديك الآن ${totalItems} منتج في السلة\n\n` +
-        `اكتب *كارت* لعرض طلبك\n` +
-        `اكتب *اطلب* لتأكيد الطلب`, shop.name);
+      // Use the new addProductToCartWithVariant method
+      await this.addProductToCartWithVariant(
+        sock, from, shop, customerPhone, product
+      );
       
       console.log(`✅ Added ${product.name} to cart for ${customerPhone}`);
     } catch (error) {
@@ -1000,9 +1013,10 @@ class BotManager {
       items.forEach((item, i) => {
         const subtotal = item.price * item.quantity;
         total += subtotal;
-        message += `${i + 1}. ${item.name}\n`;
-        message += `الكمية: ${item.quantity}\n`;
-        message += `السعر: ${subtotal} جنيه\n`;
+        message += `${i + 1}. ${item.name}` +
+          (item.variantInfo ? ` (${item.variantInfo})` : '') +
+          `\n`;
+        message += `الكمية: ${item.quantity} × ${item.price} = ${subtotal} جنيه\n`;
         message += "-------------------\n";
       });
       message += `\nالإجمالي: ${total} جنيه\n\n`;
@@ -2017,11 +2031,15 @@ ${contextMessage}
             create: items.map(i => ({
               productId: i.productId,
               quantity: i.quantity,
-              price: i.price
+              price: i.price,
+              variantInfo: i.variantInfo || null
             }))
           }
         }
       });
+
+      // Reduce stock after order created
+      await this.reduceStock(items, shop, sock);
 
       // FIX 5: Friendly order confirmed message
       let msg = `تم استلام طلبك بنجاح! 🎉\n\n`;
@@ -2029,7 +2047,9 @@ ${contextMessage}
       msg += `📍 عنوان التوصيل: ${customerAddress}\n\n`;
       msg += `🛒 تفاصيل الطلب:\n`;
       items.forEach((i, idx) => {
-        msg += `${idx + 1}. ${i.name} × ${i.quantity} = ${i.price * i.quantity} جنيه\n`;
+        msg += `${idx + 1}. ${i.name}` +
+          (i.variantInfo ? ` (${i.variantInfo})` : '') +
+          ` × ${i.quantity} = ${i.price * i.quantity} جنيه\n`;
       });
       msg += `\n💰 المجموع الكلي: ${total} جنيه\n\n`;
       msg += `سنتواصل معك قريباً لتأكيد التوصيل 📞\n`;
@@ -2054,7 +2074,9 @@ ${contextMessage}
           `   العنوان: ${customerAddress || 'لم يُحدد'}\n\n` +
           `📦 *تفاصيل الطلب:*\n` +
           items.map((i, idx) => 
-            `   ${idx + 1}. ${i.name}\n` +
+            `   ${idx + 1}. ${i.name}` +
+            (i.variantInfo ? ` (${i.variantInfo})` : '') +
+            `\n` +
             `      الكمية: ${i.quantity} × ${i.price} جنيه = ${i.quantity * i.price} جنيه`
           ).join('\n') +
           `\n\n` +
@@ -2211,29 +2233,141 @@ ${productsList}
     }
   }
 
-  async addProductToCart(sock, from, shop, customerPhone, product) {
-    const cartKey = `cart:${shop.id}:${customerPhone}`;
-    const cartData = await redis.get(cartKey);
-    const cart = cartData ? JSON.parse(cartData) : [];
-
-    const existing = cart.findIndex(i => i.productId === product.productId);
-    if (existing >= 0) {
-      cart[existing].quantity += 1;
-    } else {
-      cart.push({ ...product, quantity: 1 });
+  async addProductToCartWithVariant(
+    sock, from, shop, customerPhone, product, variantInfo = null
+  ) {
+    // Check stock first
+    if (product.stock !== null &&
+        product.stock !== undefined &&
+        product.stock <= 0) {
+      await sock.sendMessage(from, {
+        text: `عذراً، *${product.name}* غير متوفر حالياً.\n` +
+              `سيتوفر قريباً إن شاء الله 🙏` 
+      })
+      return
     }
 
-    await redis.set(cartKey, JSON.stringify(cart), { ex: 3600 });
+    // Check if needs variant selection
+    if (product.variants && !variantInfo) {
+      let variantGroups = []
+      try { variantGroups = JSON.parse(product.variants) } catch {}
 
-    const total = cart.reduce((s, i) => s + i.price * i.quantity, 0);
+      if (variantGroups.length > 0) {
+        const pendingVariantKey =
+          `pendingvariant:${shop.id}:${customerPhone}` 
+
+        await redis.set(pendingVariantKey, JSON.stringify({
+          productId: product.id,
+          name: product.name,
+          price: product.price,
+          variants: variantGroups
+        }), { ex: 300 })
+
+        await sock.sendMessage(from, {
+          text: `لإضافة *${product.name}* إلى سلتك،\n` +
+                `يرجى اختيار:\n\n` +
+                variantGroups.map(g =>
+                  `*${g.name}:*\n` +
+                  g.options.map(o => `• ${o}`).join('\n')
+                ).join('\n\n') +
+                `\n\nأرسل اختياراتك مثال:\n` +
+                variantGroups.map(g =>
+                  `${g.name}: ${g.options[0]}` 
+                ).join('\n') +
+                `\n\nأو اكتب *إلغاء* للرجوع` 
+        })
+        return
+      }
+    }
+
+    // Add to cart
+    const cartKey = `cart:${shop.id}:${customerPhone}` 
+    const cartData = await redis.get(cartKey)
+    const cart = cartData ? JSON.parse(cartData) : []
+
+    const cartItemKey = variantInfo
+      ? `${product.id}__${variantInfo}` 
+      : product.id
+
+    const existingIndex = cart.findIndex(
+      i => i.cartItemKey === cartItemKey
+    )
+
+    if (existingIndex >= 0) {
+      cart[existingIndex].quantity += 1
+    } else {
+      cart.push({
+        cartItemKey,
+        productId: product.id,
+        name: product.name,
+        price: product.price,
+        quantity: 1,
+        variantInfo: variantInfo || null
+      })
+    }
+
+    await redis.set(cartKey, JSON.stringify(cart), { ex: 3600 })
+    this.invalidateShopCache(shop.id)
+
+    const total = cart.reduce((s, i) => s + i.price * i.quantity, 0)
+    const variantText = variantInfo ? ` (${variantInfo})` : ''
+
     await sock.sendMessage(from, {
-      text: `تمت إضافة *${product.name}* إلى سلتك.\n` +
+      text: `تمت إضافة *${product.name}*${variantText} ✅\n` +
             `إجمالي سلتك: ${total} جنيه\n\n` +
-            `اكتب *قائمة* لإضافة المزيد أو *اطلب* لتأكيد طلبك.`
-    });
-    
-    // Update history
-    await this.updateMessageHistory(shop.id, customerPhone, product.name, 'bot', 'product_added');
+            `اكتب *قائمة* لإضافة المزيد\n` +
+            `أو *اطلب* لتأكيد طلبك` 
+    })
+  }
+
+  async reduceStock(cart, shop, sock) {
+    for (const item of cart) {
+      try {
+        const product = await prisma.product.findUnique({
+          where: { id: item.productId }
+        })
+
+        if (!product) continue
+        if (product.stock === null ||
+            product.stock === undefined) continue
+
+        const newStock = Math.max(0, product.stock - item.quantity)
+
+        await prisma.product.update({
+          where: { id: item.productId },
+          data: {
+            stock: newStock,
+            isAvailable: newStock > 0
+          }
+        })
+
+        this.invalidateShopCache(shop.id)
+
+        if (newStock > 0 && newStock <= 3) {
+          await sock.sendMessage(
+            `${shop.whatsappNumber}@s.whatsapp.net`,
+            {
+              text: `⚠️ *تنبيه: كمية منخفضة*\n` +
+                    `المنتج: *${product.name}*\n` +
+                    `الكمية المتبقية: ${newStock} فقط` 
+            }
+          )
+        }
+
+        if (newStock === 0) {
+          await sock.sendMessage(
+            `${shop.whatsappNumber}@s.whatsapp.net`,
+            {
+              text: `🔴 *تنبيه: نفذت الكمية*\n` +
+                    `المنتج: *${product.name}* نفذ بالكامل` 
+            }
+          )
+        }
+
+      } catch (err) {
+        console.error('Stock reduce error:', err)
+      }
+    }
   }
 
   // Helper to get cart contents

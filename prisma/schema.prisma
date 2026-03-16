@@ -40,6 +40,11 @@ model Product {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  // NEW FIELDS ONLY:
+  stock         Int?      // null = unlimited, 0 = out of stock
+  variants      String?   // JSON array of variant groups
+  variantImages String?   // JSON: {"أحمر": "/uploads/red.jpg"}
+
   // Relations
   shop        Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
   orderItems  OrderItem[]
@@ -71,6 +76,9 @@ model OrderItem {
   productId String
   quantity  Int
   price     Float
+
+  // NEW FIELD ONLY:
+  variantInfo String?   // stores chosen variant as text
 
   // Relations
   order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)

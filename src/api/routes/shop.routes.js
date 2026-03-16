@@ -3,7 +3,35 @@ const prisma = require("../../db/index");
 const { authenticateToken, authenticateTokenWithPending } = require("../middleware/auth.middleware");
 const { z } = require("zod");
 const qrService = require("../../services/qrService");
+const multer = require("multer");
+const path = require("path");
 const router = express.Router();
+
+// Configure multer for image uploads
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'public/uploads/');
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 2 * 1024 * 1024 // 2MB limit
+  },
+  fileFilter: function (req, file, cb) {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only JPEG, PNG and WebP are allowed.'));
+    }
+  }
+});
 
 // Get botManager instance from qrService singleton
 const botManager = qrService.botManager;
@@ -307,6 +335,19 @@ router.get("/stats", async (req, res) => {
   } catch (error) {
     console.error("Get stats error:", error);
     res.status(500).json({ error: "Failed to get shop statistics" });
+  }
+});
+
+// Upload image for variants
+router.post('/upload-image', authenticateToken, upload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'لم يتم رفع أي صورة' });
+    }
+    const imageUrl = `/uploads/${req.file.filename}`; 
+    res.json({ success: true, imageUrl });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 

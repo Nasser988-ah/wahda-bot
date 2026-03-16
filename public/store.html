@@ -588,6 +588,77 @@
     @media (max-width: 768px) {
       ::-webkit-scrollbar { display: none; }
     }
+
+    .variant-group { margin-bottom: 10px; }
+
+    .variant-group-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      margin-bottom: 6px;
+      letter-spacing: 0.5px;
+    }
+
+    .variant-options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .variant-chip {
+      padding: 5px 12px;
+      border-radius: 20px;
+      border: 1.5px solid var(--border);
+      background: transparent;
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: inherit;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .variant-chip.selected {
+      border-color: var(--gold, #25D366);
+      background: var(--gold, #25D366);
+      color: #000;
+    }
+
+    .variant-chip-img {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid var(--border);
+      cursor: pointer;
+      transition: all 0.15s;
+      touch-action: manipulation;
+    }
+
+    .variant-chip-img.selected {
+      border-color: var(--gold, #25D366);
+      box-shadow: 0 0 0 2px var(--gold, #25D366);
+      transform: scale(1.1);
+    }
+
+    .out-of-stock-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 0.5px;
+      border-radius: inherit;
+    }
+
+    .product-card.out-of-stock { opacity: 0.65; }
+    .product-card.out-of-stock .qty-control { display: none; }
   </style>
 </head>
 <body>
@@ -719,8 +790,11 @@
     grid.innerHTML = filteredProducts.map((p, i) => {
       const originalIndex = allProducts.findIndex(ap => ap.id === p.id)
       const qty = quantities[originalIndex] || 0
+      const isOutOfStock = p.stock !== null && 
+                         p.stock !== undefined && 
+                         p.stock <= 0
       return `
-        <div class="product-card" data-product-id="${p.id}">
+        <div class="product-card ${isOutOfStock ? 'out-of-stock' : ''}" data-product-id="${p.id}">
           <div class="product-image-wrapper" onclick="openLightbox('${p.imageUrl || ''}', '${p.name}')">
             ${p.imageUrl 
               ? `<img class="product-image" src="${p.imageUrl}" alt="${p.name}" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">` 
@@ -728,12 +802,16 @@
             }
             <div class="product-image placeholder" style="display: ${p.imageUrl ? 'none' : 'flex'}">🛍️</div>
             ${p.imageUrl ? '<span class="zoom-hint">🔍 تكبير</span>' : ''}
+            ${isOutOfStock 
+              ? `<div class="out-of-stock-overlay">سيتوفر قريباً</div>` 
+              : ''}
           </div>
           <div class="product-info">
             ${p.category ? `<div class="product-category">${p.category}</div>` : ''}
             <div class="product-name">${p.name}</div>
             ${p.description ? `<div class="product-desc">${p.description}</div>` : ''}
             <div class="product-price">${p.price}</div>
+            ${!isOutOfStock ? renderVariantSelectors(p) : ''}
             <div class="quantity-control">
               <button class="qty-btn ${qty > 0 ? 'has-items' : ''}" onclick="changeQty(${originalIndex}, -1)">−</button>
               <span class="qty-display" id="qty-${originalIndex}">${qty}</span>
@@ -770,6 +848,22 @@
   })
   
   function changeQty(index, delta) {
+    // NEW: check variants selected before adding
+    if (delta === 1) {
+      const p = allProducts[index]
+      if (p?.variants) {
+        let groups = []
+        try { groups = JSON.parse(p.variants) } catch {}
+        if (groups.length > 0) {
+          const result = getVariantInfo(p.id)
+          if (result === false) {
+            showToast('يرجى اختيار جميع الخيارات أولاً')
+            return
+          }
+        }
+      }
+    }
+    
     const current = quantities[index] || 0
     const newQty = Math.max(0, current + delta)
     quantities[index] = newQty
@@ -825,10 +919,15 @@
       return
     }
     
-    // Build order message
-    const orderLines = items.map(([i, q]) => 
-      `${allProducts[i].name} × ${q}`
-    ).join('\n')
+    // Build order message with variants
+    const lines = items.map(([id, q]) => {
+      const p = allProducts.find(p => p.id === id)
+      if (!p) return null
+      const variantInfo = getVariantInfo(id)
+      return variantInfo
+        ? `${p.name} (${variantInfo}) × ${q}` 
+        : `${p.name} × ${q}` 
+    }).filter(Boolean)
     
     const total = items.reduce((sum, [i, q]) => 
       sum + allProducts[i].price * q, 0
@@ -837,13 +936,100 @@
     const message = 
       `طلب جديد من المتجر:\n` +
       `━━━━━━━━━━━━━━━━━━━━\n` +
-      orderLines +
+      lines.join('\n') +
       `\n━━━━━━━━━━━━━━━━━━━━\n` +
       `الإجمالي: ${total} جنيه\n` +
       `[ORDER_FROM_WEBSITE]`
     
     const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
     window.open(waUrl, '_blank')
+  }
+
+  // VARIANT MANAGEMENT
+  const selectedVariants = {}
+
+  function renderVariantSelectors(product) {
+    if (!product.variants) return ''
+    let groups = []
+    try { groups = JSON.parse(product.variants) } catch { return '' }
+    if (groups.length === 0) return ''
+
+    let imgMap = {}
+    try {
+      imgMap = product.variantImages
+        ? JSON.parse(product.variantImages) : {}
+    } catch {}
+
+    return `<div style="margin-bottom:10px">` +
+      groups.map((g, gi) => `
+        <div class="variant-group">
+          <div class="variant-group-label">${g.name}</div>
+          <div class="variant-options">
+            ${g.options.map(opt => {
+              const img = imgMap[opt]
+              if (img) {
+                return `<img
+                  src="${img}"
+                  class="variant-chip-img"
+                  title="${opt}"
+                  data-pid="${product.id}"
+                  data-gi="${gi}"
+                  data-val="${opt}"
+                  onclick="selectChip(this,'${product.id}',${gi},'${opt}')">`
+              }
+              return `<button
+                class="variant-chip"
+                data-pid="${product.id}"
+                data-gi="${gi}"
+                data-val="${opt}"
+                onclick="selectChip(this,'${product.id}',${gi},'${opt}')">
+                ${opt}
+              </button>`
+            }).join('')}
+          </div>
+        </div>
+      `).join('') + `</div>`
+  }
+
+  function selectChip(el, pid, gi, val) {
+    document.querySelectorAll(
+      `[data-pid="${pid}"][data-gi="${gi}"]` 
+    ).forEach(e => e.classList.remove('selected'))
+    el.classList.add('selected')
+    if (!selectedVariants[pid]) selectedVariants[pid] = {}
+    selectedVariants[pid][gi] = val
+  }
+
+  function getVariantInfo(pid) {
+    const p = allProducts.find(p => p.id === pid)
+    if (!p?.variants) return null
+    let groups = []
+    try { groups = JSON.parse(p.variants) } catch { return null }
+    if (groups.length === 0) return null
+    const sel = selectedVariants[pid] || {}
+    const allDone = groups.every((_, i) => sel[i] !== undefined)
+    if (!allDone) return false
+    return groups.map((g, i) => `${g.name}: ${sel[i]}`).join('، ')
+  }
+
+  function showToast(message) {
+    // Simple toast implementation
+    const toast = document.createElement('div')
+    toast.style.cssText = `
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.8);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 8px;
+      z-index: 10000;
+      font-size: 14px;
+    `
+    toast.textContent = message
+    document.body.appendChild(toast)
+    setTimeout(() => toast.remove(), 3000)
   }
   
   loadShop()

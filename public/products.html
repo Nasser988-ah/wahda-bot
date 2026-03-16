@@ -665,6 +665,29 @@
                         </div>
                     </div>
 
+                    <!-- STOCK FIELD -->
+                    <div class="form-group">
+                        <label>الكمية المتاحة (اختياري)</label>
+                        <input type="number" id="productStock" min="0"
+                            placeholder="اتركه فارغاً = كمية غير محدودة">
+                        <small style="color:#888">
+                            اتركه فارغاً إذا كانت الكمية غير محدودة
+                        </small>
+                    </div>
+
+                    <!-- VARIANTS FIELD -->
+                    <div class="form-group">
+                        <label>الخيارات - ألوان / مقاسات / إلخ (اختياري)</label>
+                        <div id="variantGroupsList"></div>
+                        <button type="button" id="addVariantGroupBtn"
+                            style="background:none;border:1px dashed #ccc;
+                                   padding:8px 16px;border-radius:8px;
+                                   cursor:pointer;color:#666;width:100%;
+                                   margin-top:8px">
+                            + إضافة مجموعة خيارات
+                        </button>
+                    </div>
+
                     <div style="display: flex; gap: 10px;">
                         <button type="submit" class="btn" id="submitBtn">حفظ المنتج</button>
                         <button type="button" class="btn btn-secondary" onclick="hideForm()">إلغاء</button>
@@ -923,6 +946,9 @@
             document.getElementById('productDescription').value = product.description || '';
             document.getElementById('productAvailable').checked = product.isAvailable;
             
+            // Load variants and stock
+            loadProductVariants(product);
+            
             document.getElementById('formSection').style.display = 'block';
         }
 
@@ -930,6 +956,7 @@
         function hideForm() {
             document.getElementById('formSection').style.display = 'none';
             document.getElementById('productForm').reset();
+            resetVariants();
             editingProduct = null;
         }
 
@@ -942,7 +969,20 @@
                 price: parseFloat(document.getElementById('productPrice').value),
                 category: document.getElementById('productCategory').value || null,
                 description: document.getElementById('productDescription').value || null,
-                isAvailable: document.getElementById('productAvailable').checked
+                isAvailable: document.getElementById('productAvailable').checked,
+                stock: document.getElementById('productStock')?.value !== ''
+                    ? parseInt(document.getElementById('productStock').value)
+                    : null,
+                variants: productVariants.filter(
+                    v => v.name && v.options.length > 0
+                ).length > 0
+                    ? JSON.stringify(
+                        productVariants.filter(v => v.name && v.options.length > 0)
+                    )
+                    : null,
+                variantImages: Object.keys(variantImages).length > 0
+                    ? JSON.stringify(variantImages)
+                    : null
             };
 
             console.log('[DEBUG] Submitting product form:', formData, 'Editing:', editingProduct ? editingProduct.id : 'new');
@@ -1099,6 +1139,129 @@
                 localStorage.removeItem('shop');
                 window.location.href = 'login.html';
             }
+        }
+
+        // VARIANT MANAGEMENT
+        let productVariants = []
+        let variantImages = {}
+
+        document.getElementById('addVariantGroupBtn')
+            ?.addEventListener('click', addVariantGroup)
+
+        function addVariantGroup() {
+            productVariants.push({ name: '', options: [] })
+            renderVariantGroups()
+        }
+
+        function removeVariantGroup(index) {
+            productVariants.splice(index, 1)
+            renderVariantGroups()
+        }
+
+        function renderVariantGroups() {
+            const container = document.getElementById('variantGroupsList')
+            if (!container) return
+
+            container.innerHTML = productVariants.map((v, i) => `
+                <div style="border:1px solid #eee;border-radius:10px;
+                            padding:12px;margin-bottom:10px">
+                    <div style="display:flex;gap:8px;margin-bottom:8px">
+                        <input type="text"
+                            placeholder="اسم الخيار (مثال: اللون، المقاس، الحجم، 38-42)"
+                            value="${v.name}"
+                            oninput="productVariants[${i}].name = this.value"
+                            style="flex:1;padding:8px;border:1px solid #ddd;
+                                   border-radius:6px;font-family:inherit">
+                        <button type="button"
+                            onclick="removeVariantGroup(${i})"
+                            style="background:#fff0f0;border:1px solid #ffcccc;
+                                   color:#cc0000;padding:8px 12px;
+                                   border-radius:6px;cursor:pointer">
+                            حذف
+                        </button>
+                    </div>
+                    <input type="text"
+                        placeholder="الخيارات مفصولة بفاصلة (مثال: أحمر، أزرق، 38، 39، L، XL)"
+                        value="${v.options.join('، ')}"
+                        oninput="productVariants[${i}].options =
+                            this.value.split(/[,،]/).map(s=>s.trim()).filter(Boolean);
+                            renderVariantGroups()"
+                        style="width:100%;padding:8px;border:1px solid #ddd;
+                               border-radius:6px;font-family:inherit;margin-bottom:8px">
+
+                    <div style="font-size:12px;color:#888;margin-bottom:6px">
+                        صورة لكل خيار (اختياري):
+                    </div>
+                    ${v.options.map(opt => `
+                        <div style="display:flex;align-items:center;
+                                    gap:8px;margin-bottom:8px">
+                            <span style="min-width:70px;font-size:13px;
+                                         font-weight:600">${opt}:</span>
+                            <input type="file" accept="image/*"
+                                onchange="uploadVariantImage('${opt}', this)"
+                                style="font-size:12px;flex:1">
+                            ${variantImages[opt]
+                                ? `<img src="${variantImages[opt]}"
+                                        style="width:36px;height:36px;
+                                               object-fit:cover;
+                                               border-radius:50%;
+                                               border:2px solid #eee">`
+                                : ''}
+                        </div>
+                    `).join('')}
+                </div>
+            `).join('')
+        }
+
+        async function uploadVariantImage(optionName, input) {
+            const file = input.files[0]
+            if (!file) return
+
+            const formData = new FormData()
+            formData.append('image', file)
+
+            try {
+                const res = await fetch('/api/shop/upload-image', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${getToken()}` },
+                    body: formData
+                })
+                const data = await res.json()
+                if (data.imageUrl) {
+                    variantImages[optionName] = data.imageUrl
+                    renderVariantGroups()
+                }
+            } catch (err) {
+                console.error('Variant image upload failed:', err)
+            }
+        }
+
+        // When loading product for edit
+        function loadProductVariants(product) {
+            const stockInput = document.getElementById('productStock')
+            if (stockInput && product.stock !== null && 
+                product.stock !== undefined) {
+                stockInput.value = product.stock
+            }
+            if (product.variants) {
+                try {
+                    productVariants = JSON.parse(product.variants)
+                    renderVariantGroups()
+                } catch {}
+            }
+            if (product.variantImages) {
+                try {
+                    variantImages = JSON.parse(product.variantImages)
+                    renderVariantGroups()
+                } catch {}
+            }
+        }
+
+        // Reset on form clear
+        function resetVariants() {
+            productVariants = []
+            variantImages = {}
+            renderVariantGroups()
         }
     </script>
 </body>

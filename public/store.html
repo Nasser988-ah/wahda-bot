@@ -128,6 +128,44 @@
     .search-clear.visible {
       display: block;
     }
+
+    /* Category Filter Bar */
+    .category-bar {
+      display: none;
+      padding: 0 16px 8px;
+      overflow-x: auto;
+      gap: 8px;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .category-bar::-webkit-scrollbar { display: none; }
+    .category-bar.visible { display: flex; }
+    .category-chip {
+      flex-shrink: 0;
+      padding: 6px 16px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+      white-space: nowrap;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .category-chip:hover {
+      border-color: var(--gold);
+      color: var(--text);
+    }
+    .category-chip.active {
+      background: var(--gold);
+      border-color: var(--gold);
+      color: var(--bg);
+      font-weight: 700;
+    }
     
     /* Cart Bar */
     .cart-bar {
@@ -290,7 +328,15 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
-      transition: transform 0.3s;
+      object-position: center;
+      transition: transform 0.4s ease;
+      image-rendering: auto;
+      background: linear-gradient(135deg, #1a1a22, #252530);
+    }
+
+    .product-image.contain-fit {
+      object-fit: contain;
+      padding: 8px;
     }
     
     .product-card:hover .product-image {
@@ -936,6 +982,8 @@
   </div>
 </div>
 
+<div class="category-bar" id="categoryBar"></div>
+
 <div class="cart-bar" id="cartBar">
   <div class="cart-info">
     <span class="cart-count" id="cartCount">0 منتجات</span>
@@ -972,6 +1020,7 @@
   let filteredProducts = []
   let quantities = {}
   let shopData = null
+  let activeCategory = null
   
   // Search functionality
   const searchInput = document.getElementById('searchInput')
@@ -991,16 +1040,44 @@
   })
   
   function filterProducts(query) {
-    if (!query) {
-      filteredProducts = [...allProducts]
-    } else {
-      filteredProducts = allProducts.filter(p => 
+    let result = [...allProducts]
+    
+    // Apply category filter
+    if (activeCategory) {
+      result = result.filter(p => p.category && p.category === activeCategory)
+    }
+    
+    // Apply search filter
+    if (query) {
+      result = result.filter(p => 
         p.name.toLowerCase().includes(query) || 
         (p.description && p.description.toLowerCase().includes(query)) ||
         (p.category && p.category.toLowerCase().includes(query))
       )
     }
+    
+    filteredProducts = result
     renderProducts()
+  }
+
+  function buildCategoryBar() {
+    const bar = document.getElementById('categoryBar')
+    const categories = [...new Set(allProducts.map(p => p.category).filter(Boolean))]
+    if (categories.length < 2) { bar.classList.remove('visible'); return }
+
+    bar.innerHTML = `<button class="category-chip active" onclick="setCategory(null, this)">الكل</button>` +
+      categories.map(c => 
+        `<button class="category-chip" onclick="setCategory('${c}', this)">${c}</button>`
+      ).join('')
+    bar.classList.add('visible')
+  }
+
+  function setCategory(cat, el) {
+    activeCategory = cat
+    document.querySelectorAll('.category-chip').forEach(c => c.classList.remove('active'))
+    el.classList.add('active')
+    const query = searchInput.value.trim().toLowerCase()
+    filterProducts(query)
   }
   
   async function loadShop() {
@@ -1032,6 +1109,7 @@
       // Show all products including out of stock
       allProducts = data.products
       filteredProducts = [...allProducts]
+      buildCategoryBar()
       renderProducts()
     } catch (err) {
       console.error('Error loading shop:', err)
@@ -1069,7 +1147,7 @@
         <div class="product-card ${isOutOfStock ? 'out-of-stock' : ''}" data-product-id="${p.id}">
           <div class="product-image-wrapper" onclick="openLightbox('${p.imageUrl || ''}', '${p.name}')">
             ${p.imageUrl 
-              ? `<img class="product-image" src="${p.imageUrl}" alt="${p.name}" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">` 
+              ? `<img class="product-image" src="${p.imageUrl}" alt="${p.name}" loading="lazy" onload="smartFitImage(this)" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">` 
               : ''
             }
             <div class="product-image placeholder" style="display: ${p.imageUrl ? 'none' : 'flex'}">🛍️</div>
@@ -1095,6 +1173,19 @@
     }).join('')
   }
   
+  // Smart image fitting - detect aspect ratio and choose best fit
+  function smartFitImage(img) {
+    const natW = img.naturalWidth
+    const natH = img.naturalHeight
+    if (!natW || !natH) return
+    const ratio = natW / natH
+    // Very tall (portrait) or very wide (panoramic) images look bad with cover
+    // Use contain for extreme ratios, cover for normal photos
+    if (ratio < 0.5 || ratio > 2.5) {
+      img.classList.add('contain-fit')
+    }
+  }
+
   // Lightbox functions
   function openLightbox(imageUrl, caption) {
     if (!imageUrl) return

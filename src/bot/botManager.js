@@ -820,6 +820,46 @@ class BotManager {
         console.log(`✓ Matched: delivery question`);
         await this.handleDeliveryQuestion(sock, from, shop, customerPhone, text);
         return;
+      } else if (this.matchesIntent(lowerText, 'discount')) {
+        console.log(`✓ Matched: discount/offer question`);
+        await this.handleDiscountQuestion(sock, from, shop, customerPhone);
+        return;
+      } else if (this.matchesIntent(lowerText, 'payment')) {
+        console.log(`✓ Matched: payment method question`);
+        await this.handlePaymentQuestion(sock, from, shop, customerPhone);
+        return;
+      } else if (this.matchesIntent(lowerText, 'working_hours')) {
+        console.log(`✓ Matched: working hours question`);
+        await this.handleWorkingHoursQuestion(sock, from, shop, customerPhone);
+        return;
+      } else if (this.matchesIntent(lowerText, 'location')) {
+        console.log(`✓ Matched: location/branch question`);
+        await this.handleLocationQuestion(sock, from, shop, customerPhone);
+        return;
+      } else if (this.matchesIntent(lowerText, 'return_policy')) {
+        console.log(`✓ Matched: return/warranty question`);
+        await this.handleReturnPolicyQuestion(sock, from, shop, customerPhone);
+        return;
+      } else if (this.matchesIntent(lowerText, 'recommend')) {
+        console.log(`✓ Matched: recommendation request`);
+        await this.handleRecommendation(sock, from, shop, customerPhone);
+        return;
+      } else if (this.matchesIntent(lowerText, 'store_link')) {
+        console.log(`✓ Matched: store link request`);
+        await this.sendStoreLink(sock, from, shop, customerPhone);
+        return;
+      } else if (this.matchesIntent(lowerText, 'talk_to_human')) {
+        console.log(`✓ Matched: talk to human request`);
+        await this.handleTalkToHuman(sock, from, shop, customerPhone);
+        return;
+      } else if (this.matchesIntent(lowerText, 'whats_new')) {
+        console.log(`✓ Matched: what's new question`);
+        await this.handleWhatsNew(sock, from, shop, customerPhone);
+        return;
+      } else if (this.matchesIntent(lowerText, 'affirmative')) {
+        console.log(`✓ Matched: affirmative (ok/alright)`);
+        await this.handleAffirmative(sock, from, shop, customerPhone, context);
+        return;
       } else if (lowerText.startsWith('شيل ') || lowerText.startsWith('احذف ') || lowerText.startsWith('امسح ')) {
         console.log(`✓ Matched: remove item command`);
         const itemName = text.substring(text.indexOf(' ') + 1).trim();
@@ -1037,19 +1077,23 @@ class BotManager {
 
   async safeSendMessage(sock, to, message, shopName, shopId, customerPhone) {
     try {
-      // FIX 2: Check last message sent to prevent duplicates
+      // Rate limit: prevent rapid-fire identical messages (3 second cooldown)
       if (shopId && customerPhone) {
         const lastMsgKey = `lastmsg:${shopId}:${customerPhone}`;
         const lastMsg = await redis.get(lastMsgKey);
         
-        // If same message, warn and continue (allow caller to decide if they want AI)
         if (lastMsg === message) {
-          console.log('⚠️ Duplicate message detected - same message already sent');
-          return { duplicate: true, sent: false };
+          // Same message within cooldown - send a brief friendly variation instead of blocking
+          const variations = [
+            'تم ✅',
+            'تمام 👍',
+            'جاري المتابعة ✅',
+          ];
+          message = variations[Math.floor(Math.random() * variations.length)]
         }
         
-        // Save this message as last sent (expires in 1 hour)
-        await redis.set(lastMsgKey, message, { ex: 3600 });
+        // Save with short cooldown (30 seconds)
+        await redis.set(lastMsgKey, message, { ex: 30 });
       }
       
       const result = await sock.sendMessage(to, { text: message });
@@ -1900,6 +1944,75 @@ ${contextMessage}
         'عنوان', 'address', 'موقع', 'مكان', 'loc',
         // Misspellings
         'عنوانن', 'عنوان', 'عنواان'
+      ],
+      discount: [
+        'عرض', 'خصم', 'تخفيض', 'discount', 'offer', 'sale', 'في عرض', 'في خصم',
+        'عروض', 'خصومات', 'تخفيضات', 'بروموشن', 'promo', 'كوبون', 'coupon', 'كود خصم',
+        'في اوفر', 'خصم خاص', 'سعر خاص', 'ارخص', 'أرخص',
+        // Misspellings
+        'عروضض', 'خصمم', 'تخفيضض', 'بروموشون'
+      ],
+      payment: [
+        'الدفع', 'كاش', 'فيزا', 'visa', 'cash', 'فودافون كاش', 'اتصالات كاش', 'فوري',
+        'طريقة الدفع', 'طرق الدفع', 'بتقبلوا', 'بدفع ازاي', 'ادفع ازاي', 'ادفع إزاي',
+        'instapay', 'انستاباي', 'محفظة', 'تحويل', 'فلوس', 'payment',
+        // Misspellings
+        'الدفعع', 'كاشش', 'فيزاا', 'فودافوون'
+      ],
+      working_hours: [
+        'مواعيد', 'مواعيد العمل', 'بتفتحوا', 'بتقفلوا', 'شغالين', 'شغالين لحد امتى',
+        'ساعات العمل', 'مفتوح', 'مقفول', 'فاتح', 'بتشتغلوا', 'بتشتغلوا لحد امتى',
+        'امتى بتفتحوا', 'مواعيدكم', 'مفتوح دلوقتي', 'شغالين دلوقتي',
+        'working hours', 'open', 'closed', 'hours',
+        // Misspellings
+        'مواعييد', 'بتفتحو', 'بتقفلو', 'بتشتغلو', 'شغالييين'
+      ],
+      location: [
+        'فين المحل', 'فين المكان', 'عنوان المحل', 'العنوان', 'الموقع', 'فرع', 'فروع',
+        'عندكم فرع', 'location', 'where', 'لوكيشن', 'خريطة', 'map',
+        'فين بالظبط', 'المكان فين', 'ازاي اوصل', 'ازاي أوصل', 'اروح ازاي',
+        // Misspellings
+        'فيين', 'المحلل', 'عنواان', 'لوكيشون', 'فرووع'
+      ],
+      return_policy: [
+        'ارجاع', 'إرجاع', 'استبدال', 'ينفع أرجع', 'ينفع ارجع', 'استرجاع', 'الاسترجاع',
+        'لو مش عاجبني', 'لو مش مناسب', 'ضمان', 'warranty', 'return', 'refund',
+        'لو فيه مشكلة', 'تبديل', 'ينفع ابدل', 'لو الحاجة مش كويسة',
+        // Misspellings
+        'ارجااع', 'استبداال', 'ضماان', 'تبديييل'
+      ],
+      recommend: [
+        'نصحني', 'ايه أحسن', 'ايه احسن', 'ايه أكتر حاجة', 'الأكثر مبيعا', 'بيست سيلر',
+        'اختارلي', 'مش عارف اختار', 'مش عارفة أختار', 'ترشحلي', 'ايه الحلو',
+        'best seller', 'recommend', 'مقترحات', 'اقتراح', 'ايه الأحسن',
+        'حاجة حلوة', 'ابعتلي حاجة حلوة', 'عايز حاجة حلوة', 'انصحني',
+        // Misspellings
+        'نصحنى', 'اختارلى', 'ترشحلى', 'اقتراحح', 'مقترحاات'
+      ],
+      store_link: [
+        'لينك', 'رابط', 'link', 'url', 'الموقع', 'المتجر', 'رابط المتجر', 'لينك المتجر',
+        'ابعتلي اللينك', 'ابعتلي الرابط', 'عايز اللينك', 'عايز الرابط',
+        // Misspellings
+        'لينكك', 'رابطط', 'المتجرر'
+      ],
+      talk_to_human: [
+        'كلم المدير', 'عايز أكلم حد', 'عايز اكلم حد', 'كلم حد', 'بشر', 'إنسان',
+        'عايز ادم', 'مش بوت', 'agent', 'human', 'عايز صاحب المحل', 'صاحب المحل',
+        'ممكن اكلم صاحب الشغل', 'عايز اتكلم مع حد',
+        // Misspellings
+        'كلمم', 'المديرر', 'بشرر'
+      ],
+      affirmative: [
+        'طب', 'ماشي', 'تمام', 'اوكي', 'حاضر', 'أكيد', 'اكيد', 'ok', 'okay',
+        'ان شاء الله', 'إن شاء الله', 'خلاص تمام', 'طيب', 'good', 'أوك',
+        // Misspellings
+        'طبب', 'ماشيي', 'تمامم', 'حاضرر', 'طييب'
+      ],
+      whats_new: [
+        'ايه الجديد', 'جديد', 'new', 'وصل حاجة جديدة', 'في جديد', 'حاجة جديدة',
+        'منتجات جديدة', 'أحدث', 'latest', 'ايه اللي نزل',
+        // Misspellings
+        'الجدييد', 'جديدد', 'أحدثث'
       ],
     };
     
@@ -2813,6 +2926,135 @@ ${productsList}
       } catch (err) {
         console.error('Stock reduce error:', err)
       }
+    }
+  }
+
+  // Handle discount/offer questions
+  async handleDiscountQuestion(sock, from, shop, customerPhone) {
+    const responses = [
+      `🏷️ أهلاً بك!\n\nأسعارنا تنافسية جداً ومناسبة للجميع.\nتابعنا دائماً لأن العروض والخصومات بتنزل باستمرار! 🔥\n\nاكتب *قائمة* لتصفح المنتجات والأسعار 📋`,
+      `💫 حالياً أسعارنا هي أفضل الأسعار في السوق!\n\nلو عايز تشوف المنتجات والأسعار اكتب *قائمة* 📋\nولو في عروض جديدة هنعلن عنها فوراً! 🎉`,
+    ];
+    await this.safeSendMessage(sock, from,
+      responses[Math.floor(Math.random() * responses.length)], shop.name, shop.id, customerPhone);
+  }
+
+  // Handle payment method questions
+  async handlePaymentQuestion(sock, from, shop, customerPhone) {
+    await this.safeSendMessage(sock, from,
+      `💳 *طرق الدفع المتاحة:*\n\n` +
+      `💵 الدفع عند الاستلام (كاش)\n` +
+      `📱 فودافون كاش / اتصالات كاش / محفظة إلكترونية\n` +
+      `🏦 تحويل بنكي\n\n` +
+      `تفاصيل الدفع بتتحدد بعد تأكيد الطلب.\n` +
+      `اكتب *اطلب* لتأكيد طلبك وهنتواصل معاك! 📞`, shop.name, shop.id, customerPhone);
+  }
+
+  // Handle working hours questions
+  async handleWorkingHoursQuestion(sock, from, shop, customerPhone) {
+    const hour = new Date().getHours();
+    const isLikelyOpen = hour >= 9 && hour <= 22;
+    
+    await this.safeSendMessage(sock, from,
+      `🕐 *مواعيد العمل:*\n\n` +
+      `نحن نستقبل طلباتك على مدار الساعة عبر الواتساب! 📱\n` +
+      (isLikelyOpen 
+        ? `✅ إحنا شغالين دلوقتي! يلا ابدأ طلبك 🚀\n`
+        : `⏰ ممكن يكون فيه تأخير بسيط في الرد حالياً.\nبس سجل طلبك وهنرد عليك في أقرب وقت! 🙏\n`) +
+      `\nاكتب *قائمة* لتصفح المنتجات 📋`, shop.name, shop.id, customerPhone);
+  }
+
+  // Handle location/branch questions
+  async handleLocationQuestion(sock, from, shop, customerPhone) {
+    await this.safeSendMessage(sock, from,
+      `📍 *${shop.name}*\n\n` +
+      `إحنا متجر إلكتروني ونوصلك لحد عندك! 🚗\n\n` +
+      `لو عايز تعرف تفاصيل التوصيل لمنطقتك،\n` +
+      `ابدأ طلبك وهنتواصل معاك لتأكيد كل التفاصيل 📞\n\n` +
+      `اكتب *قائمة* لتصفح المنتجات 📋\n` +
+      `أو *اطلب* لتأكيد طلبك ✅`, shop.name, shop.id, customerPhone);
+  }
+
+  // Handle return/warranty questions
+  async handleReturnPolicyQuestion(sock, from, shop, customerPhone) {
+    await this.safeSendMessage(sock, from,
+      `🔄 *سياسة الإرجاع والاستبدال:*\n\n` +
+      `رضا العميل هو أولويتنا! 🌟\n\n` +
+      `✅ لو المنتج فيه أي عيب أو مش مطابق - بنبدله فوراً\n` +
+      `✅ لو مش مناسب ليك - تواصل معانا وهنحل الموضوع\n` +
+      `📞 تواصل مع صاحب المتجر مباشرة لأي استفسار\n\n` +
+      `اكتب *قائمة* لتصفح المنتجات 📋`, shop.name, shop.id, customerPhone);
+  }
+
+  // Handle recommendation requests
+  async handleRecommendation(sock, from, shop, customerPhone) {
+    const availableProducts = shop.products.filter(p => p.isAvailable);
+    
+    if (availableProducts.length === 0) {
+      await this.safeSendMessage(sock, from,
+        `عذراً، لا توجد منتجات متاحة حالياً 😅\nتابعنا وهنضيف منتجات جديدة قريباً!`, shop.name, shop.id, customerPhone);
+      return;
+    }
+
+    // Pick top 3 (or all if less)
+    const topProducts = availableProducts.slice(0, Math.min(3, availableProducts.length));
+    
+    await this.safeSendMessage(sock, from,
+      `⭐ *مقترحاتنا ليك:*\n\n` +
+      topProducts.map((p, i) => 
+        `${i + 1}. *${p.name}* - ${p.price} جنيه`
+      ).join('\n') +
+      `\n\n💡 اكتب رقم المنتج لإضافته للسلة\n` +
+      `أو اكتب *قائمة* لرؤية كل المنتجات 📋`, shop.name, shop.id, customerPhone);
+  }
+
+  // Handle talk to human request
+  async handleTalkToHuman(sock, from, shop, customerPhone) {
+    await this.safeSendMessage(sock, from,
+      `👤 أنا بوت مساعد لـ *${shop.name}* وبحاول أساعدك في كل حاجة!\n\n` +
+      `لو محتاج تتكلم مع صاحب المتجر مباشرة:\n` +
+      `📞 هيتواصل معاك بعد ما تسجل طلبك\n\n` +
+      `💡 في الأغلب أقدر أساعدك! جرب:\n` +
+      `📋 *قائمة* - لعرض المنتجات\n` +
+      `🛒 *كارت* - لعرض السلة\n` +
+      `❓ *مساعدة* - لعرض كل الأوامر`, shop.name, shop.id, customerPhone);
+  }
+
+  // Handle what's new questions
+  async handleWhatsNew(sock, from, shop, customerPhone) {
+    const availableProducts = shop.products.filter(p => p.isAvailable);
+    
+    if (availableProducts.length === 0) {
+      await this.safeSendMessage(sock, from,
+        `لسه بنجهز منتجات جديدة! 🎉\nتابعنا وهنعلن عن كل جديد قريباً`, shop.name, shop.id, customerPhone);
+      return;
+    }
+
+    // Show latest products (last added)
+    const latest = availableProducts.slice(-Math.min(3, availableProducts.length));
+    
+    await this.safeSendMessage(sock, from,
+      `🆕 *أحدث المنتجات:*\n\n` +
+      latest.map((p, i) => 
+        `${i + 1}. *${p.name}* - ${p.price} جنيه`
+      ).join('\n') +
+      `\n\n💡 اكتب رقم المنتج أو اسمه لإضافته للسلة\n` +
+      `أو اكتب *قائمة* لرؤية كل المنتجات 📋`, shop.name, shop.id, customerPhone);
+  }
+
+  // Handle affirmative responses (طب، ماشي، تمام، حاضر)
+  async handleAffirmative(sock, from, shop, customerPhone, context) {
+    if (context.hasItems) {
+      await this.safeSendMessage(sock, from,
+        `تمام! 👍\n\n` +
+        `لديك ${context.itemCount} منتج في السلة (${context.totalValue} جنيه)\n\n` +
+        `اكتب *قائمة* لإضافة المزيد\n` +
+        `أو *اطلب* لتأكيد الطلب ✅`, shop.name, shop.id, customerPhone);
+    } else {
+      await this.safeSendMessage(sock, from,
+        `تمام! 👍 ازاي أقدر أساعدك؟\n\n` +
+        `اكتب *قائمة* لتصفح المنتجات 📋\n` +
+        `أو اكتب اسم المنتج اللي عايزه مباشرة!`, shop.name, shop.id, customerPhone);
     }
   }
 

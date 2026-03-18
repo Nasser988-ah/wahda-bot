@@ -412,7 +412,21 @@ class BotManager {
       
       const text = normalizeNumbers(rawText);
 
-      if (!text.trim()) return;
+      // Handle non-text messages (voice, sticker, image without caption, etc.)
+      if (!text.trim()) {
+        const msgType = Object.keys(msg.message || {})[0];
+        const nonTextTypes = ['audioMessage', 'stickerMessage', 'reactionMessage', 'locationMessage', 'contactMessage', 'documentMessage'];
+        if (nonTextTypes.includes(msgType) || msgType === 'imageMessage' || msgType === 'videoMessage') {
+          await this.safeSendMessage(sock, from,
+            `عذراً، لا أستطيع قراءة هذا النوع من الرسائل حالياً 😅\n\n` +
+            `يرجى كتابة طلبك نصياً، مثلاً:\n` +
+            `📋 *قائمة* - لعرض المنتجات\n` +
+            `🛒 *كارت* - لعرض سلتك\n` +
+            `✅ *اطلب* - لتأكيد الطلب\n` +
+            `❓ *مساعدة* - للمساعدة`, shop.name, shop.id, customerPhone);
+        }
+        return;
+      }
 
       console.log(`📩 ${shop.name} - Message from ${customerPhone}: "${text}"`);
 
@@ -609,14 +623,20 @@ class BotManager {
           await this.handleNameInput(sock, from, shop.id, customerPhone, shop, text.trim());
           return;
         } else if (orderState === 'waiting_for_phone') {
-          const phone = text.replace(/\s/g, '');
-          if (/^0?1\d{9}$/.test(phone)) {
+          let phone = text.replace(/[\s\-\+]/g, '');
+          // Normalize Egyptian phone formats: +201..., 00201..., 201..., 01...
+          if (/^00201\d{9}$/.test(phone)) phone = '0' + phone.slice(4);
+          else if (/^201\d{9}$/.test(phone)) phone = '0' + phone.slice(2);
+          else if (/^01\d{9}$/.test(phone)) { /* already correct */ }
+          else if (/^1\d{9}$/.test(phone)) phone = '0' + phone;
+          
+          if (/^01\d{9}$/.test(phone)) {
             await this.handlePhoneInput(sock, from, shop.id, customerPhone, shop, phone);
           } else {
-            // Check if it's a question or cancel (already handled above)
             await this.safeSendMessage(sock, from, 
               `⚠️ رقم الهاتف غير صحيح\n\n` +
-              `يرجى كتابة الرقم بالصيغة الصحيحة: 01012345678 📱\n` +
+              `يرجى كتابة الرقم بالصيغة الصحيحة:\n` +
+              `01012345678 أو +201012345678 📱\n` +
               `أو اكتب *إلغاء* لإلغاء الطلب`, shop.name, shop.id, customerPhone);
           }
           return;
@@ -683,28 +703,70 @@ class BotManager {
         console.log(`✓ Matched: address input`);
         await this.handleAddressInput(sock, from, shop.id, customerPhone, shop, text);
         return;
-      } else if (/^0?1\d{9}$/.test(text.replace(/\s/g, ''))) {
+      } else if (/^(\+?0{0,2}2?0?1\d{9})$/.test(text.replace(/[\s\-]/g, ''))) {
         console.log(`✓ Matched: phone number`);
-        await this.handlePhoneInput(sock, from, shop.id, customerPhone, shop, text.replace(/\s/g, ''));
+        let phone = text.replace(/[\s\-\+]/g, '');
+        if (/^00201\d{9}$/.test(phone)) phone = '0' + phone.slice(4);
+        else if (/^201\d{9}$/.test(phone)) phone = '0' + phone.slice(2);
+        else if (/^1\d{9}$/.test(phone)) phone = '0' + phone;
+        await this.handlePhoneInput(sock, from, shop.id, customerPhone, shop, phone);
         return;
       } else if (lowerText.startsWith('صفحة ') || lowerText.startsWith('page ')) {
         console.log(`✓ Matched: page navigation`);
         const pageNum = parseInt(text.split(' ')[1]) || 1;
         await this.sendProductsList(sock, from, shop, customerPhone, pageNum);
         return;
+      } else if (this.matchesIntent(lowerText, 'done')) {
+        console.log(`✓ Matched: done (خلاص/بس/كده/تم)`);
+        await this.handleDoneResponse(sock, from, shop, customerPhone);
+        return;
+      } else if (this.matchesIntent(lowerText, 'thanks')) {
+        console.log(`✓ Matched: thanks`);
+        await this.handleThanksResponse(sock, from, shop, customerPhone, context);
+        return;
       } else if (this.matchesIntent(lowerText, 'cancel')) {
         console.log(`✓ Matched: cancel`);
         await this.handleCancelCommand(sock, from, shop, customerPhone, context);
+        return;
+      } else if (this.matchesIntent(lowerText, 'order_status')) {
+        console.log(`✓ Matched: order status`);
+        await this.handleOrderStatus(sock, from, shop, customerPhone);
+        return;
+      } else if (this.matchesIntent(lowerText, 'delivery')) {
+        console.log(`✓ Matched: delivery question`);
+        await this.handleDeliveryQuestion(sock, from, shop, customerPhone, text);
         return;
       } else if (lowerText.startsWith('شيل ') || lowerText.startsWith('احذف ') || lowerText.startsWith('امسح ')) {
         console.log(`✓ Matched: remove item command`);
         const itemName = text.substring(text.indexOf(' ') + 1).trim();
         await this.removeFromCart(sock, from, shop.id, customerPhone, itemName, shop);
         return;
+      } else if (/^(زود|نقص|غير)\s/.test(lowerText)) {
+        console.log(`✓ Matched: change quantity command`);
+        await this.handleChangeQuantity(sock, from, shop, customerPhone, text);
+        return;
       } else if (/^\d+$/.test(text)) {
         console.log(`✓ Matched: product number`);
         await this.addToCart(sock, from, shop.id, customerPhone, parseInt(text), shop);
         return;
+      } else if (/^\d+\s+.+/.test(text.trim()) || /.+\s+\d+$/.test(text.trim())) {
+        // Quantity + product name: "2 شاورما" or "شاورما 2"
+        const qtyMatch = text.trim().match(/^(\d+)\s+(.+)/) || text.trim().match(/^(.+)\s+(\d+)$/);
+        if (qtyMatch) {
+          let qty, productName;
+          if (/^\d/.test(text.trim())) {
+            qty = parseInt(qtyMatch[1]);
+            productName = qtyMatch[2];
+          } else {
+            productName = qtyMatch[1];
+            qty = parseInt(qtyMatch[2]);
+          }
+          if (qty > 0 && qty <= 20 && productName.length > 1) {
+            console.log(`✓ Matched: quantity + product name: ${qty}x "${productName}"`);
+            await this.addToCartByNameWithQty(sock, from, shop, customerPhone, productName, qty);
+            return;
+          }
+        }
       }
       
       // NAME-BASED ORDERING: Check if text matches a product name
@@ -1445,10 +1507,10 @@ ${contextMessage}
     const normalizedText = ' ' + this.normalizeText(text) + ' '; // Add spaces for word boundary detection
     const emotions = {
       frustrated: [
-        'مش شغال', 'بطل', 'خراب', 'زهق', 'عصب', 'غضبان', 'متضايق', 
+        'مش شغال', 'خراب', 'زهق', 'عصب', 'غضبان', 'متضايق', 
         'مش فاهم', 'مش بيشتغل', 'وحش', 'سيئ', 'باظ', 'تعبت', 'زهقت',
-        'مش عارف', 'ليه كدا', 'لا يعني', 'معقول', 'يعني إيه', 'مش تمام',
-        'في إيه مش', 'مش شايف', 'مخنوق', 'مستفز', 'زفت', 'هبل',
+        'ليه كدا', 'معقول', 'مش تمام',
+        'مش شايف', 'مخنوق', 'مستفز', 'زفت',
         'مش ماشي', 'قرفت', 'مش فاهمة', 'ايه الغباء', 'غلط', 'غلطان',
         'ياعم', 'يا عم', 'انت فاشل'
       ],
@@ -1718,15 +1780,37 @@ ${contextMessage}
       ],
       cancel: [
         'الغاء', 'cancel', 'stop', 'لا أريد', 'غير', 'ما أريد', 'لا أحب',
-        'الفاء', 'إلغاء', 'الغي', 'إلغي', 'امسح', 'لا عادي', 'مش عايز', 'بطل', 'اوقف', 'إيقاف', 'مسح', 'احذف', 'حذف', 'صفر',
+        'الفاء', 'إلغاء', 'الغي', 'إلغي', 'امسح الكل', 'اوقف', 'إيقاف', 'مسح الكل', 'صفر السلة',
         // Misspellings
-        'الغا', 'الغاءء', 'كانسل', 'cancle', 'الغيي', 'امسحح', 'حذفف', 'امساح', 'الغاء الطلب', 'إلغاء الطلب', 'الغي الطلب'
+        'الغا', 'الغاءء', 'كانسل', 'cancle', 'الغيي', 'الغاء الطلب', 'إلغاء الطلب', 'الغي الطلب', 'امسح السلة'
+      ],
+      done: [
+        'خلاص', 'بس', 'كده', 'بس كده', 'خلاص كده', 'كفاية', 'تم', 'مش عايز حاجة تاني',
+        'هو ده', 'ده بس', 'كده تمام', 'بس يا معلم', 'بس خلاص', 'مش عايز تاني',
+        'done', 'that is all', 'thats all', 'finish', 'enough',
+        // Misspellings
+        'خلاصص', 'بسس', 'كدا', 'كدة', 'بس كدا', 'خلص', 'خلصت', 'كفايه', 'بسس كده'
       ],
       thanks: [
         'شكرا', 'thank', 'merci', 'تسلم', 'دومت', 'شكر', 'شكراً', 'thanks', 'thx',
         'مشكور', 'جزاك الله', 'بارك الله',
         // Misspellings
         'شكرر', 'شكراا', 'شكرراً', 'تسلمم'
+      ],
+      order_status: [
+        'فين طلبي', 'فين الطلب', 'الطلب وصل فين', 'الاوردر فين', 'حالة الطلب', 'حالة طلبي',
+        'وصل فين', 'الطلب ايه اخباره', 'اخبار الطلب', 'track', 'status', 'طلبي فين',
+        'الاوردر', 'متى يوصل', 'هيوصل امتى', 'امتى هيوصل',
+        // Misspellings
+        'فين طلبى', 'حاله الطلب', 'اخبار طلبي'
+      ],
+      delivery: [
+        'التوصيل', 'بتوصلوا', 'مصاريف التوصيل', 'سعر التوصيل', 'التوصيل بكام',
+        'بتوصلوا فين', 'بتوصلوا لحد فين', 'مناطق التوصيل', 'اماكن التوصيل',
+        'الشحن', 'مصاريف الشحن', 'الدليفري', 'delivery', 'shipping',
+        'توصيل لحد البيت', 'توصيل مجاني', 'في توصيل',
+        // Misspellings
+        'التوصييل', 'بتوصلو', 'الدليفرى', 'دليفري'
       ],
       address: [
         'عنوان', 'address', 'موقع', 'مكان', 'loc',
@@ -2119,13 +2203,18 @@ ${contextMessage}
     const msg = `👋 ${name}، أنا مساعد ${shop.name}!\n\n` +
                 personalizedMsg +
                 `📱 الأوامر المتاحة:\n\n` +
-                `📋 "قائمة" - عرض جميع المنتجات\n` +
-                `🛒 "كارت" - عرض طلبك\n` +
-                `✅ "اطلب" - تأكيد الطلب\n` +
-                `👍 "نعم" - إضافة منتج آخر\n` +
-                `👎 "لا" - إكمال الطلب\n` +
-                `❌ "الغاء" - تفريغ السلة\n\n` +
-                `💡 أو اكتب رقم المنتج مباشرة (1, 2, 3...)`;
+                `📋 *قائمة* - عرض جميع المنتجات\n` +
+                `🛒 *كارت* - عرض سلتك\n` +
+                `✅ *اطلب* - تأكيد الطلب\n` +
+                `✔️ *خلاص* أو *تم* - إتمام الطلب\n` +
+                `❌ *إلغاء* - تفريغ السلة\n` +
+                `📊 *فين طلبي* - حالة آخر طلب\n` +
+                `🚗 *التوصيل* - معلومات التوصيل\n` +
+                `➕ *زود [اسم]* - زيادة الكمية\n` +
+                `➖ *نقص [اسم]* - تقليل الكمية\n` +
+                `🗑️ *شيل [اسم]* - إزالة من السلة\n\n` +
+                `💡 أو اكتب رقم المنتج أو اسمه مباشرة\n` +
+                `مثال: *2 شاورما* لإضافة 2 شاورما`;
     await this.safeSendMessage(sock, from, msg, shop.name);
   }
 
@@ -2331,6 +2420,238 @@ ${productsList}
             `اكتب *قائمة* لإضافة المزيد\n` +
             `أو *اطلب* لتأكيد طلبك` 
     })
+  }
+
+  // Handle "خلاص/بس/كده/تم" - customer is done, proceed to order
+  async handleDoneResponse(sock, from, shop, customerPhone) {
+    const cartKey = `cart:${shop.id}:${customerPhone}`;
+    let cart = await redis.get(cartKey);
+    let items = [];
+    if (cart) {
+      try { items = typeof cart === 'string' ? JSON.parse(cart) : cart; } catch (e) { items = []; }
+    }
+
+    if (items.length === 0) {
+      await this.safeSendMessage(sock, from,
+        `سلتك فارغة حالياً 🛒\n\nاكتب *قائمة* لاستعراض منتجاتنا واختيار ما يناسبك!`, shop.name, shop.id, customerPhone);
+      return;
+    }
+
+    // Customer has items - proceed to order details
+    const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+    await this.safeSendMessage(sock, from,
+      `حسناً! لديك ${items.length} منتج بإجمالي ${total} جنيه ✅\n\n` +
+      `سنبدأ الآن بتسجيل بيانات التوصيل... 📝`, shop.name, shop.id, customerPhone);
+    
+    await this.askForCustomerDetails(sock, from, shop.id, customerPhone, shop);
+  }
+
+  // Handle "شكرا" response
+  async handleThanksResponse(sock, from, shop, customerPhone, context) {
+    const responses = [
+      `العفو! دائماً في خدمتك 😊\nإذا احتجت أي شيء اكتب *قائمة* أو *مساعدة*`,
+      `الشكر لله! نورتنا يا فندم 🙏\nاكتب *قائمة* إذا حبيت تطلب حاجة تاني`,
+      `تسلم يا فندم! 🌟\nمتنسانيش لو عايز حاجة تاني 😊`,
+    ];
+    const response = responses[Math.floor(Math.random() * responses.length)];
+    
+    if (context.hasItems) {
+      await this.safeSendMessage(sock, from,
+        `${response}\n\n💡 بالمناسبة، لديك ${context.itemCount} منتج في السلة. اكتب *اطلب* لتأكيد طلبك!`, shop.name, shop.id, customerPhone);
+    } else {
+      await this.safeSendMessage(sock, from, response, shop.name, shop.id, customerPhone);
+    }
+  }
+
+  // Handle order status inquiry
+  async handleOrderStatus(sock, from, shop, customerPhone) {
+    try {
+      // Get last order for this customer
+      const lastOrder = await prisma.order.findFirst({
+        where: {
+          shopId: shop.id,
+          customerPhone: { contains: customerPhone.slice(-10) }
+        },
+        orderBy: { createdAt: 'desc' },
+        include: { orderItems: true }
+      });
+
+      if (!lastOrder) {
+        await this.safeSendMessage(sock, from,
+          `لم نجد طلبات سابقة لك 📋\n\nاكتب *قائمة* لتصفح منتجاتنا وإنشاء طلب جديد!`, shop.name, shop.id, customerPhone);
+        return;
+      }
+
+      const statusMap = {
+        'PENDING': '⏳ قيد الانتظار',
+        'CONFIRMED': '✅ تم التأكيد',
+        'PREPARING': '👨‍🍳 جاري التحضير',
+        'DELIVERING': '🚗 في الطريق إليك',
+        'DELIVERED': '📦 تم التوصيل',
+        'CANCELLED': '❌ ملغي'
+      };
+
+      const statusText = statusMap[lastOrder.status] || lastOrder.status;
+      const orderDate = new Date(lastOrder.createdAt).toLocaleString('ar-EG');
+
+      await this.safeSendMessage(sock, from,
+        `📋 *آخر طلب لك:*\n\n` +
+        `🔢 رقم الطلب: #${lastOrder.id.slice(-6)}\n` +
+        `📅 التاريخ: ${orderDate}\n` +
+        `💰 الإجمالي: ${lastOrder.totalPrice} جنيه\n` +
+        `📊 الحالة: ${statusText}\n\n` +
+        `للاستفسار أكثر تواصل مع صاحب المتجر مباشرة 📞`, shop.name, shop.id, customerPhone);
+    } catch (error) {
+      console.error('Order status error:', error);
+      await this.safeSendMessage(sock, from,
+        `عذراً، لم أتمكن من جلب حالة الطلب حالياً 😅\nيرجى التواصل مع صاحب المتجر مباشرة.`, shop.name, shop.id, customerPhone);
+    }
+  }
+
+  // Handle delivery questions
+  async handleDeliveryQuestion(sock, from, shop, customerPhone, text) {
+    await this.safeSendMessage(sock, from,
+      `🚗 *معلومات التوصيل:*\n\n` +
+      `نحن نوصل لجميع المناطق القريبة.\n` +
+      `تفاصيل التوصيل ومصاريفه يتم تحديدها حسب موقعك.\n\n` +
+      `للمزيد من التفاصيل، يمكنك:\n` +
+      `1️⃣ إتمام طلبك وسنتواصل معك لتأكيد التفاصيل\n` +
+      `2️⃣ التواصل مع صاحب المتجر مباشرة 📞\n\n` +
+      `اكتب *قائمة* لتصفح المنتجات 📋`, shop.name, shop.id, customerPhone);
+  }
+
+  // Handle change quantity command (زود/نقص/غير)
+  async handleChangeQuantity(sock, from, shop, customerPhone, text) {
+    try {
+      const cartKey = `cart:${shop.id}:${customerPhone}`;
+      let cart = await redis.get(cartKey);
+      let items = [];
+      if (cart) {
+        try { items = typeof cart === 'string' ? JSON.parse(cart) : cart; } catch (e) { items = []; }
+      }
+
+      if (items.length === 0) {
+        await this.safeSendMessage(sock, from,
+          `السلة فارغة! 🛒\nاكتب *قائمة* لإضافة منتجات.`, shop.name, shop.id, customerPhone);
+        return;
+      }
+
+      const lowerText = text.toLowerCase();
+      const isIncrease = lowerText.startsWith('زود');
+      const isDecrease = lowerText.startsWith('نقص');
+      const itemName = text.substring(text.indexOf(' ') + 1).trim();
+
+      // Find item in cart
+      const itemIndex = items.findIndex(item =>
+        item.name.toLowerCase().includes(itemName.toLowerCase()) ||
+        itemName.toLowerCase().includes(item.name.toLowerCase())
+      );
+
+      if (itemIndex === -1) {
+        await this.safeSendMessage(sock, from,
+          `لم أجد "${itemName}" في السلة 😕\n\nاكتب *كارت* لعرض محتويات السلة.`, shop.name, shop.id, customerPhone);
+        return;
+      }
+
+      if (isIncrease) {
+        items[itemIndex].quantity += 1;
+        await redis.set(cartKey, JSON.stringify(items), { ex: 3600 });
+        const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+        await this.safeSendMessage(sock, from,
+          `تم زيادة كمية ${items[itemIndex].name} إلى ${items[itemIndex].quantity} ✅\nالإجمالي: ${total} جنيه`, shop.name, shop.id, customerPhone);
+      } else if (isDecrease) {
+        if (items[itemIndex].quantity <= 1) {
+          items.splice(itemIndex, 1);
+          if (items.length === 0) {
+            await redis.del(cartKey);
+          } else {
+            await redis.set(cartKey, JSON.stringify(items), { ex: 3600 });
+          }
+          await this.safeSendMessage(sock, from,
+            `تم إزالة المنتج من السلة ✅`, shop.name, shop.id, customerPhone);
+        } else {
+          items[itemIndex].quantity -= 1;
+          await redis.set(cartKey, JSON.stringify(items), { ex: 3600 });
+          const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+          await this.safeSendMessage(sock, from,
+            `تم تقليل كمية ${items[itemIndex].name} إلى ${items[itemIndex].quantity} ✅\nالإجمالي: ${total} جنيه`, shop.name, shop.id, customerPhone);
+        }
+      } else {
+        // غير - show current quantity and ask
+        await this.safeSendMessage(sock, from,
+          `${items[itemIndex].name} - الكمية الحالية: ${items[itemIndex].quantity}\n\n` +
+          `اكتب *زود ${itemName}* لزيادة الكمية\n` +
+          `اكتب *نقص ${itemName}* لتقليل الكمية\n` +
+          `اكتب *شيل ${itemName}* لإزالته`, shop.name, shop.id, customerPhone);
+      }
+    } catch (error) {
+      console.error('Change quantity error:', error);
+      await this.safeSendMessage(sock, from, `عذراً، حدث خطأ. يرجى المحاولة مرة أخرى 🙏`, shop.name);
+    }
+  }
+
+  // Add product to cart by name with specific quantity
+  async addToCartByNameWithQty(sock, from, shop, customerPhone, productName, qty) {
+    const matches = findBestMatch(productName, shop.products);
+
+    if (matches.length >= 1 && matches[0].score >= 0.7) {
+      const product = matches[0].product;
+
+      // Check stock
+      if (product.stock !== null && product.stock !== undefined) {
+        if (product.stock <= 0) {
+          await this.safeSendMessage(sock, from,
+            `عذراً، *${product.name}* غير متوفر حالياً 😔\nسيتوفر قريباً إن شاء الله 🙏`, shop.name, shop.id, customerPhone);
+          return;
+        }
+        if (qty > product.stock) {
+          await this.safeSendMessage(sock, from,
+            `عذراً، الكمية المتاحة من *${product.name}* هي ${product.stock} فقط.`, shop.name, shop.id, customerPhone);
+          return;
+        }
+      }
+
+      // Check variants
+      if (product.variants) {
+        let variantGroups = [];
+        try { variantGroups = JSON.parse(product.variants); } catch {}
+        if (variantGroups.length > 0) {
+          // Has variants - add one at a time
+          await this.addProductToCartWithVariant(sock, from, shop, customerPhone, product);
+          return;
+        }
+      }
+
+      // Add with quantity
+      const cartKey = `cart:${shop.id}:${customerPhone}`;
+      const cartData = await redis.get(cartKey);
+      const cart = cartData ? JSON.parse(cartData) : [];
+
+      const existingIndex = cart.findIndex(i => i.productId === product.id);
+      if (existingIndex >= 0) {
+        cart[existingIndex].quantity += qty;
+      } else {
+        cart.push({
+          cartItemKey: product.id,
+          productId: product.id,
+          name: product.name,
+          price: product.price,
+          quantity: qty,
+          variantInfo: null
+        });
+      }
+
+      await redis.set(cartKey, JSON.stringify(cart), { ex: 3600 });
+      const total = cart.reduce((s, i) => s + i.price * i.quantity, 0);
+
+      await this.safeSendMessage(sock, from,
+        `تمت إضافة *${product.name}* × ${qty} ✅\n` +
+        `إجمالي سلتك: ${total} جنيه\n\n` +
+        `اكتب *قائمة* لإضافة المزيد\nأو *اطلب* لتأكيد طلبك`, shop.name, shop.id, customerPhone);
+    } else {
+      await this.safeSendMessage(sock, from,
+        `لم أجد منتج بهذا الاسم 😕\nاكتب *قائمة* لرؤية المنتجات المتاحة.`, shop.name, shop.id, customerPhone);
+    }
   }
 
   async reduceStock(cart, shop, sock) {

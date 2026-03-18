@@ -1340,7 +1340,7 @@
             ?.addEventListener('click', addVariantGroup)
 
         function addVariantGroup() {
-            productVariants.push({ name: '', options: [] })
+            productVariants.push({ name: '', options: [], stock: {} })
             renderVariantGroups()
         }
 
@@ -1349,58 +1349,93 @@
             renderVariantGroups()
         }
 
+        function updateVariantStock(groupIdx, optionName, value) {
+            if (!productVariants[groupIdx].stock) productVariants[groupIdx].stock = {}
+            productVariants[groupIdx].stock[optionName] = value === '' ? null : parseInt(value)
+        }
+
         function renderVariantGroups() {
             const container = document.getElementById('variantGroupsList')
             if (!container) return
 
             container.innerHTML = productVariants.map((v, i) => `
-                <div style="border:1px solid #eee;border-radius:10px;
-                            padding:12px;margin-bottom:10px">
+                <div style="border:1px solid rgba(255,255,255,0.1);border-radius:10px;
+                            padding:12px;margin-bottom:10px;background:rgba(255,255,255,0.03)">
                     <div style="display:flex;gap:8px;margin-bottom:8px">
                         <input type="text"
-                            placeholder="اسم الخيار (مثال: اللون، المقاس، الحجم، 38-42)"
+                            placeholder="اسم الخيار (مثال: اللون، المقاس، الحجم)"
                             value="${v.name}"
                             oninput="productVariants[${i}].name = this.value"
-                            style="flex:1;padding:8px;border:1px solid #ddd;
-                                   border-radius:6px;font-family:inherit">
+                            style="flex:1;padding:8px;border:1px solid rgba(255,255,255,0.15);
+                                   border-radius:6px;font-family:inherit;background:rgba(255,255,255,0.05);color:#fff">
                         <button type="button"
                             onclick="removeVariantGroup(${i})"
-                            style="background:#fff0f0;border:1px solid #ffcccc;
-                                   color:#cc0000;padding:8px 12px;
+                            style="background:rgba(255,0,0,0.1);border:1px solid rgba(255,0,0,0.3);
+                                   color:#ff6b6b;padding:8px 12px;
                                    border-radius:6px;cursor:pointer">
                             حذف
                         </button>
                     </div>
                     <input type="text"
-                        placeholder="الخيارات مفصولة بفاصلة (مثال: أحمر، أزرق، 38، 39، L، XL)"
+                        placeholder="الخيارات مفصولة بفاصلة (مثال: أحمر، أزرق، L، XL)"
                         value="${v.options.join('، ')}"
-                        oninput="productVariants[${i}].options = this.value.split(/[,،]/).map(s=>s.trim()).filter(Boolean)"
+                        oninput="updateVariantOptions(${i}, this.value)"
                         onchange="renderVariantGroups()"
-                        style="width:100%;padding:8px;border:1px solid #ddd;
-                               border-radius:6px;font-family:inherit;margin-bottom:8px">
+                        style="width:100%;padding:8px;border:1px solid rgba(255,255,255,0.15);
+                               border-radius:6px;font-family:inherit;margin-bottom:10px;background:rgba(255,255,255,0.05);color:#fff">
 
-                    <div style="font-size:12px;color:#888;margin-bottom:6px">
-                        صورة لكل خيار (اختياري):
+                    ${v.options.length > 0 ? `
+                    <div style="font-size:12px;color:#94a3b8;margin-bottom:8px;font-weight:600">
+                        ⚙️ إعدادات كل خيار:
                     </div>
-                    ${v.options.map(opt => `
-                        <div style="display:flex;align-items:center;
-                                    gap:8px;margin-bottom:8px">
-                            <span style="min-width:70px;font-size:13px;
-                                         font-weight:600">${opt}:</span>
-                            <input type="file" accept="image/*"
-                                onchange="uploadVariantImage('${opt}', this)"
-                                style="font-size:12px;flex:1">
-                            ${variantImages[opt]
-                                ? `<img src="${variantImages[opt]}"
-                                        style="width:36px;height:36px;
-                                               object-fit:cover;
-                                               border-radius:50%;
-                                               border:2px solid #eee">`
-                                : ''}
-                        </div>
-                    `).join('')}
+                    <div style="display:flex;flex-direction:column;gap:6px">
+                    ${v.options.map(opt => {
+                        const stockVal = v.stock && v.stock[opt] !== null && v.stock[opt] !== undefined ? v.stock[opt] : ''
+                        return `
+                        <div style="display:flex;align-items:center;gap:8px;
+                                    padding:8px;border-radius:8px;background:rgba(255,255,255,0.03);
+                                    border:1px solid rgba(255,255,255,0.06)">
+                            <span style="min-width:60px;font-size:13px;font-weight:700;color:#e2e8f0">${opt}</span>
+                            <div style="display:flex;align-items:center;gap:4px;flex:1">
+                                <span style="font-size:11px;color:#94a3b8;white-space:nowrap">📦 الكمية:</span>
+                                <input type="number" min="0" placeholder="∞"
+                                    value="${stockVal}"
+                                    onchange="updateVariantStock(${i}, '${opt}', this.value)"
+                                    style="width:60px;padding:4px 6px;border:1px solid rgba(255,255,255,0.15);
+                                           border-radius:4px;font-size:12px;text-align:center;
+                                           background:rgba(255,255,255,0.05);color:#fff;font-family:inherit">
+                            </div>
+                            <div style="display:flex;align-items:center;gap:4px">
+                                <span style="font-size:11px;color:#94a3b8;white-space:nowrap">📷</span>
+                                <input type="file" accept="image/*"
+                                    onchange="uploadVariantImage('${opt}', this)"
+                                    style="font-size:11px;width:90px;color:#94a3b8">
+                                ${variantImages[opt]
+                                    ? `<img src="${variantImages[opt]}"
+                                            style="width:32px;height:32px;object-fit:cover;
+                                                   border-radius:50%;border:2px solid rgba(255,255,255,0.2)">`
+                                    : ''}
+                            </div>
+                        </div>`
+                    }).join('')}
+                    </div>` : ''}
                 </div>
             `).join('')
+        }
+
+        function updateVariantOptions(index, value) {
+            const newOptions = value.split(/[,،]/).map(s=>s.trim()).filter(Boolean)
+            const oldOptions = productVariants[index].options
+            const oldStock = productVariants[index].stock || {}
+
+            // Preserve stock values for options that still exist
+            const newStock = {}
+            newOptions.forEach(opt => {
+                if (oldStock[opt] !== undefined) newStock[opt] = oldStock[opt]
+            })
+
+            productVariants[index].options = newOptions
+            productVariants[index].stock = newStock
         }
 
         async function uploadVariantImage(optionName, input) {
@@ -1420,9 +1455,11 @@
                 if (data.imageUrl) {
                     variantImages[optionName] = data.imageUrl
                     renderVariantGroups()
+                    showToast('تم رفع الصورة بنجاح', 'success')
                 }
             } catch (err) {
                 console.error('Variant image upload failed:', err)
+                showToast('فشل رفع الصورة', 'error')
             }
         }
 
@@ -1439,7 +1476,13 @@
             }
             if (product.variants) {
                 try {
-                    productVariants = JSON.parse(product.variants)
+                    const parsed = JSON.parse(product.variants)
+                    // Ensure each group has a stock object
+                    productVariants = parsed.map(v => ({
+                        name: v.name || '',
+                        options: v.options || [],
+                        stock: v.stock || {}
+                    }))
                 } catch {}
             }
             if (product.variantImages) {

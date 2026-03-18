@@ -721,8 +721,8 @@
       
       .variant-chip {
         font-size: 11px;
-        padding: 4px 8px;
-        border-radius: 6px;
+        padding: 4px 10px;
+        border-radius: 16px;
         min-height: 28px;
         display: flex;
         align-items: center;
@@ -730,9 +730,13 @@
       }
       
       .variant-chip-img {
-        width: 24px;
-        height: 24px;
-        border-radius: 4px;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+      }
+
+      .variant-preview-img {
+        max-height: 140px;
       }
     }
     
@@ -782,6 +786,20 @@
       color: var(--muted);
       margin-bottom: 6px;
       letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .variant-group-label .choose-hint {
+      font-size: 10px;
+      font-weight: 400;
+      color: var(--gold, #25D366);
+      opacity: 0.8;
+    }
+
+    .variant-group-label .choose-hint.done {
+      color: #22c55e;
     }
 
     .variant-options {
@@ -799,33 +817,90 @@
       font-size: 12px;
       font-weight: 600;
       cursor: pointer;
-      transition: all 0.15s;
+      transition: all 0.2s;
       font-family: inherit;
       touch-action: manipulation;
       -webkit-tap-highlight-color: transparent;
+      position: relative;
+    }
+
+    .variant-chip:hover {
+      border-color: var(--gold, #25D366);
+      background: rgba(255,255,255,0.05);
     }
 
     .variant-chip.selected {
       border-color: var(--gold, #25D366);
       background: var(--gold, #25D366);
       color: #000;
+      transform: scale(1.05);
+    }
+
+    .variant-chip.out-of-stock-opt {
+      opacity: 0.4;
+      text-decoration: line-through;
+      pointer-events: none;
     }
 
     .variant-chip-img {
-      width: 32px;
-      height: 32px;
+      width: 36px;
+      height: 36px;
       border-radius: 50%;
       object-fit: cover;
-      border: 2px solid var(--border);
+      border: 2.5px solid var(--border);
       cursor: pointer;
-      transition: all 0.15s;
+      transition: all 0.2s;
       touch-action: manipulation;
+    }
+
+    .variant-chip-img:hover {
+      border-color: var(--gold, #25D366);
+      transform: scale(1.1);
     }
 
     .variant-chip-img.selected {
       border-color: var(--gold, #25D366);
-      box-shadow: 0 0 0 2px var(--gold, #25D366);
-      transform: scale(1.1);
+      box-shadow: 0 0 0 3px var(--gold, #25D366);
+      transform: scale(1.15);
+    }
+
+    .variant-chip-img.out-of-stock-opt {
+      opacity: 0.35;
+      pointer-events: none;
+      filter: grayscale(100%);
+    }
+
+    .variant-preview-img {
+      width: 100%;
+      border-radius: 10px;
+      margin-top: 8px;
+      max-height: 180px;
+      object-fit: cover;
+      animation: fadeIn 0.3s ease;
+      border: 1px solid var(--border);
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .variant-required-msg {
+      font-size: 10px;
+      color: #ef4444;
+      margin-top: 4px;
+      display: none;
+    }
+
+    .variant-required-msg.show {
+      display: block;
+      animation: shake 0.4s ease;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-4px); }
+      75% { transform: translateX(4px); }
     }
 
     .out-of-stock-overlay {
@@ -953,9 +1028,6 @@
       
       document.title = data.name
       document.getElementById('shopName').textContent = data.name
-      
-      // Apply customization
-      applyCustomization(data)
       
       // Show all products including out of stock
       allProducts = data.products
@@ -1185,44 +1257,83 @@
         ? JSON.parse(product.variantImages) : {}
     } catch {}
 
-    return `<div style="margin-bottom:10px">` +
-      groups.map((g, gi) => `
+    const hasAnyImages = groups.some(g => g.options.some(opt => imgMap[opt]))
+
+    return `<div class="variant-selector-wrap" style="margin-bottom:10px">` +
+      groups.map((g, gi) => {
+        const sel = selectedVariants[product.id]
+        const isSelected = sel && sel[gi] !== undefined
+        return `
         <div class="variant-group">
-          <div class="variant-group-label">${g.name}</div>
+          <div class="variant-group-label">
+            ${g.name}
+            <span class="choose-hint ${isSelected ? 'done' : ''}" id="hint-${product.id}-${gi}">
+              ${isSelected ? '✓' : '← اضغط للاختيار'}
+            </span>
+          </div>
           <div class="variant-options">
             ${g.options.map(opt => {
               const img = imgMap[opt]
+              const optStock = g.stock ? g.stock[opt] : null
+              const isOOS = optStock !== null && optStock !== undefined && optStock <= 0
+              const stockLabel = optStock !== null && optStock !== undefined && optStock > 0 && optStock <= 5
+                ? ` (${optStock})` : ''
               if (img) {
                 return `<img
                   src="${img}"
-                  class="variant-chip-img"
-                  title="${opt}"
+                  class="variant-chip-img ${isOOS ? 'out-of-stock-opt' : ''}"
+                  title="${opt}${isOOS ? ' - غير متوفر' : ''}"
+                  alt="${opt}"
                   data-pid="${product.id}"
                   data-gi="${gi}"
                   data-val="${opt}"
+                  data-img="${img}"
                   onclick="selectChip(this,'${product.id}',${gi},'${opt}')">`
               }
               return `<button
-                class="variant-chip"
+                class="variant-chip ${isOOS ? 'out-of-stock-opt' : ''}"
                 data-pid="${product.id}"
                 data-gi="${gi}"
                 data-val="${opt}"
+                ${isOOS ? 'disabled' : ''}
                 onclick="selectChip(this,'${product.id}',${gi},'${opt}')">
-                ${opt}
+                ${opt}${stockLabel}${isOOS ? ' ❌' : ''}
               </button>`
             }).join('')}
           </div>
-        </div>
-      `).join('') + `</div>`
+        </div>`
+      }).join('') +
+      `<div class="variant-preview-container" id="vpreview-${product.id}"></div>
+       <div class="variant-required-msg" id="vreq-${product.id}">⚠️ يرجى اختيار جميع الخيارات</div>
+      </div>`
   }
 
   function selectChip(el, pid, gi, val) {
+    // Remove selected from same group
     document.querySelectorAll(
       `[data-pid="${pid}"][data-gi="${gi}"]` 
     ).forEach(e => e.classList.remove('selected'))
     el.classList.add('selected')
     if (!selectedVariants[pid]) selectedVariants[pid] = {}
     selectedVariants[pid][gi] = val
+
+    // Update hint label
+    const hint = document.getElementById(`hint-${pid}-${gi}`)
+    if (hint) {
+      hint.textContent = '✓'
+      hint.classList.add('done')
+    }
+
+    // Hide required message if was showing
+    const reqMsg = document.getElementById(`vreq-${pid}`)
+    if (reqMsg) reqMsg.classList.remove('show')
+
+    // Show image preview if variant has an image
+    const imgSrc = el.dataset?.img || el.getAttribute('data-img')
+    const previewContainer = document.getElementById(`vpreview-${pid}`)
+    if (previewContainer && imgSrc) {
+      previewContainer.innerHTML = `<img src="${imgSrc}" class="variant-preview-img" alt="${val}" onclick="openLightbox('${imgSrc}', '${val}')">`
+    }
   }
 
   function getVariantInfo(pid) {
@@ -1233,7 +1344,12 @@
     if (groups.length === 0) return null
     const sel = selectedVariants[pid] || {}
     const allDone = groups.every((_, i) => sel[i] !== undefined)
-    if (!allDone) return false
+    if (!allDone) {
+      // Show required message
+      const reqMsg = document.getElementById(`vreq-${pid}`)
+      if (reqMsg) reqMsg.classList.add('show')
+      return false
+    }
     return groups.map((g, i) => `${g.name}: ${sel[i]}`).join('، ')
   }
 

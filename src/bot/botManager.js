@@ -449,17 +449,104 @@ class BotManager {
           return
         }
 
-        // Parse variant choices (customer sends "اللون: أحمر\nالمقاس: L")
-        const lines = text.split('\n').filter(l => l.includes(':'))
+        const trimmedText = text.trim()
+        const variantGroups = pendingVariant.variants || []
+        let variantInfo = null
 
-        if (lines.length > 0) {
-          const variantInfo = lines.map(l => l.trim()).join(' - ')
+        // Method 1: Colon format "اللون: أحمر\nالمقاس: L" or "اللون: أحمر، المقاس: L"
+        const colonLines = trimmedText.split(/[\n،,]/).filter(l => l.includes(':'))
+        if (colonLines.length > 0) {
+          variantInfo = colonLines.map(l => l.trim()).join(' - ')
+        }
+
+        // Method 2: Direct option value match - customer just types "أحمر" or "L" or "أحمر L"
+        if (!variantInfo) {
+          const inputWords = trimmedText.split(/[\s،,]+/).map(w => w.trim()).filter(Boolean)
+          const matched = {}
+
+          for (let gi = 0; gi < variantGroups.length; gi++) {
+            const group = variantGroups[gi]
+            for (const opt of group.options) {
+              const normalizedOpt = normalizeArabic(opt)
+              // Check if any input word matches this option
+              for (const word of inputWords) {
+                const normalizedWord = normalizeArabic(word)
+                if (normalizedWord === normalizedOpt || 
+                    normalizedOpt.includes(normalizedWord) || 
+                    normalizedWord.includes(normalizedOpt)) {
+                  matched[gi] = { name: group.name, value: opt }
+                  break
+                }
+              }
+              if (matched[gi]) break
+            }
+            // Also check full text against each option
+            if (!matched[gi]) {
+              const normalizedInput = normalizeArabic(trimmedText)
+              for (const opt of group.options) {
+                if (normalizeArabic(opt) === normalizedInput) {
+                  matched[gi] = { name: group.name, value: opt }
+                  break
+                }
+              }
+            }
+          }
+
+          const matchedCount = Object.keys(matched).length
+          if (matchedCount === variantGroups.length) {
+            // All groups matched - build variant info
+            variantInfo = Object.values(matched).map(m => `${m.name}: ${m.value}`).join(' - ')
+          } else if (matchedCount > 0 && matchedCount < variantGroups.length) {
+            // Partial match - save what we have, ask for the rest
+            const remaining = variantGroups.filter((_, i) => !matched[i])
+            const partialInfo = Object.values(matched).map(m => `✅ ${m.name}: ${m.value}`).join('\n')
+            await sock.sendMessage(from, {
+              text: `تم اختيار:\n${partialInfo}\n\n` +
+                    `يرجى اختيار أيضاً:\n` +
+                    remaining.map(g =>
+                      `*${g.name}:* ${g.options.join('، ')}`
+                    ).join('\n') +
+                    `\n\nأو اكتب *إلغاء* للرجوع`
+            })
+            // Update pending with partial selections
+            pendingVariant.selected = matched
+            await redis.set(pendingVariantKey, JSON.stringify(pendingVariant), { ex: 300 })
+            return
+          }
+        }
+
+        // Method 3: Check if previous partial selection exists and this completes it
+        if (!variantInfo && pendingVariant.selected) {
+          const prevMatched = pendingVariant.selected
+          const inputWords = trimmedText.split(/[\s،,]+/).map(w => w.trim()).filter(Boolean)
+          
+          for (let gi = 0; gi < variantGroups.length; gi++) {
+            if (prevMatched[gi]) continue // Already matched
+            const group = variantGroups[gi]
+            for (const opt of group.options) {
+              const normalizedOpt = normalizeArabic(opt)
+              for (const word of inputWords) {
+                if (normalizeArabic(word) === normalizedOpt || 
+                    normalizedOpt.includes(normalizeArabic(word)) ||
+                    normalizeArabic(word).includes(normalizedOpt)) {
+                  prevMatched[gi] = { name: group.name, value: opt }
+                  break
+                }
+              }
+              if (prevMatched[gi]) break
+            }
+          }
+
+          if (Object.keys(prevMatched).length === variantGroups.length) {
+            variantInfo = Object.values(prevMatched).map(m => `${m.name}: ${m.value}`).join(' - ')
+          }
+        }
+
+        if (variantInfo) {
           await redis.del(pendingVariantKey)
-
           const product = await prisma.product.findUnique({
             where: { id: pendingVariant.productId }
           })
-
           if (product) {
             await this.addProductToCartWithVariant(
               sock, from, shop, customerPhone, product, variantInfo
@@ -468,17 +555,14 @@ class BotManager {
           return
         }
 
-        // Customer didn't follow format - remind them
+        // Customer input didn't match any option - show friendly reminder
         await sock.sendMessage(from, {
-          text: `يرجى إرسال اختياراتك بهذا الشكل:\n\n` +
-                pendingVariant.variants.map(g =>
-                  `${g.name}: (اختيارك)` 
+          text: `يرجى اختيار من الخيارات التالية:\n\n` +
+                variantGroups.map(g =>
+                  `*${g.name}:* ${g.options.join('، ')}`
                 ).join('\n') +
-                `\n\nالخيارات المتاحة:\n` +
-                pendingVariant.variants.map(g =>
-                  `*${g.name}:* ${g.options.join('، ')}` 
-                ).join('\n') +
-                `\n\nأو اكتب *إلغاء* للرجوع` 
+                `\n\n💡 اكتب اسم الخيار مباشرة (مثال: ${variantGroups[0]?.options[0] || 'أحمر'})` +
+                `\n\nأو اكتب *إلغاء* للرجوع`
         })
         return
       }

@@ -1134,11 +1134,31 @@
           }
         }
       }
-      // NEW: Check stock limit
-      if (p?.stock !== null && p?.stock !== undefined) {
+      // Check per-variant stock limit
+      let effectiveStock = null
+      if (p?.variants) {
+        try {
+          const vGroups = JSON.parse(p.variants)
+          const sel = selectedVariants[p.id] || {}
+          for (let gi = 0; gi < vGroups.length; gi++) {
+            const g = vGroups[gi]
+            if (g.stock && sel[gi]) {
+              const optStock = g.stock[sel[gi]]
+              if (optStock !== null && optStock !== undefined) {
+                effectiveStock = effectiveStock === null ? optStock : Math.min(effectiveStock, optStock)
+              }
+            }
+          }
+        } catch {}
+      }
+      // Fall back to product-level stock
+      if (effectiveStock === null && p?.stock !== null && p?.stock !== undefined) {
+        effectiveStock = p.stock
+      }
+      if (effectiveStock !== null) {
         const current = quantities[index] || 0
-        if (current >= p.stock) {
-          showToast(`الكمية المتاحة: ${p.stock} فقط`)
+        if (current >= effectiveStock) {
+          showToast(`الكمية المتاحة: ${effectiveStock} فقط`)
           return
         }
       }

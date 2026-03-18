@@ -165,10 +165,10 @@ async function getCustomerData(shopId, customerPhone) {
   ]);
   
   return {
-    cart: cart ? JSON.parse(cart) : [],
+    cart: cart ? (typeof cart === 'string' ? JSON.parse(cart) : cart) : [],
     state,
     isFirstTime: !firstTime,
-    pending: pending ? JSON.parse(pending) : null,
+    pending: pending ? (typeof pending === 'string' ? JSON.parse(pending) : pending) : null,
     msgCount: parseInt(msgCount) || 0,
     cancelConfirm
   };
@@ -438,7 +438,7 @@ class BotManager {
       const pendingVariantData = await redis.get(pendingVariantKey)
 
       if (pendingVariantData) {
-        const pendingVariant = JSON.parse(pendingVariantData)
+        const pendingVariant = typeof pendingVariantData === 'string' ? JSON.parse(pendingVariantData) : pendingVariantData
 
         // Allow cancel
         if (/^(الغاء|إلغاء|إلغي|الغي|cancel)$/i.test(text.trim())) {
@@ -579,7 +579,7 @@ class BotManager {
       const pendingData = await redis.get(pendingKey);
 
       if (pendingData) {
-        const pending = JSON.parse(pendingData);
+        const pending = typeof pendingData === 'string' ? JSON.parse(pendingData) : pendingData;
         const t = text.trim();
 
         // Confirmed with yes
@@ -2458,7 +2458,8 @@ ${productsList}
     // Add to cart
     const cartKey = `cart:${shop.id}:${customerPhone}` 
     const cartData = await redis.get(cartKey)
-    const cart = cartData ? JSON.parse(cartData) : []
+    let cart = []
+    try { cart = cartData ? (typeof cartData === 'string' ? JSON.parse(cartData) : cartData) : [] } catch(e) { cart = [] }
 
     const cartItemKey = variantInfo
       ? `${product.id}__${variantInfo}` 
@@ -2468,12 +2469,38 @@ ${productsList}
       i => i.cartItemKey === cartItemKey
     )
 
-    // NEW: Check stock limit before adding
-    if (product.stock !== null && product.stock !== undefined) {
+    // Check per-variant stock limit
+    let variantStockLimit = null
+    if (variantInfo && product.variants) {
+      try {
+        const vGroups = typeof product.variants === 'string' ? JSON.parse(product.variants) : product.variants
+        for (const g of vGroups) {
+          if (g.stock) {
+            for (const opt of g.options) {
+              if (variantInfo.includes(opt) && g.stock[opt] !== null && g.stock[opt] !== undefined) {
+                variantStockLimit = variantStockLimit === null ? g.stock[opt] : Math.min(variantStockLimit, g.stock[opt])
+              }
+            }
+          }
+        }
+      } catch(e) {}
+    }
+
+    // Use variant stock if available, otherwise fall back to product stock
+    const effectiveStock = variantStockLimit !== null ? variantStockLimit : 
+      (product.stock !== null && product.stock !== undefined ? product.stock : null)
+
+    if (effectiveStock !== null) {
       const currentQty = existingIndex >= 0 ? cart[existingIndex].quantity : 0
-      if (currentQty >= product.stock) {
+      if (effectiveStock <= 0) {
         await sock.sendMessage(from, {
-          text: `عذراً، الكمية المتاحة من *${product.name}* هي ${product.stock} فقط.`
+          text: `عذراً، هذا الخيار غير متوفر حالياً 😔`
+        })
+        return
+      }
+      if (currentQty >= effectiveStock) {
+        await sock.sendMessage(from, {
+          text: `عذراً، الكمية المتاحة من *${product.name}*${variantInfo ? ` (${variantInfo})` : ''} هي ${effectiveStock} فقط.`
         })
         return
       }
@@ -2709,7 +2736,8 @@ ${productsList}
       // Add with quantity
       const cartKey = `cart:${shop.id}:${customerPhone}`;
       const cartData = await redis.get(cartKey);
-      const cart = cartData ? JSON.parse(cartData) : [];
+      let cart = []
+      try { cart = cartData ? (typeof cartData === 'string' ? JSON.parse(cartData) : cartData) : [] } catch(e) { cart = [] }
 
       const existingIndex = cart.findIndex(i => i.productId === product.id);
       if (existingIndex >= 0) {

@@ -1381,7 +1381,7 @@
     const nq = Math.max(1, modalQty + delta)
     const p = allProducts[modalIdx]
     const stock = getEffectiveStock(p, modalVariants)
-    if (stock !== null && nq > stock) { showToast('الكمية المتاحة: ' + stock + ' فقط'); return }
+    if (stock !== null && nq > stock) { showToast('وصلت للحد الأقصى المتاح حالياً'); return }
     modalQty = nq
     document.getElementById('modalQtyVal').textContent = modalQty
   }
@@ -1401,10 +1401,10 @@
     })
     if (existIdx >= 0) {
       const nq = cart[existIdx].qty + modalQty
-      if (stock !== null && nq > stock) { showToast('الكمية المتاحة: ' + stock + '، لديك ' + cart[existIdx].qty + ' في السلة'); return }
+      if (stock !== null && nq > stock) { showToast('وصلت للحد الأقصى المتاح حالياً'); return }
       cart[existIdx].qty = nq
     } else {
-      if (stock !== null && modalQty > stock) { showToast('الكمية المتاحة: ' + stock + ' فقط'); return }
+      if (stock !== null && modalQty > stock) { showToast('الكمية المطلوبة غير متوفرة حالياً'); return }
       cart.push({ productIndex: modalIdx, variants: { ...modalVariants }, qty: modalQty })
     }
     closeProductModal()
@@ -1471,7 +1471,7 @@
     else {
       const p = allProducts[cart[ci].productIndex]
       const stock = getEffectiveStock(p, cart[ci].variants)
-      if (stock !== null && nq > stock) { showToast('الكمية المتاحة: ' + stock + ' فقط'); return }
+      if (stock !== null && nq > stock) { showToast('وصلت للحد الأقصى المتاح حالياً'); return }
       cart[ci].qty = nq
     }
     renderCartDrawer()

@@ -568,11 +568,24 @@
             document.getElementById('success').classList.remove('show');
         }
         
-        // Check if already logged in
-        window.addEventListener('load', () => {
+        // Check if already logged in (validate token first to avoid redirect loop)
+        window.addEventListener('load', async () => {
             const token = localStorage.getItem('token');
             if (token) {
-                window.location.href = 'dashboard.html';
+                try {
+                    const res = await fetch(`${API_BASE}/shop/me`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (res.ok) {
+                        window.location.href = 'dashboard.html';
+                    } else {
+                        localStorage.removeItem('token');
+                        localStorage.removeItem('shop');
+                    }
+                } catch {
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('shop');
+                }
             }
         });
     </script>

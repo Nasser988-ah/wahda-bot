@@ -965,6 +965,60 @@
 
     .product-card.out-of-stock { opacity: 0.65; }
     .product-card.out-of-stock .qty-control { display: none; }
+
+    .add-cart-btn{width:100%;padding:10px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--gold),#e6a800);color:var(--bg);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;touch-action:manipulation;margin-top:auto;display:flex;align-items:center;justify-content:center;gap:6px}
+    .add-cart-btn:active{transform:scale(.96)}
+    .add-cart-btn.in-cart{background:transparent;border:1.5px solid var(--gold);color:var(--gold);font-size:12px}
+    .card-badge{position:absolute;top:8px;right:8px;background:var(--gold);color:var(--bg);min-width:22px;height:22px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;z-index:5;padding:0 6px;box-shadow:0 2px 8px rgba(0,0,0,.4)}
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;backdrop-filter:blur(4px)}
+    .modal-overlay.open{display:block}
+    .product-modal{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-radius:24px 24px 0 0;z-index:501;max-height:85vh;overflow-y:auto;transform:translateY(100%);transition:transform .35s cubic-bezier(.32,.72,0,1);padding-bottom:env(safe-area-inset-bottom)}
+    .product-modal.open{transform:translateY(0)}
+    .modal-handle{width:40px;height:4px;background:rgba(255,255,255,.2);border-radius:2px;margin:12px auto}
+    .modal-head{display:flex;align-items:center;gap:14px;padding:4px 20px 16px;border-bottom:1px solid var(--border)}
+    .modal-pimg{width:72px;height:72px;border-radius:14px;object-fit:cover;background:var(--bg);flex-shrink:0}
+    .modal-pinfo{flex:1;min-width:0}
+    .modal-pname{font-size:16px;font-weight:700;margin-bottom:2px}
+    .modal-pprice{color:var(--gold);font-size:18px;font-weight:800}
+    .modal-pprice::after{content:' جنيه';font-size:12px;font-weight:400;color:var(--muted)}
+    .modal-body{padding:16px 20px}
+    .modal-vgroup{margin-bottom:14px}
+    .modal-vlabel{font-size:13px;font-weight:700;color:var(--muted);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+    .modal-vlabel .chk{color:#22c55e;display:none}
+    .modal-vlabel .chk.on{display:inline}
+    .modal-vopts{display:flex;flex-wrap:wrap;gap:8px}
+    .modal-qty-row{display:flex;align-items:center;justify-content:center;gap:20px;padding:16px 0;border-top:1px solid var(--border)}
+    .modal-qty-btn{width:42px;height:42px;border-radius:50%;border:1.5px solid var(--border);background:transparent;color:var(--text);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+    .modal-qty-btn:active{background:var(--gold);color:var(--bg);border-color:var(--gold)}
+    .modal-qty-val{font-size:22px;font-weight:800;min-width:40px;text-align:center}
+    .modal-add-btn{width:calc(100% - 40px);margin:0 20px 20px;padding:14px;border:none;border-radius:14px;background:linear-gradient(135deg,var(--gold),#e6a800);color:var(--bg);font-size:16px;font-weight:800;cursor:pointer;font-family:inherit}
+    .modal-add-btn:active{transform:scale(.97)}
+    .drawer-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:600;backdrop-filter:blur(4px)}
+    .drawer-overlay.open{display:block}
+    .cart-drawer{position:fixed;bottom:0;left:0;right:0;background:var(--bg);border-radius:24px 24px 0 0;z-index:601;max-height:80vh;display:flex;flex-direction:column;transform:translateY(100%);transition:transform .35s cubic-bezier(.32,.72,0,1);padding-bottom:env(safe-area-inset-bottom)}
+    .cart-drawer.open{transform:translateY(0)}
+    .drawer-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 14px;border-bottom:1px solid var(--border)}
+    .drawer-title{font-size:18px;font-weight:800}
+    .drawer-clear{font-size:13px;color:#ef4444;background:none;border:none;cursor:pointer;font-family:inherit;font-weight:600}
+    .drawer-items{flex:1;overflow-y:auto;padding:8px 20px}
+    .ci{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
+    .ci-img{width:52px;height:52px;border-radius:10px;object-fit:cover;background:var(--card);flex-shrink:0}
+    .ci-info{flex:1;min-width:0}
+    .ci-name{font-size:13px;font-weight:700;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .ci-var{font-size:11px;color:var(--muted);margin-bottom:2px}
+    .ci-price{font-size:13px;font-weight:800;color:var(--gold)}
+    .ci-ctrls{display:flex;align-items:center;gap:6px;flex-shrink:0}
+    .ci-qbtn{width:26px;height:26px;border-radius:50%;border:1px solid var(--border);background:transparent;color:var(--text);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+    .ci-qty{font-size:14px;font-weight:700;min-width:18px;text-align:center}
+    .ci-del{color:#ef4444;background:none;border:none;font-size:16px;cursor:pointer;padding:4px}
+    .drawer-foot{padding:14px 20px;border-top:1px solid var(--border);background:var(--card)}
+    .drawer-total{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+    .drawer-total-l{font-size:14px;color:var(--muted)}
+    .drawer-total-v{font-size:20px;font-weight:900;color:var(--gold)}
+    .drawer-total-v::after{content:' جنيه';font-size:12px;font-weight:400}
+    .drawer-order-btn{width:100%;padding:14px;border:none;border-radius:14px;background:linear-gradient(135deg,#25D366,#128C7E);color:white;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px}
+    .drawer-order-btn:active{transform:scale(.97)}
+    .drawer-empty{text-align:center;padding:40px 20px;color:var(--muted)}
   </style>
 </head>
 <body>
@@ -985,12 +1039,12 @@
 <div class="category-bar" id="categoryBar"></div>
 
 <div class="cart-bar" id="cartBar">
-  <div class="cart-info">
+  <div class="cart-info" onclick="openCartDrawer()" style="cursor:pointer">
     <span class="cart-count" id="cartCount">0 منتجات</span>
     <span class="cart-total" id="cartTotal">0 جنيه</span>
   </div>
-  <button class="order-btn" onclick="sendOrder()">
-    أرسل الطلب 🛒
+  <button class="order-btn" onclick="openCartDrawer()">
+    عرض السلة 🛒
   </button>
 </div>
 
@@ -1010,6 +1064,44 @@
   <div class="lightbox-caption" id="lightboxCaption"></div>
 </div>
 
+<!-- Product Modal (Bottom Sheet) -->
+<div class="modal-overlay" id="productModal" onclick="closeProductModal()"></div>
+<div class="product-modal" id="productSheet" onclick="event.stopPropagation()">
+  <div class="modal-handle"></div>
+  <div class="modal-head">
+    <img class="modal-pimg" id="modalImg" src="" alt="">
+    <div class="modal-pinfo">
+      <div class="modal-pname" id="modalName"></div>
+      <div class="modal-pprice" id="modalPrice"></div>
+    </div>
+  </div>
+  <div class="modal-body" id="modalVariantsBody"></div>
+  <div class="modal-qty-row">
+    <button class="modal-qty-btn" onclick="modalChangeQty(-1)">−</button>
+    <span class="modal-qty-val" id="modalQtyVal">1</span>
+    <button class="modal-qty-btn" onclick="modalChangeQty(1)">+</button>
+  </div>
+  <button class="modal-add-btn" onclick="addToCartFromModal()">أضف للسلة</button>
+</div>
+
+<!-- Cart Drawer -->
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeCartDrawer()"></div>
+<div class="cart-drawer" id="cartDrawer">
+  <div class="modal-handle"></div>
+  <div class="drawer-head">
+    <span class="drawer-title">سلة المشتريات</span>
+    <button class="drawer-clear" onclick="clearCart()">مسح الكل</button>
+  </div>
+  <div class="drawer-items" id="drawerItems"></div>
+  <div class="drawer-foot" id="drawerFoot">
+    <div class="drawer-total">
+      <span class="drawer-total-l">الإجمالي</span>
+      <span class="drawer-total-v" id="drawerTotalVal">0</span>
+    </div>
+    <button class="drawer-order-btn" onclick="sendOrder()">أرسل الطلب عبر واتساب 💬</button>
+  </div>
+</div>
+
 <script>
   // XSS sanitization - escape HTML in user-generated content
   function esc(str) {
@@ -1021,14 +1113,18 @@
 
   // Extract shopId from URL path (e.g., /store/cmmsk09t1000a136jwrgk01jg)
   const pathParts = window.location.pathname.split('/')
-  const shopId = pathParts[pathParts.length - 1] // Get the last part of the path
-  const phone = '' // Phone is not needed for public store
+  const shopId = pathParts[pathParts.length - 1]
   
   let allProducts = []
   let filteredProducts = []
-  let quantities = {}
+  let cart = [] // { productIndex, variants: {gi: optName}, qty }
   let shopData = null
   let activeCategory = null
+  let modalIdx = null
+  let modalVariants = {}
+  let modalQty = 1
+  let modalGroups = []
+  let modalImgMap = {}
   
   // Search functionality
   const searchInput = document.getElementById('searchInput')
@@ -1126,6 +1222,15 @@
     }
   }
   
+  function getProductCartQty(idx) {
+    return cart.filter(item => item.productIndex === idx).reduce((s, i) => s + i.qty, 0)
+  }
+
+  function hasProductVariants(p) {
+    if (!p.variants) return false
+    try { return JSON.parse(p.variants).length > 0 } catch { return false }
+  }
+
   function renderProducts() {
     const grid = document.getElementById('productsGrid')
     
@@ -1146,350 +1251,282 @@
     }
     
     grid.innerHTML = filteredProducts.map((p, i) => {
-      const originalIndex = allProducts.findIndex(ap => ap.id === p.id)
-      const qty = quantities[originalIndex] || 0
-      const isOutOfStock = p.stock !== null && 
-                         p.stock !== undefined && 
-                         p.stock <= 0
+      const idx = allProducts.findIndex(ap => ap.id === p.id)
+      const inCart = getProductCartQty(idx)
+      const isOOS = p.stock !== null && p.stock !== undefined && p.stock <= 0
+      const hasV = hasProductVariants(p)
       return `
-        <div class="product-card ${isOutOfStock ? 'out-of-stock' : ''}" data-product-id="${p.id}">
-          <div class="product-image-wrapper" onclick="openLightbox('${esc(p.imageUrl || '')}', '${esc(p.name)}')">
+        <div class="product-card ${isOOS ? 'out-of-stock' : ''}" data-product-id="${p.id}">
+          <div class="product-image-wrapper" onclick="${isOOS ? `openLightbox('${esc(p.imageUrl||'')}','${esc(p.name)}')` : `openProductModal(${idx})`}">
+            ${inCart > 0 ? `<span class="card-badge">${inCart}</span>` : ''}
             ${p.imageUrl 
-              ? `<img class="product-image" src="${esc(p.imageUrl)}" alt="${esc(p.name)}" loading="lazy" onload="smartFitImage(this)" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">` 
-              : ''
-            }
-            <div class="product-image placeholder" style="display: ${p.imageUrl ? 'none' : 'flex'}">🛍️</div>
-            ${p.imageUrl ? '<span class="zoom-hint">🔍 تكبير</span>' : ''}
-            ${isOutOfStock 
-              ? `<div class="out-of-stock-overlay">سيتوفر قريباً</div>` 
+              ? `<img class="product-image" src="${esc(p.imageUrl)}" alt="${esc(p.name)}" loading="lazy" onload="smartFitImage(this)" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` 
               : ''}
+            <div class="product-image placeholder" style="display:${p.imageUrl ? 'none' : 'flex'}">🛍️</div>
+            ${isOOS ? '<div class="out-of-stock-overlay">سيتوفر قريباً</div>' : ''}
           </div>
           <div class="product-info">
             ${p.category ? `<div class="product-category">${esc(p.category)}</div>` : ''}
             <div class="product-name">${esc(p.name)}</div>
             ${p.description ? `<div class="product-desc">${esc(p.description)}</div>` : ''}
             <div class="product-price">${p.price}</div>
-            ${!isOutOfStock ? renderVariantSelectors(p) : ''}
-            <div class="quantity-control">
-              <button class="qty-btn ${qty > 0 ? 'has-items' : ''}" onclick="changeQty(${originalIndex}, -1)">−</button>
-              <span class="qty-display" id="qty-${originalIndex}">${qty}</span>
-              <button class="qty-btn ${qty > 0 ? 'has-items' : ''}" onclick="changeQty(${originalIndex}, 1)">+</button>
-            </div>
+            ${!isOOS ? `
+              <button class="add-cart-btn ${inCart > 0 ? 'in-cart' : ''}" onclick="openProductModal(${idx})">
+                ${inCart > 0 ? 'في السلة ('+inCart+') · تعديل' : (hasV ? 'اختر الخيارات' : 'أضف للسلة +')}
+              </button>` : ''}
           </div>
-        </div>
-      `
+        </div>`
     }).join('')
   }
   
-  // Smart image fitting - detect aspect ratio and choose best fit
   function smartFitImage(img) {
-    const natW = img.naturalWidth
-    const natH = img.naturalHeight
-    if (!natW || !natH) return
-    const ratio = natW / natH
-    // Very tall (portrait) or very wide (panoramic) images look bad with cover
-    // Use contain for extreme ratios, cover for normal photos
-    if (ratio < 0.5 || ratio > 2.5) {
-      img.classList.add('contain-fit')
-    }
+    const r = img.naturalWidth / img.naturalHeight
+    if (r < 0.5 || r > 2.5) img.classList.add('contain-fit')
   }
 
-  // Lightbox functions
-  function openLightbox(imageUrl, caption) {
-    if (!imageUrl) return
-    const lightbox = document.getElementById('lightbox')
-    const img = document.getElementById('lightboxImg')
-    const cap = document.getElementById('lightboxCaption')
-    
-    img.src = imageUrl
-    cap.textContent = caption
-    lightbox.classList.add('visible')
+  function openLightbox(url, caption) {
+    if (!url) return
+    document.getElementById('lightboxImg').src = url
+    document.getElementById('lightboxCaption').textContent = caption
+    document.getElementById('lightbox').classList.add('visible')
     document.body.style.overflow = 'hidden'
   }
-  
+
   function closeLightbox() {
-    const lightbox = document.getElementById('lightbox')
-    lightbox.classList.remove('visible')
+    document.getElementById('lightbox').classList.remove('visible')
     document.body.style.overflow = ''
   }
-  
-  // Close lightbox on escape key
+
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeLightbox()
+    if (e.key === 'Escape') { closeLightbox(); closeProductModal(); closeCartDrawer() }
   })
-  
-  function changeQty(index, delta) {
-    // NEW: check variants selected before adding
-    if (delta === 1) {
-      const p = allProducts[index]
-      if (p?.variants) {
-        let groups = []
-        try { groups = JSON.parse(p.variants) } catch {}
-        if (groups.length > 0) {
-          const result = getVariantInfo(p.id)
-          if (result === false) {
-            showToast('يرجى اختيار جميع الخيارات أولاً')
-            return
+
+  // === STOCK HELPER ===
+  function getEffectiveStock(product, variants) {
+    let stock = null
+    if (product.variants) {
+      try {
+        const groups = JSON.parse(product.variants)
+        for (let gi = 0; gi < groups.length; gi++) {
+          const g = groups[gi]
+          if (g.stock && variants[gi]) {
+            const os = g.stock[variants[gi]]
+            if (os !== null && os !== undefined) stock = stock === null ? os : Math.min(stock, os)
           }
         }
-      }
-      // Check per-variant stock limit
-      let effectiveStock = null
-      if (p?.variants) {
-        try {
-          const vGroups = JSON.parse(p.variants)
-          const sel = selectedVariants[p.id] || {}
-          for (let gi = 0; gi < vGroups.length; gi++) {
-            const g = vGroups[gi]
-            if (g.stock && sel[gi]) {
-              const optStock = g.stock[sel[gi]]
-              if (optStock !== null && optStock !== undefined) {
-                effectiveStock = effectiveStock === null ? optStock : Math.min(effectiveStock, optStock)
-              }
-            }
-          }
-        } catch {}
-      }
-      // Fall back to product-level stock
-      if (effectiveStock === null && p?.stock !== null && p?.stock !== undefined) {
-        effectiveStock = p.stock
-      }
-      if (effectiveStock !== null) {
-        const current = quantities[index] || 0
-        if (current >= effectiveStock) {
-          showToast(`الكمية المتاحة: ${effectiveStock} فقط`)
-          return
-        }
-      }
+      } catch {}
     }
-    
-    const current = quantities[index] || 0
-    const newQty = Math.max(0, current + delta)
-    quantities[index] = newQty
-    
-    // Update display
-    const qtyElements = document.querySelectorAll(`#qty-${index}`)
-    qtyElements.forEach(el => el.textContent = newQty)
-    
-    // Update button styles
-    const btns = document.querySelectorAll(`.qty-btn[onclick*="${index}"]`)
-    btns.forEach(btn => {
-      if (newQty > 0) {
-        btn.classList.add('has-items')
-      } else {
-        btn.classList.remove('has-items')
-      }
-    })
-    
-    // Animate cart
-    const cartBar = document.getElementById('cartBar')
-    cartBar.classList.add('cart-updating')
-    setTimeout(() => cartBar.classList.remove('cart-updating'), 300)
-    
-    updateCartBar()
-  }
-  
-  function updateCartBar() {
-    const cartBar = document.getElementById('cartBar')
-    const items = Object.entries(quantities).filter(([_, q]) => q > 0)
-    
-    if (items.length === 0) {
-      cartBar.classList.remove('visible')
-      return
-    }
-    
-    const total = items.reduce((sum, [i, q]) => 
-      sum + allProducts[i].price * q, 0
-    )
-    const itemCount = items.reduce((sum, [_, q]) => sum + q, 0)
-    
-    document.getElementById('cartCount').textContent = 
-      `${itemCount} ${itemCount === 1 ? 'منتج' : 'منتجات'}`
-    document.getElementById('cartTotal').textContent = 
-      `${total} جنيه`
-    cartBar.classList.add('visible')
-  }
-  
-  function sendOrder() {
-    const items = Object.entries(quantities).filter(([_, q]) => q > 0)
-    
-    if (items.length === 0) {
-      alert('يرجى اختيار منتج واحد على الأقل')
-      return
-    }
-    
-    // Build order message with variants
-    const lines = items.map(([index, q]) => {
-      const p = allProducts[index]
-      if (!p) return null
-      const variantInfo = getVariantInfo(p.id)
-      return variantInfo
-        ? `${p.name} (${variantInfo}) × ${q}` 
-        : `${p.name} × ${q}` 
-    }).filter(Boolean)
-    
-    const total = items.reduce((sum, [index, q]) => 
-      sum + allProducts[index].price * q, 0
-    )
-    
-    const message = 
-      `طلب جديد من المتجر:\n` +
-      `━━━━━━━━━━━━━━━━━━━━\n` +
-      lines.join('\n') +
-      `\n━━━━━━━━━━━━━━━━━━━━\n` +
-      `الإجمالي: ${total} جنيه\n` +
-      `[ORDER_FROM_WEBSITE]`
-    
-    // Use shop's WhatsApp number from API response
-    const phoneNumber = shopData?.whatsappNumber || ''
-    
-    // Debug: Log the phone number to see what we're getting
-    console.log('Shop WhatsApp number:', phoneNumber)
-    console.log('Shop data:', shopData)
-    
-    if (!phoneNumber) {
-      alert('رقم الواتساب غير متاح لهذا المتجر')
-      return
-    }
-    
-    // Clean phone number - remove any non-digits and ensure proper format
-    const cleanPhone = phoneNumber.replace(/\D/g, '')
-    console.log('Clean phone number:', cleanPhone)
-    
-    const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`
-    console.log('WhatsApp URL:', waUrl)
-    window.open(waUrl, '_blank')
+    if (stock === null && product.stock !== null && product.stock !== undefined) stock = product.stock
+    return stock
   }
 
-  // VARIANT MANAGEMENT
-  const selectedVariants = {}
+  // === PRODUCT MODAL (BOTTOM SHEET) ===
+  function openProductModal(idx) {
+    modalIdx = idx
+    modalVariants = {}
+    modalQty = 1
+    const p = allProducts[idx]
+    try { modalGroups = JSON.parse(p.variants || '[]') } catch { modalGroups = [] }
+    try { modalImgMap = p.variantImages ? JSON.parse(p.variantImages) : {} } catch { modalImgMap = {} }
 
-  function renderVariantSelectors(product) {
-    if (!product.variants) return ''
-    let groups = []
-    try { groups = JSON.parse(product.variants) } catch { return '' }
-    if (groups.length === 0) return ''
+    document.getElementById('modalImg').src = p.imageUrl || ''
+    document.getElementById('modalImg').style.display = p.imageUrl ? '' : 'none'
+    document.getElementById('modalName').textContent = p.name
+    document.getElementById('modalPrice').textContent = p.price
 
-    let imgMap = {}
-    try {
-      imgMap = product.variantImages
-        ? JSON.parse(product.variantImages) : {}
-    } catch {}
-
-    const hasAnyImages = groups.some(g => g.options.some(opt => imgMap[opt]))
-
-    return `<div class="variant-selector-wrap" style="margin-bottom:10px">` +
-      groups.map((g, gi) => {
-        const sel = selectedVariants[product.id]
-        const isSelected = sel && sel[gi] !== undefined
-        return `
-        <div class="variant-group">
-          <div class="variant-group-label">
-            ${g.name}
-            <span class="choose-hint ${isSelected ? 'done' : ''}" id="hint-${product.id}-${gi}">
-              ${isSelected ? '✓' : '← اضغط للاختيار'}
-            </span>
-          </div>
-          <div class="variant-options">
-            ${g.options.map(opt => {
-              const img = imgMap[opt]
-              const optStock = g.stock ? g.stock[opt] : null
-              const isOOS = optStock !== null && optStock !== undefined && optStock <= 0
-              const stockLabel = optStock !== null && optStock !== undefined && optStock > 0 && optStock <= 5
-                ? ` (${optStock})` : ''
-              if (img) {
-                return `<img
-                  src="${img}"
-                  class="variant-chip-img ${isOOS ? 'out-of-stock-opt' : ''}"
-                  title="${opt}${isOOS ? ' - غير متوفر' : ''}"
-                  alt="${opt}"
-                  data-pid="${product.id}"
-                  data-gi="${gi}"
-                  data-val="${opt}"
-                  data-img="${img}"
-                  onclick="selectChip(this,'${product.id}',${gi},'${opt}')">`
-              }
-              return `<button
-                class="variant-chip ${isOOS ? 'out-of-stock-opt' : ''}"
-                data-pid="${product.id}"
-                data-gi="${gi}"
-                data-val="${opt}"
-                ${isOOS ? 'disabled' : ''}
-                onclick="selectChip(this,'${product.id}',${gi},'${opt}')">
-                ${opt}${stockLabel}${isOOS ? ' ❌' : ''}
-              </button>`
+    const vBody = document.getElementById('modalVariantsBody')
+    if (modalGroups.length > 0) {
+      vBody.style.display = ''
+      vBody.innerHTML = modalGroups.map((g, gi) => `
+        <div class="modal-vgroup">
+          <div class="modal-vlabel">${esc(g.name)} <span class="chk" id="mchk-${gi}">✓</span></div>
+          <div class="modal-vopts">
+            ${g.options.map((opt, oi) => {
+              const os = g.stock ? g.stock[opt] : null
+              const dead = os !== null && os !== undefined && os <= 0
+              const low = os !== null && os !== undefined && os > 0 && os <= 5 ? ' ('+os+')' : ''
+              const img = modalImgMap[opt]
+              if (img) return '<img src="'+esc(img)+'" class="variant-chip-img'+(dead?' out-of-stock-opt':'')+'" title="'+esc(opt)+'" alt="'+esc(opt)+'" onclick="modalSelectVariant('+gi+','+oi+',this)">'
+              return '<button class="variant-chip'+(dead?' out-of-stock-opt':'')+'" '+(dead?'disabled ':'')+' onclick="modalSelectVariant('+gi+','+oi+',this)">'+esc(opt)+low+(dead?' ❌':'')+'</button>'
             }).join('')}
           </div>
-        </div>`
-      }).join('') +
-      `<div class="variant-preview-container" id="vpreview-${product.id}"></div>
-       <div class="variant-required-msg" id="vreq-${product.id}">⚠️ يرجى اختيار جميع الخيارات</div>
-      </div>`
+        </div>`).join('')
+    } else {
+      vBody.style.display = 'none'
+      vBody.innerHTML = ''
+    }
+
+    document.getElementById('modalQtyVal').textContent = modalQty
+    document.getElementById('productModal').classList.add('open')
+    document.getElementById('productSheet').classList.add('open')
+    document.body.style.overflow = 'hidden'
   }
 
-  function selectChip(el, pid, gi, val) {
-    // Remove selected from same group
-    document.querySelectorAll(
-      `[data-pid="${pid}"][data-gi="${gi}"]` 
-    ).forEach(e => e.classList.remove('selected'))
+  function closeProductModal() {
+    document.getElementById('productModal').classList.remove('open')
+    document.getElementById('productSheet').classList.remove('open')
+    document.body.style.overflow = ''
+  }
+
+  function modalSelectVariant(gi, oi, el) {
+    el.parentElement.querySelectorAll('.variant-chip,.variant-chip-img').forEach(e => e.classList.remove('selected'))
     el.classList.add('selected')
-    if (!selectedVariants[pid]) selectedVariants[pid] = {}
-    selectedVariants[pid][gi] = val
-
-    // Update hint label
-    const hint = document.getElementById(`hint-${pid}-${gi}`)
-    if (hint) {
-      hint.textContent = '✓'
-      hint.classList.add('done')
-    }
-
-    // Hide required message if was showing
-    const reqMsg = document.getElementById(`vreq-${pid}`)
-    if (reqMsg) reqMsg.classList.remove('show')
-
-    // Show image preview if variant has an image
-    const imgSrc = el.dataset?.img || el.getAttribute('data-img')
-    const previewContainer = document.getElementById(`vpreview-${pid}`)
-    if (previewContainer && imgSrc) {
-      previewContainer.innerHTML = `<img src="${imgSrc}" class="variant-preview-img" alt="${val}" onclick="openLightbox('${imgSrc}', '${val}')">`
-    }
+    modalVariants[gi] = modalGroups[gi].options[oi]
+    const chk = document.getElementById('mchk-' + gi)
+    if (chk) chk.classList.add('on')
   }
 
-  function getVariantInfo(pid) {
-    const p = allProducts.find(p => p.id === pid)
-    if (!p?.variants) return null
-    let groups = []
-    try { groups = JSON.parse(p.variants) } catch { return null }
-    if (groups.length === 0) return null
-    const sel = selectedVariants[pid] || {}
-    const allDone = groups.every((_, i) => sel[i] !== undefined)
-    if (!allDone) {
-      // Show required message
-      const reqMsg = document.getElementById(`vreq-${pid}`)
-      if (reqMsg) reqMsg.classList.add('show')
-      return false
+  function modalChangeQty(delta) {
+    const nq = Math.max(1, modalQty + delta)
+    const p = allProducts[modalIdx]
+    const stock = getEffectiveStock(p, modalVariants)
+    if (stock !== null && nq > stock) { showToast('الكمية المتاحة: ' + stock + ' فقط'); return }
+    modalQty = nq
+    document.getElementById('modalQtyVal').textContent = modalQty
+  }
+
+  function addToCartFromModal() {
+    const p = allProducts[modalIdx]
+    if (modalGroups.length > 0) {
+      const allDone = modalGroups.every((_, i) => modalVariants[i] !== undefined)
+      if (!allDone) { showToast('يرجى اختيار جميع الخيارات أولاً'); return }
     }
-    return groups.map((g, i) => `${g.name}: ${sel[i]}`).join('، ')
+    const stock = getEffectiveStock(p, modalVariants)
+    // Check if same product+variant combo already in cart
+    const existIdx = cart.findIndex(item => {
+      if (item.productIndex !== modalIdx) return false
+      if (modalGroups.length === 0) return true
+      return modalGroups.every((_, gi) => item.variants[gi] === modalVariants[gi])
+    })
+    if (existIdx >= 0) {
+      const nq = cart[existIdx].qty + modalQty
+      if (stock !== null && nq > stock) { showToast('الكمية المتاحة: ' + stock + '، لديك ' + cart[existIdx].qty + ' في السلة'); return }
+      cart[existIdx].qty = nq
+    } else {
+      if (stock !== null && modalQty > stock) { showToast('الكمية المتاحة: ' + stock + ' فقط'); return }
+      cart.push({ productIndex: modalIdx, variants: { ...modalVariants }, qty: modalQty })
+    }
+    closeProductModal()
+    updateCartBar()
+    renderProducts()
+    showToast('تمت الإضافة للسلة ✓')
+  }
+
+  // === CART DRAWER ===
+  function openCartDrawer() {
+    renderCartDrawer()
+    document.getElementById('drawerOverlay').classList.add('open')
+    document.getElementById('cartDrawer').classList.add('open')
+    document.body.style.overflow = 'hidden'
+  }
+
+  function closeCartDrawer() {
+    document.getElementById('drawerOverlay').classList.remove('open')
+    document.getElementById('cartDrawer').classList.remove('open')
+    document.body.style.overflow = ''
+  }
+
+  function getCartItemVariantStr(item) {
+    const p = allProducts[item.productIndex]
+    if (!p.variants) return ''
+    let groups = []
+    try { groups = JSON.parse(p.variants) } catch { return '' }
+    return groups.map((g, i) => item.variants[i] ? g.name + ': ' + item.variants[i] : '').filter(Boolean).join('، ')
+  }
+
+  function renderCartDrawer() {
+    const container = document.getElementById('drawerItems')
+    const foot = document.getElementById('drawerFoot')
+    if (cart.length === 0) {
+      container.innerHTML = '<div class="drawer-empty"><div style="font-size:48px;margin-bottom:12px">🛒</div><p>السلة فارغة</p></div>'
+      foot.style.display = 'none'
+      return
+    }
+    foot.style.display = ''
+    container.innerHTML = cart.map((item, ci) => {
+      const p = allProducts[item.productIndex]
+      const vs = getCartItemVariantStr(item)
+      const lt = p.price * item.qty
+      return '<div class="ci">' +
+        (p.imageUrl ? '<img class="ci-img" src="'+esc(p.imageUrl)+'" alt="">' : '<div class="ci-img" style="display:flex;align-items:center;justify-content:center;font-size:24px">🛍️</div>') +
+        '<div class="ci-info"><div class="ci-name">'+esc(p.name)+'</div>' +
+        (vs ? '<div class="ci-var">'+esc(vs)+'</div>' : '') +
+        '<div class="ci-price">'+lt+' جنيه</div></div>' +
+        '<div class="ci-ctrls">' +
+        '<button class="ci-qbtn" onclick="updateCartItem('+ci+',-1)">−</button>' +
+        '<span class="ci-qty">'+item.qty+'</span>' +
+        '<button class="ci-qbtn" onclick="updateCartItem('+ci+',1)">+</button>' +
+        '<button class="ci-del" onclick="removeCartItem('+ci+')">🗑</button>' +
+        '</div></div>'
+    }).join('')
+    const total = cart.reduce((s, item) => s + allProducts[item.productIndex].price * item.qty, 0)
+    document.getElementById('drawerTotalVal').textContent = total
+  }
+
+  function updateCartItem(ci, delta) {
+    if (!cart[ci]) return
+    const nq = cart[ci].qty + delta
+    if (nq <= 0) { cart.splice(ci, 1) }
+    else {
+      const p = allProducts[cart[ci].productIndex]
+      const stock = getEffectiveStock(p, cart[ci].variants)
+      if (stock !== null && nq > stock) { showToast('الكمية المتاحة: ' + stock + ' فقط'); return }
+      cart[ci].qty = nq
+    }
+    renderCartDrawer()
+    updateCartBar()
+    renderProducts()
+  }
+
+  function removeCartItem(ci) {
+    cart.splice(ci, 1)
+    renderCartDrawer()
+    updateCartBar()
+    renderProducts()
+  }
+
+  function clearCart() {
+    if (cart.length === 0) return
+    if (!confirm('مسح جميع المنتجات من السلة؟')) return
+    cart = []
+    renderCartDrawer()
+    updateCartBar()
+    renderProducts()
+  }
+
+  function updateCartBar() {
+    const cartBar = document.getElementById('cartBar')
+    if (cart.length === 0) { cartBar.classList.remove('visible'); return }
+    const total = cart.reduce((s, item) => s + allProducts[item.productIndex].price * item.qty, 0)
+    const count = cart.reduce((s, item) => s + item.qty, 0)
+    document.getElementById('cartCount').textContent = count + ' ' + (count === 1 ? 'منتج' : 'منتجات')
+    document.getElementById('cartTotal').textContent = total + ' جنيه'
+    cartBar.classList.add('visible')
+  }
+
+  function sendOrder() {
+    if (cart.length === 0) { showToast('السلة فارغة'); return }
+    const lines = cart.map(item => {
+      const p = allProducts[item.productIndex]
+      const vs = getCartItemVariantStr(item)
+      return vs ? p.name + ' (' + vs + ') × ' + item.qty : p.name + ' × ' + item.qty
+    })
+    const total = cart.reduce((s, item) => s + allProducts[item.productIndex].price * item.qty, 0)
+    const message = 'طلب جديد من المتجر:\n━━━━━━━━━━━━━━━━━━━━\n' +
+      lines.join('\n') + '\n━━━━━━━━━━━━━━━━━━━━\nالإجمالي: ' + total + ' جنيه\n[ORDER_FROM_WEBSITE]'
+    const phoneNumber = shopData?.whatsappNumber || ''
+    if (!phoneNumber) { showToast('رقم الواتساب غير متاح'); return }
+    const cleanPhone = phoneNumber.replace(/\D/g, '')
+    window.open('https://wa.me/' + cleanPhone + '?text=' + encodeURIComponent(message), '_blank')
+    closeCartDrawer()
   }
 
   function showToast(message) {
-    // Simple toast implementation
     const toast = document.createElement('div')
-    toast.style.cssText = `
-      position: fixed;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0,0,0,0.8);
-      color: white;
-      padding: 12px 24px;
-      border-radius: 8px;
-      z-index: 10000;
-      font-size: 14px;
-    `
+    toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.9);color:white;padding:12px 24px;border-radius:12px;z-index:10000;font-size:14px;font-family:inherit;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.1);box-shadow:0 4px 20px rgba(0,0,0,.4)'
     toast.textContent = message
     document.body.appendChild(toast)
-    setTimeout(() => toast.remove(), 3000)
+    setTimeout(() => toast.remove(), 2500)
   }
   
   // Apply customization from shop data

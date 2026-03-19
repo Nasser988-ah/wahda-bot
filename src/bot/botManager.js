@@ -492,12 +492,19 @@ class BotManager {
             }
           }
 
+          // Merge with any previous partial selections
+          if (pendingVariant.selected) {
+            for (const [gi, val] of Object.entries(pendingVariant.selected)) {
+              if (!matched[gi]) matched[gi] = val
+            }
+          }
+
           const matchedCount = Object.keys(matched).length
           if (matchedCount === variantGroups.length) {
-            // All groups matched - build variant info
+            // All groups matched (possibly combining previous + current) - build variant info
             variantInfo = Object.values(matched).map(m => `${m.name}: ${m.value}`).join(' - ')
           } else if (matchedCount > 0 && matchedCount < variantGroups.length) {
-            // Partial match - save what we have, ask for the rest
+            // Still partial - save merged selections, ask for the rest
             const remaining = variantGroups.filter((_, i) => !matched[i])
             const partialInfo = Object.values(matched).map(m => `✅ ${m.name}: ${m.value}`).join('\n')
             await sock.sendMessage(from, {
@@ -513,37 +520,10 @@ class BotManager {
                     }).join('\n') +
                     `\n\nأو اكتب *إلغاء* للرجوع`
             })
-            // Update pending with partial selections
+            // Save merged selections (previous + current)
             pendingVariant.selected = matched
             await redis.set(pendingVariantKey, JSON.stringify(pendingVariant), { ex: 300 })
             return
-          }
-        }
-
-        // Method 3: Check if previous partial selection exists and this completes it
-        if (!variantInfo && pendingVariant.selected) {
-          const prevMatched = pendingVariant.selected
-          const inputWords = trimmedText.split(/[\s،,]+/).map(w => w.trim()).filter(Boolean)
-          
-          for (let gi = 0; gi < variantGroups.length; gi++) {
-            if (prevMatched[gi]) continue // Already matched
-            const group = variantGroups[gi]
-            for (const opt of group.options) {
-              const normalizedOpt = normalizeArabic(opt)
-              for (const word of inputWords) {
-                if (normalizeArabic(word) === normalizedOpt || 
-                    normalizedOpt.includes(normalizeArabic(word)) ||
-                    normalizeArabic(word).includes(normalizedOpt)) {
-                  prevMatched[gi] = { name: group.name, value: opt }
-                  break
-                }
-              }
-              if (prevMatched[gi]) break
-            }
-          }
-
-          if (Object.keys(prevMatched).length === variantGroups.length) {
-            variantInfo = Object.values(prevMatched).map(m => `${m.name}: ${m.value}`).join(' - ')
           }
         }
 
@@ -1172,12 +1152,10 @@ class BotManager {
         return;
       }
 
-      // Use the new addProductToCartWithVariant method
+      // Use the new addProductToCartWithVariant method (handles variant selection if needed)
       await this.addProductToCartWithVariant(
         sock, from, shop, customerPhone, product
       );
-      
-      console.log(`✅ Added ${product.name} to cart for ${customerPhone}`);
     } catch (error) {
       console.error(`❌ Error in addToCart:`, error);
       await this.safeSendMessage(sock, from, "❌ حدث خطأ. يرجى المحاولة مرة أخرى.", shop.name);

@@ -475,11 +475,278 @@
             transform: translateY(-2px);
             box-shadow: 0 10px 30px rgba(245, 200, 66, 0.3);
         }
+        /* ===== Store Customization Styles ===== */
+        .logo-upload-area {
+            text-align: center;
+            padding: 28px 20px;
+            background: var(--bg);
+            border-radius: 16px;
+            border: 2px dashed var(--border);
+            transition: border-color 0.3s, background 0.3s;
+            cursor: pointer;
+        }
+        .logo-upload-area:hover {
+            border-color: var(--gold);
+            background: var(--gold-dim);
+        }
+        .logo-upload-area img {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 16px;
+            margin-bottom: 12px;
+            border: 3px solid var(--border);
+        }
+        .logo-placeholder {
+            font-size: 56px;
+            margin-bottom: 12px;
+            line-height: 1;
+        }
+        .logo-upload-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 22px;
+            background: var(--card-hover);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text);
+            font-family: 'Cairo', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .logo-upload-btn:hover {
+            border-color: var(--gold);
+            color: var(--gold);
+        }
+
+        .color-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 16px;
+        }
+        .color-item {
+            background: var(--bg);
+            border-radius: 12px;
+            padding: 14px;
+            border: 1px solid var(--border);
+            transition: border-color 0.3s;
+        }
+        .color-item:hover { border-color: rgba(255,255,255,0.15); }
+        .color-item-label {
+            font-size: 0.8rem;
+            color: var(--muted);
+            margin-bottom: 10px;
+            display: block;
+            font-weight: 500;
+        }
+        .color-item-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .color-picker {
+            width: 44px;
+            height: 44px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            cursor: pointer;
+            padding: 0;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .color-picker::-webkit-color-swatch-wrapper { padding: 0; }
+        .color-picker::-webkit-color-swatch { border: none; border-radius: 8px; }
+        .color-picker::-moz-color-swatch { border: none; border-radius: 8px; }
+        .color-text-input {
+            flex: 1;
+            padding: 10px 12px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            direction: ltr;
+            text-align: center;
+            transition: border-color 0.3s;
+            min-width: 0;
+        }
+        .color-text-input:focus {
+            outline: none;
+            border-color: var(--gold);
+        }
+
+        .font-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+            gap: 12px;
+        }
+        .font-option {
+            padding: 16px 8px;
+            border: 2px solid var(--border);
+            border-radius: 14px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: transparent;
+        }
+        .font-option:hover {
+            border-color: rgba(245, 200, 66, 0.4);
+            background: rgba(245, 200, 66, 0.05);
+        }
+        .font-option.selected {
+            border-color: var(--gold) !important;
+            background: var(--gold-dim) !important;
+        }
+        .font-option-sample {
+            font-size: 1.5rem;
+            margin-bottom: 6px;
+            line-height: 1.3;
+        }
+        .font-option-name {
+            font-size: 0.72rem;
+            color: var(--muted);
+            font-family: 'Cairo', sans-serif;
+        }
+
+        .store-preview-frame {
+            background: #0f0f13;
+            border-radius: 18px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+        .store-preview-header {
+            text-align: center;
+            padding: 20px;
+            border-bottom: 1px solid #1a1a22;
+        }
+        .store-preview-logo {
+            font-size: 44px;
+            margin-bottom: 8px;
+            line-height: 1;
+        }
+        .store-preview-name {
+            color: #f5c842;
+            font-size: 1.15rem;
+            font-weight: 700;
+        }
+        .store-preview-products {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            padding: 16px;
+        }
+        .store-preview-card {
+            background: #1a1a22;
+            border-radius: 12px;
+            padding: 14px 10px;
+            text-align: center;
+        }
+        .store-preview-card-icon {
+            font-size: 26px;
+            margin-bottom: 6px;
+        }
+        .store-preview-card-name {
+            color: #ffffff;
+            font-size: 0.82rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .store-preview-card-price {
+            color: #f5c842;
+            font-size: 0.9rem;
+            font-weight: 700;
+        }
+
+        .customization-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+        .customization-actions .save-btn {
+            flex: 1;
+            margin-top: 0;
+        }
+        .reset-btn {
+            padding: 14px 20px;
+            background: transparent;
+            color: var(--error);
+            border: 1px solid var(--error);
+            border-radius: 14px;
+            font-family: 'Cairo', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+        .reset-btn:hover {
+            background: rgba(239, 68, 68, 0.12);
+        }
+
+        /* ===== Global Mobile Responsive ===== */
+        @media (max-width: 768px) {
+            body { padding: 12px; }
+            .container { max-width: 100%; }
+            .header { flex-direction: column; gap: 12px; align-items: stretch; text-align: center; margin-bottom: 20px; padding-bottom: 16px; }
+            .header h1 { font-size: 1.4rem; justify-content: center; }
+            .back-btn { justify-content: center; font-size: 0.85rem; padding: 10px 16px; }
+            .settings-card { padding: 20px 16px; border-radius: 16px; margin-bottom: 16px; }
+            .card-title { font-size: 1.05rem; margin-bottom: 18px; padding-bottom: 12px; }
+            .form-group { margin-bottom: 18px; }
+            .form-input { padding: 12px 14px; font-size: 0.95rem; }
+            .form-label { font-size: 0.9rem; }
+            .input-group { gap: 8px; }
+            .input-prefix { padding: 0 10px; font-size: 0.85rem; }
+            .save-btn { padding: 15px; font-size: 1rem; margin-top: 20px; border-radius: 12px; }
+            .info-box { padding: 14px; }
+            .info-box p { font-size: 0.82rem; }
+            .shop-id-display { flex-direction: column; gap: 10px; text-align: center; padding: 12px 14px; }
+        }
+
         @media (max-width: 600px) {
             .hours-table th { font-size: 0.75rem; padding: 6px; }
             .hours-table td { padding: 8px 6px; }
-            .time-input { width: 90px; font-size: 0.8rem; padding: 6px 8px; }
-            .day-name { font-size: 0.85rem; min-width: 60px; }
+            .time-input { width: 85px; font-size: 0.8rem; padding: 6px 6px; }
+            .day-name { font-size: 0.82rem; min-width: 55px; }
+            .hours-save-btn { font-size: 0.9rem; padding: 14px; }
+            .toggle-container { padding: 12px 14px; }
+            .toggle-label { font-size: 0.9rem; }
+
+            .color-grid { grid-template-columns: 1fr; gap: 10px; }
+            .color-item { padding: 12px; }
+            .font-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+            .font-option { padding: 12px 6px; }
+            .font-option-sample { font-size: 1.3rem; }
+
+            .store-preview-products { gap: 8px; padding: 12px; }
+            .store-preview-card { padding: 10px 6px; }
+            .store-preview-card-icon { font-size: 22px; }
+            .store-preview-card-name { font-size: 0.75rem; }
+            .store-preview-card-price { font-size: 0.8rem; }
+            .store-preview-header { padding: 14px; }
+            .store-preview-name { font-size: 1rem; }
+
+            .customization-actions { flex-direction: column; }
+            .reset-btn { text-align: center; }
+
+            .logo-upload-area img { width: 80px; height: 80px; }
+            .logo-placeholder { font-size: 48px; }
+        }
+
+        @media (max-width: 380px) {
+            body { padding: 8px; }
+            .settings-card { padding: 16px 12px; }
+            .header h1 { font-size: 1.2rem; }
+            .form-input { padding: 10px 12px; font-size: 0.9rem; }
+            .time-input { width: 75px; font-size: 0.75rem; padding: 5px 4px; }
+            .day-name { font-size: 0.78rem; min-width: 48px; }
+            .hours-table th { font-size: 0.7rem; padding: 4px; }
+            .font-grid { grid-template-columns: repeat(2, 1fr); }
         }
     </style>
 </head>
@@ -576,11 +843,11 @@
             <!-- Logo Upload -->
             <div class="form-group">
                 <label class="form-label">🖼️ شعار المتجر</label>
-                <div class="logo-upload-section" style="text-align: center; padding: 20px; background: var(--bg); border-radius: 12px; border: 2px dashed var(--border);">
-                    <img id="logoPreview" src="" alt="Logo" style="display: none; width: 120px; height: 120px; object-fit: cover; border-radius: 16px; margin-bottom: 15px;">
-                    <div id="logoPlaceholder" style="font-size: 60px; margin-bottom: 15px;">🏪</div>
+                <div class="logo-upload-area" onclick="document.getElementById('logoInput').click()">
+                    <img id="logoPreview" src="" alt="Logo" style="display: none;">
+                    <div id="logoPlaceholder" class="logo-placeholder">🏪</div>
                     <input type="file" id="logoInput" accept="image/*" style="display: none;">
-                    <button type="button" class="copy-btn" onclick="document.getElementById('logoInput').click()" style="padding: 12px 24px; font-size: 14px;">
+                    <button type="button" class="logo-upload-btn" onclick="event.stopPropagation(); document.getElementById('logoInput').click()">
                         📷 رفع شعار جديد
                     </button>
                     <p class="form-hint" style="margin-top: 10px;">الصورة الموصى بها: مربعة، 500×500 بكسل</p>
@@ -590,40 +857,40 @@
             <!-- Color Customization -->
             <div class="form-group">
                 <label class="form-label">🎨 ألوان المتجر</label>
-                <div class="color-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+                <div class="color-grid">
                     <div class="color-item">
-                        <label style="font-size: 13px; color: var(--muted); margin-bottom: 6px; display: block;">اللون الرئيسي</label>
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <input type="color" id="primaryColor" value="#f5c842" style="width: 50px; height: 50px; border: none; border-radius: 10px; cursor: pointer;">
-                            <input type="text" id="primaryColorText" value="#f5c842" style="flex: 1; padding: 10px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: monospace; font-size: 13px;">
+                        <span class="color-item-label">اللون الرئيسي</span>
+                        <div class="color-item-row">
+                            <input type="color" id="primaryColor" value="#f5c842" class="color-picker">
+                            <input type="text" id="primaryColorText" value="#f5c842" class="color-text-input">
                         </div>
                     </div>
                     <div class="color-item">
-                        <label style="font-size: 13px; color: var(--muted); margin-bottom: 6px; display: block;">لون الخلفية</label>
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <input type="color" id="backgroundColor" value="#0f0f13" style="width: 50px; height: 50px; border: none; border-radius: 10px; cursor: pointer;">
-                            <input type="text" id="backgroundColorText" value="#0f0f13" style="flex: 1; padding: 10px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: monospace; font-size: 13px;">
+                        <span class="color-item-label">لون الخلفية</span>
+                        <div class="color-item-row">
+                            <input type="color" id="backgroundColor" value="#0f0f13" class="color-picker">
+                            <input type="text" id="backgroundColorText" value="#0f0f13" class="color-text-input">
                         </div>
                     </div>
                     <div class="color-item">
-                        <label style="font-size: 13px; color: var(--muted); margin-bottom: 6px; display: block;">لون البطاقات</label>
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <input type="color" id="secondaryColor" value="#1a1a22" style="width: 50px; height: 50px; border: none; border-radius: 10px; cursor: pointer;">
-                            <input type="text" id="secondaryColorText" value="#1a1a22" style="flex: 1; padding: 10px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: monospace; font-size: 13px;">
+                        <span class="color-item-label">لون البطاقات</span>
+                        <div class="color-item-row">
+                            <input type="color" id="secondaryColor" value="#1a1a22" class="color-picker">
+                            <input type="text" id="secondaryColorText" value="#1a1a22" class="color-text-input">
                         </div>
                     </div>
                     <div class="color-item">
-                        <label style="font-size: 13px; color: var(--muted); margin-bottom: 6px; display: block;">لون النص</label>
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <input type="color" id="textColor" value="#ffffff" style="width: 50px; height: 50px; border: none; border-radius: 10px; cursor: pointer;">
-                            <input type="text" id="textColorText" value="#ffffff" style="flex: 1; padding: 10px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: monospace; font-size: 13px;">
+                        <span class="color-item-label">لون النص</span>
+                        <div class="color-item-row">
+                            <input type="color" id="textColor" value="#ffffff" class="color-picker">
+                            <input type="text" id="textColorText" value="#ffffff" class="color-text-input">
                         </div>
                     </div>
                     <div class="color-item">
-                        <label style="font-size: 13px; color: var(--muted); margin-bottom: 6px; display: block;">لون التمييز</label>
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <input type="color" id="accentColor" value="#fde98a" style="width: 50px; height: 50px; border: none; border-radius: 10px; cursor: pointer;">
-                            <input type="text" id="accentColorText" value="#fde98a" style="flex: 1; padding: 10px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: monospace; font-size: 13px;">
+                        <span class="color-item-label">لون التمييز</span>
+                        <div class="color-item-row">
+                            <input type="color" id="accentColor" value="#fde98a" class="color-picker">
+                            <input type="text" id="accentColorText" value="#fde98a" class="color-text-input">
                         </div>
                     </div>
                 </div>
@@ -632,22 +899,22 @@
             <!-- Font Selection -->
             <div class="form-group">
                 <label class="form-label">🔤 خط المتجر</label>
-                <div class="font-options" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 12px;">
-                    <div class="font-option selected" data-font="Cairo" onclick="selectFont('Cairo')" style="padding: 16px; border: 2px solid var(--gold); border-radius: 12px; text-align: center; cursor: pointer; background: var(--gold-dim);">
-                        <div style="font-family: 'Cairo'; font-size: 24px; margin-bottom: 8px;">أبجد</div>
-                        <div style="font-size: 12px; color: var(--muted);">Cairo</div>
+                <div class="font-grid">
+                    <div class="font-option selected" data-font="Cairo" onclick="selectFont('Cairo')">
+                        <div class="font-option-sample" style="font-family: 'Cairo';">أبجد</div>
+                        <div class="font-option-name">Cairo</div>
                     </div>
-                    <div class="font-option" data-font="Tajawal" onclick="selectFont('Tajawal')" style="padding: 16px; border: 2px solid var(--border); border-radius: 12px; text-align: center; cursor: pointer;">
-                        <div style="font-family: 'Tajawal'; font-size: 24px; margin-bottom: 8px;">أبجد</div>
-                        <div style="font-size: 12px; color: var(--muted);">Tajawal</div>
+                    <div class="font-option" data-font="Tajawal" onclick="selectFont('Tajawal')">
+                        <div class="font-option-sample" style="font-family: 'Tajawal';">أبجد</div>
+                        <div class="font-option-name">Tajawal</div>
                     </div>
-                    <div class="font-option" data-font="Almarai" onclick="selectFont('Almarai')" style="padding: 16px; border: 2px solid var(--border); border-radius: 12px; text-align: center; cursor: pointer;">
-                        <div style="font-family: 'Almarai'; font-size: 24px; margin-bottom: 8px;">أبجد</div>
-                        <div style="font-size: 12px; color: var(--muted);">Almarai</div>
+                    <div class="font-option" data-font="Almarai" onclick="selectFont('Almarai')">
+                        <div class="font-option-sample" style="font-family: 'Almarai';">أبجد</div>
+                        <div class="font-option-name">Almarai</div>
                     </div>
-                    <div class="font-option" data-font="Noto Sans Arabic" onclick="selectFont('Noto Sans Arabic')" style="padding: 16px; border: 2px solid var(--border); border-radius: 12px; text-align: center; cursor: pointer;">
-                        <div style="font-family: 'Noto Sans Arabic'; font-size: 24px; margin-bottom: 8px;">أبجد</div>
-                        <div style="font-size: 12px; color: var(--muted);">Noto Sans</div>
+                    <div class="font-option" data-font="Noto Sans Arabic" onclick="selectFont('Noto Sans Arabic')">
+                        <div class="font-option-sample" style="font-family: 'Noto Sans Arabic';">أبجد</div>
+                        <div class="font-option-name">Noto Sans</div>
                     </div>
                 </div>
             </div>
@@ -655,32 +922,32 @@
             <!-- Preview -->
             <div class="form-group">
                 <label class="form-label">👁️ معاينة المتجر</label>
-                <div id="storePreview" style="background: #0f0f13; border-radius: 16px; padding: 20px; min-height: 200px; border: 1px solid var(--border);">
-                    <div style="text-align: center; padding: 20px; border-bottom: 1px solid #1a1a22;">
-                        <div id="previewLogo" style="font-size: 50px; margin-bottom: 10px;">🏪</div>
-                        <div id="previewShopName" style="color: #f5c842; font-size: 20px; font-weight: 700;">متجرك</div>
+                <div id="storePreview" class="store-preview-frame">
+                    <div class="store-preview-header">
+                        <div id="previewLogo" class="store-preview-logo">🏪</div>
+                        <div id="previewShopName" class="store-preview-name">متجرك</div>
                     </div>
-                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 20px;">
-                        <div style="background: #1a1a22; border-radius: 12px; padding: 16px; text-align: center;">
-                            <div style="font-size: 30px; margin-bottom: 8px;">🛍️</div>
-                            <div style="color: #ffffff; font-size: 14px; font-weight: 600; margin-bottom: 4px;">منتج 1</div>
-                            <div style="color: #f5c842; font-size: 16px; font-weight: 700;">100 ج.م</div>
+                    <div class="store-preview-products">
+                        <div class="store-preview-card">
+                            <div class="store-preview-card-icon">🛍️</div>
+                            <div class="store-preview-card-name">منتج 1</div>
+                            <div class="store-preview-card-price">100 ج.م</div>
                         </div>
-                        <div style="background: #1a1a22; border-radius: 12px; padding: 16px; text-align: center;">
-                            <div style="font-size: 30px; margin-bottom: 8px;">👕</div>
-                            <div style="color: #ffffff; font-size: 14px; font-weight: 600; margin-bottom: 4px;">منتج 2</div>
-                            <div style="color: #f5c842; font-size: 16px; font-weight: 700;">150 ج.م</div>
+                        <div class="store-preview-card">
+                            <div class="store-preview-card-icon">👕</div>
+                            <div class="store-preview-card-name">منتج 2</div>
+                            <div class="store-preview-card-price">150 ج.م</div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div style="display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap;">
+            <div class="customization-actions">
                 <button type="button" class="save-btn" onclick="saveCustomization()">
                     💾 حفظ تخصيص المتجر
                 </button>
-                <button type="button" class="copy-btn" onclick="resetToDefault()" style="background: #ef4444;">
-                    � استعادة التصميم الافتراضي
+                <button type="button" class="reset-btn" onclick="resetToDefault()">
+                    🔄 استعادة الافتراضي
                 </button>
             </div>
         </div>
@@ -953,7 +1220,7 @@
                         document.getElementById('logoPreview').src = data.logoUrl;
                         document.getElementById('logoPreview').style.display = 'inline-block';
                         document.getElementById('logoPlaceholder').style.display = 'none';
-                        document.getElementById('previewLogo').innerHTML = `<img src="${data.logoUrl}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 12px;">`;
+                        document.getElementById('previewLogo').innerHTML = `<img src="${data.logoUrl}" style="width: 44px; height: 44px; object-fit: cover; border-radius: 10px;">`;
                     }
                     
                     updatePreview();
@@ -988,15 +1255,11 @@
             selectedFont = font;
             document.querySelectorAll('.font-option').forEach(el => {
                 el.classList.remove('selected');
-                el.style.borderColor = 'var(--border)';
-                el.style.background = 'transparent';
             });
             
             const selected = document.querySelector(`[data-font="${font}"]`);
             if (selected) {
                 selected.classList.add('selected');
-                selected.style.borderColor = 'var(--gold)';
-                selected.style.background = 'var(--gold-dim)';
             }
             
             updatePreview();
@@ -1015,31 +1278,26 @@
             preview.style.fontFamily = selectedFont;
             
             // Update header
-            const header = preview.querySelector('div:first-child');
-            header.style.borderBottomColor = secondaryColor;
+            const header = preview.querySelector('.store-preview-header');
+            if (header) header.style.borderBottomColor = secondaryColor;
             
             // Update shop name color
             const shopName = document.getElementById('previewShopName');
-            if (shopName) {
-                shopName.style.color = primaryColor;
-            }
+            if (shopName) shopName.style.color = primaryColor;
             
             // Update product cards
-            const cards = preview.querySelectorAll('div[style*="background: #1a1a22"]');
-            cards.forEach(card => {
+            preview.querySelectorAll('.store-preview-card').forEach(card => {
                 card.style.background = secondaryColor;
             });
             
             // Update product names
-            const names = preview.querySelectorAll('div[style*="color: #ffffff"]');
-            names.forEach(name => {
-                name.style.color = textColor;
+            preview.querySelectorAll('.store-preview-card-name').forEach(el => {
+                el.style.color = textColor;
             });
             
             // Update prices
-            const prices = preview.querySelectorAll('div[style*="color: #f5c842"]');
-            prices.forEach(price => {
-                price.style.color = primaryColor;
+            preview.querySelectorAll('.store-preview-card-price').forEach(el => {
+                el.style.color = primaryColor;
             });
         }
 
@@ -1056,7 +1314,7 @@
                     document.getElementById('logoPreview').src = e.target.result;
                     document.getElementById('logoPreview').style.display = 'inline-block';
                     document.getElementById('logoPlaceholder').style.display = 'none';
-                    document.getElementById('previewLogo').innerHTML = `<img src="${e.target.result}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 12px;">`;
+                    document.getElementById('previewLogo').innerHTML = `<img src="${e.target.result}" style="width: 44px; height: 44px; object-fit: cover; border-radius: 10px;">`;
                 };
                 reader.readAsDataURL(file);
                 

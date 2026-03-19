@@ -94,6 +94,13 @@ router.post("/register", async (req, res) => {
       { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
     );
 
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 30 * 24 * 60 * 60 * 1000
+    });
+
     res.status(201).json({
       message: "Shop registered successfully",
       shop,
@@ -155,6 +162,11 @@ router.post("/login", async (req, res) => {
     const admin = await prisma.admin.findFirst({
       where: {
         email: `${phone}@wahdabot.com`
+      },
+      select: {
+        id: true,
+        email: true,
+        password: true
       }
     });
     if (!admin) {
@@ -174,6 +186,13 @@ router.post("/login", async (req, res) => {
         process.env.JWT_SECRET,
         { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
       );
+
+      res.cookie('token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 30 * 24 * 60 * 60 * 1000
+      });
 
       return res.status(402).json({ 
         error: "Payment required",
@@ -199,6 +218,13 @@ router.post("/login", async (req, res) => {
       { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
     );
 
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 30 * 24 * 60 * 60 * 1000
+    });
+
     res.json({
       message: "Login successful",
       shop,
@@ -220,6 +246,10 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// Debug endpoint removed for security
+// Logout - clear cookie
+router.post('/logout', (req, res) => {
+  res.clearCookie('token');
+  res.json({ success: true });
+});
 
 module.exports = router;

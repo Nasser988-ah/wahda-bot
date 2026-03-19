@@ -17,11 +17,13 @@ const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
 const rateLimit = require("express-rate-limit");
+const cookieParser = require("cookie-parser");
 const path = require("path");
 const fs = require("fs");
 const databaseService = require("./src/services/databaseService");
 const logger = require("./src/services/loggerService");
 const { errorHandler } = require("./src/middleware/errorHandler");
+const pageAuth = require("./src/middleware/pageAuth");
 
 const apiRoutes = require("./src/api");
 const { initBot } = require("./src/bot");
@@ -30,36 +32,29 @@ const app = express();
 app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
 
-// Rate limiting configuration from environment variables
-const rateLimitWindowMs = parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10);
-const rateLimitMaxRequests = parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10);
-
-const authLimiter = rateLimit({
-  windowMs: rateLimitWindowMs,
-  max: 10,
-  message: { error: "محاولات كثيرة، انتظر 15 دقيقة" },
+// Rate limiting
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { error: 'محاولات كثيرة، حاول بعد 15 دقيقة' },
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req, res) => {
-    return req.ip === '127.0.0.1' || req.ip === '::1';
-  },
-  handler: (req, res) => {
-    res.status(429).json({ error: "محاولات كثيرة، انتظر 15 دقيقة" });
-  },
-  trustProxy: 1
+});
+
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  message: { error: 'حاول بعد ساعة' },
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
 const apiLimiter = rateLimit({
-  windowMs: rateLimitWindowMs,
-  max: 1000, // Increased from 100 to 1000 requests per window
-  message: { error: "Too many requests, please try again later" },
-  skip: (req, res) => {
-    return req.ip === '127.0.0.1' || req.ip === '::1';
-  },
-  handler: (req, res) => {
-    res.status(429).json({ error: "Too many requests, please try again later" });
-  },
-  trustProxy: 1
+  windowMs: 60 * 1000,
+  max: 100,
+  message: { error: 'طلبات كثيرة، حاول لاحقاً' },
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
 // Middleware
@@ -79,29 +74,44 @@ app.use(helmet({
     },
   },
 }));
-// CORS - allow all in dev, specific origins in production
-const corsOptions = {
-  origin: process.env.NODE_ENV === 'production' 
-    ? (process.env.CORS_ORIGIN || true)  // Allow all in production or use specific origin
-    : true,  // Allow all in development
-  credentials: true
-};
-app.use(cors(corsOptions));
+app.use(cookieParser());
+app.use(cors({
+  origin: [
+    'https://wahda-bot-production-0c88.up.railway.app',
+    'http://localhost:3000'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(morgan("dev"));
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: false, limit: '1mb' }));
 
 // Apply rate limiting
-app.use("/api/auth", authLimiter);
-app.use("/api/admin/login", authLimiter); // Brute-force protection for admin login
-// General API limiter
-app.use("/api", apiLimiter);
+app.use('/api/auth/login', loginLimiter);
+app.use('/api/auth/register', registerLimiter);
+app.use('/api/admin/login', loginLimiter);
+app.use('/api/', apiLimiter);
 
 // Block access to sensitive directories
 app.use('/sessions', (req, res) => res.status(403).json({ error: 'Forbidden' }));
 app.use('/tmp', (req, res) => res.status(403).json({ error: 'Forbidden' }));
 app.use('/.env', (req, res) => res.status(403).json({ error: 'Forbidden' }));
 app.use('/.git', (req, res) => res.status(403).json({ error: 'Forbidden' }));
+
+// Protect dashboard pages - must be BEFORE static serving
+const protectedPages = [
+  '/dashboard.html',
+  '/products.html',
+  '/qr.html',
+  '/settings.html'
+];
+protectedPages.forEach(page => {
+  app.get(page, pageAuth, (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', page));
+  });
+});
 
 // Serve static files (HTML dashboard)
 app.use(express.static("public", {
@@ -146,6 +156,42 @@ app.get("/", (req, res) => {
 // Store page route
 app.get("/store/:shopId", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "store.html"));
+});
+
+// 404 handlers
+app.use('/api/*', (req, res) => {
+  res.status(404).json({ error: 'المسار غير موجود' });
+});
+
+app.use((req, res) => {
+  res.status(404).send(`
+    <!DOCTYPE html>
+    <html lang="ar" dir="rtl">
+    <head>
+      <meta charset="UTF-8">
+      <title>404</title>
+      <style>
+        body {
+          font-family: Cairo, sans-serif;
+          display:flex;align-items:center;
+          justify-content:center;height:100vh;
+          margin:0;background:#0f0f13;color:#fff;
+          text-align:center;
+        }
+        h1 { font-size:80px;margin:0;color:#f5c842; }
+        p { color:#8a8a9a;font-size:18px; }
+        a { color:#f5c842;text-decoration:none;font-weight:bold; }
+      </style>
+    </head>
+    <body>
+      <div>
+        <h1>404</h1>
+        <p>الصفحة غير موجودة</p>
+        <a href="/login.html">العودة للرئيسية</a>
+      </div>
+    </body>
+    </html>
+  `);
 });
 
 // Graceful shutdown

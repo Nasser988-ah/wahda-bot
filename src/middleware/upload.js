@@ -14,12 +14,20 @@ const storage = multer.diskStorage({
   }
 });
 
+const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+const allowedExts = ['.jpg', '.jpeg', '.png', '.webp'];
+
 const upload = multer({
   storage,
-  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB max
+  limits: {
+    fileSize: 2 * 1024 * 1024, // 2MB max
+    files: 1
+  },
   fileFilter: (req, file, cb) => {
-    const allowed = ['image/jpeg', 'image/png', 'image/webp'];
-    if (allowed.includes(file.mimetype)) {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const mime = file.mimetype.toLowerCase();
+
+    if (allowedMimes.includes(mime) && allowedExts.includes(ext)) {
       cb(null, true);
     } else {
       cb(new Error('يُسمح فقط بصور JPG و PNG و WebP'));

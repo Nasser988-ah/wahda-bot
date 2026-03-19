@@ -368,7 +368,10 @@
             }
         }
 
-        function logout() {
+        async function logout() {
+            try {
+                await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+            } catch {}
             localStorage.removeItem('token');
             window.location.href = '/login.html';
         }

@@ -997,12 +997,15 @@
         }
 
         // Logout
-        function logout() {
+        async function logout() {
             if (confirm('هل أنت متأكد من تسجيل الخروج؟')) {
+                try {
+                    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+                } catch {}
                 localStorage.removeItem('token');
                 localStorage.removeItem('shop');
                 localStorage.removeItem('whatsappConnected');
-                window.location.href = 'login.html';
+                window.location.href = '/login.html';
             }
         }
 

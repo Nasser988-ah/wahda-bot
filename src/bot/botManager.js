@@ -232,8 +232,6 @@ class BotManager {
     shopCache.delete(shopId);
     console.log(`🔄 Cache cleared for shop ${shopId} (had cache: ${hadCache}, cache size: ${shopCache.size})`);
     
-    // Also log stack trace to see who's calling this
-    console.log(`🔄 invalidateShopCache called from:`, new Error().stack.split('\n')[2]?.trim());
   }
 
   async connectShop(shopId, qrCallback) {
@@ -358,7 +356,7 @@ class BotManager {
           try {
             // FIX 4: Add timeout to message handling
             const timeoutPromise = new Promise((_, reject) => 
-              setTimeout(() => reject(new Error('Message handling timeout')), 10000)
+              setTimeout(() => reject(new Error('Message handling timeout')), 30000)
             );
             await Promise.race([
               this.handleMessage(sock, msg, shop),
@@ -1752,11 +1750,6 @@ ${contextMessage}
       .replace(/ى/g, 'ي')         // Alef maksura to ya
       .replace(/ة/g, 'ه')         // Ta marbuta to ha
       .replace(/[ؤئ]/g, 'ء')      // Hamza variations
-      // Common spelling mistakes
-      .replace(/ق/g, 'ك')         // Qaf to kaf (common in dialect)
-      .replace(/ث/g, 'س')         // Tha to seen
-      .replace(/ذ/g, 'ز')         // Dhal to zay
-      .replace(/ظ/g, 'ض')         // Dha to dad
       // Remove extra spaces and punctuation
       .replace(/\s+/g, ' ')
       .replace(/[.,!?;:\-_]/g, '');
@@ -2649,7 +2642,6 @@ ${productsList}
     }
 
     await redis.set(cartKey, JSON.stringify(cart), { ex: 3600 })
-    this.invalidateShopCache(shop.id)
 
     const total = cart.reduce((s, i) => s + i.price * i.quantity, 0)
     const variantText = variantInfo ? ` (${variantInfo})` : ''
@@ -2690,8 +2682,8 @@ ${productsList}
   async handleThanksResponse(sock, from, shop, customerPhone, context) {
     const responses = [
       `العفو! دائماً في خدمتك 😊\nإذا احتجت أي شيء اكتب *قائمة* أو *مساعدة*`,
-      `الشكر لله! نورتنا يا فندم 🙏\nاكتب *قائمة* إذا حبيت تطلب حاجة تاني`,
-      `تسلم يا فندم! 🌟\nمتنسانيش لو عايز حاجة تاني 😊`,
+      `شكراً لك! نسعد بخدمتك دائماً 🙏\nاكتب *قائمة* إذا أردت طلب شيء آخر`,
+      `بارك الله فيك! 🌟\nنحن في خدمتك دائماً، اكتب *قائمة* لتصفح المنتجات 😊`,
     ];
     const response = responses[Math.floor(Math.random() * responses.length)];
     
@@ -2846,7 +2838,7 @@ ${productsList}
         }
         if (qty > product.stock) {
           await this.safeSendMessage(sock, from,
-            `عذراً، الكمية المتاحة من *${product.name}* هي ${product.stock} فقط.`, shop.name, shop.id, customerPhone);
+            `عذراً، الكمية المطلوبة من *${product.name}* غير متوفرة حالياً.\nجرّب كمية أقل أو تابعنا لمعرفة وقت التوفر 🙏`, shop.name, shop.id, customerPhone);
           return;
         }
       }
@@ -3023,8 +3015,8 @@ ${productsList}
       `💵 الدفع عند الاستلام (كاش)\n` +
       `📱 فودافون كاش / اتصالات كاش / محفظة إلكترونية\n` +
       `🏦 تحويل بنكي\n\n` +
-      `تفاصيل الدفع بتتحدد بعد تأكيد الطلب.\n` +
-      `اكتب *اطلب* لتأكيد طلبك وهنتواصل معاك! 📞`, shop.name, shop.id, customerPhone);
+      `يتم تحديد تفاصيل الدفع بعد تأكيد الطلب.\n` +
+      `اكتب *اطلب* لتأكيد طلبك وسنتواصل معك! 📞`, shop.name, shop.id, customerPhone);
   }
 
   // Handle working hours questions
@@ -3036,8 +3028,8 @@ ${productsList}
       `🕐 *مواعيد العمل:*\n\n` +
       `نحن نستقبل طلباتك على مدار الساعة عبر الواتساب! 📱\n` +
       (isLikelyOpen 
-        ? `✅ إحنا شغالين دلوقتي! يلا ابدأ طلبك 🚀\n`
-        : `⏰ ممكن يكون فيه تأخير بسيط في الرد حالياً.\nبس سجل طلبك وهنرد عليك في أقرب وقت! 🙏\n`) +
+        ? `✅ نحن متاحون الآن! ابدأ طلبك 🚀\n`
+        : `⏰ قد يكون هناك تأخير بسيط في الرد حالياً.\nسجّل طلبك وسنرد عليك في أقرب وقت! 🙏\n`) +
       `\nاكتب *قائمة* لتصفح المنتجات 📋`, shop.name, shop.id, customerPhone);
   }
 
@@ -3045,9 +3037,9 @@ ${productsList}
   async handleLocationQuestion(sock, from, shop, customerPhone) {
     await this.safeSendMessage(sock, from,
       `📍 *${shop.name}*\n\n` +
-      `إحنا متجر إلكتروني ونوصلك لحد عندك! 🚗\n\n` +
-      `لو عايز تعرف تفاصيل التوصيل لمنطقتك،\n` +
-      `ابدأ طلبك وهنتواصل معاك لتأكيد كل التفاصيل 📞\n\n` +
+      `نحن متجر إلكتروني ونوصل لك حتى باب منزلك! 🚗\n\n` +
+      `لمعرفة تفاصيل التوصيل لمنطقتك،\n` +
+      `ابدأ طلبك وسنتواصل معك لتأكيد جميع التفاصيل 📞\n\n` +
       `اكتب *قائمة* لتصفح المنتجات 📋\n` +
       `أو *اطلب* لتأكيد طلبك ✅`, shop.name, shop.id, customerPhone);
   }
@@ -3057,8 +3049,8 @@ ${productsList}
     await this.safeSendMessage(sock, from,
       `🔄 *سياسة الإرجاع والاستبدال:*\n\n` +
       `رضا العميل هو أولويتنا! 🌟\n\n` +
-      `✅ لو المنتج فيه أي عيب أو مش مطابق - بنبدله فوراً\n` +
-      `✅ لو مش مناسب ليك - تواصل معانا وهنحل الموضوع\n` +
+      `✅ إذا كان المنتج به أي عيب أو غير مطابق - نبدّله فوراً\n` +
+      `✅ إذا لم يكن مناسباً لك - تواصل معنا وسنحل الأمر\n` +
       `📞 تواصل مع صاحب المتجر مباشرة لأي استفسار\n\n` +
       `اكتب *قائمة* لتصفح المنتجات 📋`, shop.name, shop.id, customerPhone);
   }
@@ -3069,7 +3061,7 @@ ${productsList}
     
     if (availableProducts.length === 0) {
       await this.safeSendMessage(sock, from,
-        `عذراً، لا توجد منتجات متاحة حالياً 😅\nتابعنا وهنضيف منتجات جديدة قريباً!`, shop.name, shop.id, customerPhone);
+        `عذراً، لا توجد منتجات متاحة حالياً 😅\nتابعنا وسنضيف منتجات جديدة قريباً!`, shop.name, shop.id, customerPhone);
       return;
     }
 
@@ -3088,13 +3080,13 @@ ${productsList}
   // Handle talk to human request
   async handleTalkToHuman(sock, from, shop, customerPhone) {
     await this.safeSendMessage(sock, from,
-      `👤 أنا بوت مساعد لـ *${shop.name}* وبحاول أساعدك في كل حاجة!\n\n` +
-      `لو محتاج تتكلم مع صاحب المتجر مباشرة:\n` +
-      `📞 هيتواصل معاك بعد ما تسجل طلبك\n\n` +
-      `💡 في الأغلب أقدر أساعدك! جرب:\n` +
+      `👤 أنا *ذكي*، موظف خدمة العملاء في *${shop.name}*\n\n` +
+      `سأبذل قصارى جهدي لمساعدتك! وإذا أردت التواصل مع صاحب المتجر مباشرة:\n` +
+      `📞 سيتواصل معك بعد تسجيل طلبك\n\n` +
+      `💡 يمكنني مساعدتك في أغلب الأمور! جرّب:\n` +
       `📋 *قائمة* - لعرض المنتجات\n` +
       `🛒 *كارت* - لعرض السلة\n` +
-      `❓ *مساعدة* - لعرض كل الأوامر`, shop.name, shop.id, customerPhone);
+      `❓ *مساعدة* - لعرض جميع الأوامر`, shop.name, shop.id, customerPhone);
   }
 
   // Handle what's new questions
@@ -3103,7 +3095,7 @@ ${productsList}
     
     if (availableProducts.length === 0) {
       await this.safeSendMessage(sock, from,
-        `لسه بنجهز منتجات جديدة! 🎉\nتابعنا وهنعلن عن كل جديد قريباً`, shop.name, shop.id, customerPhone);
+        `نجهّز منتجات جديدة حالياً! 🎉\nتابعنا وسنعلن عن كل جديد قريباً`, shop.name, shop.id, customerPhone);
       return;
     }
 

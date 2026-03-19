@@ -756,10 +756,50 @@ class BotManager {
       const msgCount = parseInt(await redis.get(msgCountKey) || '0') + 1;
       await redis.set(msgCountKey, msgCount, { ex: 3600 });
       
+      // Check for product variant questions (e.g., "ايه الالوان المتاحه من الهودي")
+      const variantQueryWords = ['الوان', 'لون', 'مقاس', 'مقاسات', 'حجم', 'احجام', 'المتاحه', 'المتاح', 'الخيارات'];
+      const hasVariantQuery = variantQueryWords.some(w => lowerText.includes(w));
+      if (hasVariantQuery && shop.products && shop.products.length > 0) {
+        const availableProducts = shop.products.filter(p => p.isAvailable);
+        const variantMatches = findBestMatch(text, availableProducts);
+        if (variantMatches.length > 0 && variantMatches[0].score >= 0.5) {
+          const product = variantMatches[0].product;
+          if (product.variants) {
+            let vGroups = [];
+            try { vGroups = typeof product.variants === 'string' ? JSON.parse(product.variants) : product.variants; } catch {}
+            if (vGroups.length > 0) {
+              let msg = `📦 الخيارات المتاحة لـ *${product.name}*:\n\n`;
+              for (const group of vGroups) {
+                const availableOpts = (group.options || []).filter(opt => {
+                  const stock = group.stock?.[opt];
+                  return stock === null || stock === undefined || stock > 0;
+                });
+                if (availableOpts.length > 0) {
+                  msg += `*${group.name}:* ${availableOpts.join(' - ')}\n`;
+                }
+              }
+              msg += `\n💰 السعر: ${product.price} جنيه`;
+              msg += `\n\nاكتب اسم المنتج لإضافته للسلة 🛒`;
+              console.log(`✓ Matched: variant question for "${product.name}"`);
+              await this.safeSendMessage(sock, from, msg, shop.name, shop.id, customerPhone);
+              return;
+            }
+          }
+        }
+      }
+
       // IMPORTANT: Check basic commands FIRST before any AI logic
       if (this.matchesIntent(lowerText, 'menu')) {
         console.log(`✓ Matched: menu`);
         await this.sendProductsList(sock, from, shop, customerPhone, 1);
+        return;
+      } else if (this.matchesIntent(lowerText, 'delivery')) {
+        console.log(`✓ Matched: delivery question`);
+        await this.handleDeliveryQuestion(sock, from, shop, customerPhone, text);
+        return;
+      } else if (this.matchesIntent(lowerText, 'order_status')) {
+        console.log(`✓ Matched: order status`);
+        await this.handleOrderStatus(sock, from, shop, customerPhone);
         return;
       } else if (this.matchesIntent(lowerText, 'cart')) {
         console.log(`✓ Matched: cart`);
@@ -805,14 +845,6 @@ class BotManager {
       } else if (this.matchesIntent(lowerText, 'cancel')) {
         console.log(`✓ Matched: cancel`);
         await this.handleCancelCommand(sock, from, shop, customerPhone, context);
-        return;
-      } else if (this.matchesIntent(lowerText, 'order_status')) {
-        console.log(`✓ Matched: order status`);
-        await this.handleOrderStatus(sock, from, shop, customerPhone);
-        return;
-      } else if (this.matchesIntent(lowerText, 'delivery')) {
-        console.log(`✓ Matched: delivery question`);
-        await this.handleDeliveryQuestion(sock, from, shop, customerPhone, text);
         return;
       } else if (this.matchesIntent(lowerText, 'discount')) {
         console.log(`✓ Matched: discount/offer question`);
@@ -1784,36 +1816,44 @@ ${contextMessage}
     return maxLen === 0 ? 1 : 1 - distance / maxLen;
   }
 
-  // Fuzzy match with spelling tolerance
+  // Fuzzy match with spelling tolerance (tightened to prevent false positives)
   fuzzyMatch(text, pattern, threshold = 0.7) {
     const normalizedText = this.normalizeText(text);
     const normalizedPattern = this.normalizeText(pattern);
     
-    // Exact match after normalization
+    // Exact full match
+    if (normalizedText === normalizedPattern) return true;
+    
+    // Full pattern found as substring in text
     if (normalizedText.includes(normalizedPattern)) return true;
     
-    // Word-by-word fuzzy match
-    const textWords = normalizedText.split(' ');
-    const patternWords = normalizedPattern.split(' ');
+    const textWords = normalizedText.split(' ').filter(w => w.length > 0);
+    const patternWords = normalizedPattern.split(' ').filter(w => w.length > 0);
     
-    for (const patternWord of patternWords) {
-      if (patternWord.length < 2) continue; // Skip single chars
-      
-      for (const textWord of textWords) {
-        // Check for substring match first
-        if (textWord.includes(patternWord) || patternWord.includes(textWord)) {
-          return true;
+    // Helper: check if a single pattern word matches any text word
+    const wordMatches = (pw) => {
+      return textWords.some(tw => {
+        // Text word contains pattern word (pattern must be ≥3 chars to avoid "بس" matching inside longer words)
+        if (pw.length >= 3 && tw.includes(pw)) return true;
+        // Exact match for short words (2 chars)
+        if (pw.length === 2 && tw === pw) return true;
+        // Similarity check only for similar-length words (diff ≤ 1)
+        if (Math.abs(tw.length - pw.length) <= 1 && tw.length >= 3) {
+          return this.calculateSimilarity(tw, pw) >= threshold;
         }
-        
-        // Check similarity for similar length words
-        if (Math.abs(textWord.length - patternWord.length) <= 2) {
-          const similarity = this.calculateSimilarity(textWord, patternWord);
-          if (similarity >= threshold) return true;
-        }
-      }
+        return false;
+      });
+    };
+    
+    // Multi-word patterns: ALL significant words (≥3 chars) must match
+    if (patternWords.length > 1) {
+      const significantWords = patternWords.filter(w => w.length >= 3);
+      if (significantWords.length === 0) return false;
+      return significantWords.every(pw => wordMatches(pw));
     }
     
-    return false;
+    // Single-word pattern
+    return wordMatches(patternWords[0]);
   }
 
   // Enhanced matchesIntent with spelling mistake tolerance
@@ -1874,9 +1914,9 @@ ${contextMessage}
         'قايمه', 'قائمةة', 'منيوو', 'قايمةة', 'قائمه'
       ],
       cart: [
-        'كارت', 'cart', 'سلة', 'السلة', 'الكارت', 'طلبي', 'اوردر',
+        'كارت', 'cart', 'سلة', 'السلة', 'الكارت', 'عربية', 'عربيه',
         // Misspellings
-        'كاررت', 'كارتت', 'سله', 'سلةة', 'طلبيي'
+        'كاررت', 'كارتت', 'سله', 'سلةة'
       ],
       order: [
         'اطلب', 'order', 'اطلب', 'احجز', 'booking', 'حجز',
@@ -1924,8 +1964,12 @@ ${contextMessage}
         'بتوصلوا فين', 'بتوصلوا لحد فين', 'مناطق التوصيل', 'اماكن التوصيل',
         'الشحن', 'مصاريف الشحن', 'الدليفري', 'delivery', 'shipping',
         'توصيل لحد البيت', 'توصيل مجاني', 'في توصيل',
+        'بيوصل', 'هيوصل', 'يوصل', 'هيجي', 'هيجيلي', 'بيجي',
+        'بيوصل في قد ايه', 'هيوصل في قد ايه', 'كام يوم', 'خلال كام يوم',
+        'بيوصل في كام يوم', 'الاوردر بيوصل', 'الطلب بيوصل',
+        'الاوردر هيجيلي', 'الطلب هيجيلي', 'امتى يوصل', 'امتى هيوصل',
         // Misspellings
-        'التوصييل', 'بتوصلو', 'الدليفرى', 'دليفري'
+        'التوصييل', 'بتوصلو', 'الدليفرى', 'دليفري', 'هيوصلل', 'بيوصلل'
       ],
       address: [
         'عنوان', 'address', 'موقع', 'مكان', 'loc',

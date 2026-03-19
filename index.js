@@ -93,12 +93,25 @@ app.use(express.urlencoded({ extended: false, limit: '1mb' }));
 
 // Apply rate limiting
 app.use("/api/auth", authLimiter);
-// General API limiter - skip for admin routes to allow dashboard operations
+app.use("/api/admin/login", authLimiter); // Brute-force protection for admin login
+// General API limiter
 app.use("/api", apiLimiter);
 
+// Block access to sensitive directories
+app.use('/sessions', (req, res) => res.status(403).json({ error: 'Forbidden' }));
+app.use('/tmp', (req, res) => res.status(403).json({ error: 'Forbidden' }));
+app.use('/.env', (req, res) => res.status(403).json({ error: 'Forbidden' }));
+app.use('/.git', (req, res) => res.status(403).json({ error: 'Forbidden' }));
+
 // Serve static files (HTML dashboard)
-app.use(express.static("public"));
-app.use("/uploads", express.static("src/public/uploads"));
+app.use(express.static("public", {
+  dotfiles: 'deny',
+  index: false
+}));
+app.use("/uploads", express.static("src/public/uploads", {
+  dotfiles: 'deny',
+  index: false
+}));
 
 // Health check - works without DB for Railway deployment
 app.get('/health', (req, res) => {

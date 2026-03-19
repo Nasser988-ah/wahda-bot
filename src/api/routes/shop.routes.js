@@ -54,6 +54,11 @@ router.get("/qr", authenticateTokenWithPending, async (req, res) => {
       });
     }
 
+    // Ownership check: shop can only check its own QR status
+    if (req.shop && req.shop.id !== shopId) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
     const status = await qrService.getConnectionStatus(shopId);
     
     // Prevent caching to ensure fresh status updates
@@ -81,6 +86,11 @@ router.post("/qr", authenticateTokenWithPending, async (req, res) => {
         error: "Shop ID is required",
         message: "Please provide shopId in request body"
       });
+    }
+
+    // Ownership check
+    if (req.shop && req.shop.id !== shopId) {
+      return res.status(403).json({ error: "Access denied" });
     }
 
     console.log(`🔄 Generating QR for shop: ${shopId}`);
@@ -144,6 +154,11 @@ router.post("/qr/refresh", authenticateTokenWithPending, async (req, res) => {
         error: "Shop ID is required",
         message: "Please provide shopId as query parameter or in request body"
       });
+    }
+
+    // Ownership check
+    if (req.shop && req.shop.id !== shopId) {
+      return res.status(403).json({ error: "Access denied" });
     }
 
     console.log(`🔄 QR Refresh requested for shop: ${shopId}`);

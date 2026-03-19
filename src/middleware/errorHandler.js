@@ -43,10 +43,13 @@ const errorHandler = (err, req, res, next) => {
     error = new AppError('Invalid resource', 400);
   }
 
-  res.status(error.statusCode || 500).json({
+  const statusCode = error.statusCode || 500;
+  const isOperational = error.isOperational || false;
+  
+  res.status(statusCode).json({
     status: error.status || 'error',
-    message: error.message,
-    ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
+    message: (isOperational || statusCode < 500) ? error.message : 'Internal server error',
+    ...(process.env.NODE_ENV === 'development' && { stack: error.stack, detail: error.message })
   });
 };
 

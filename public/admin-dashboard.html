@@ -313,6 +313,8 @@
     </div>
 
     <script>
+        function esc(s){if(!s)return '';const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+
         const API_BASE_URL = window.location.origin;
         const ADMIN_PHONE = '201128511900';
 
@@ -389,11 +391,11 @@
                 listEl.innerHTML = shops.map(shop => `
                     <div class="pending-item" id="shop-${shop.id}">
                         <div class="pending-info">
-                            <div class="pending-name">${shop.name}</div>
+                            <div class="pending-name">${esc(shop.name)}</div>
                             <div class="pending-details">
-                                <span>👤 ${shop.ownerName || '-'}</span>
-                                <span>📱 ${shop.phone || '-'}</span>
-                                <span>📞 ${shop.whatsappNumber || '-'}</span>
+                                <span>👤 ${esc(shop.ownerName) || '-'}</span>
+                                <span>📱 ${esc(shop.phone) || '-'}</span>
+                                <span>📞 ${esc(shop.whatsappNumber) || '-'}</span>
                                 <span>🕐 ${new Date(shop.createdAt).toLocaleString('ar-EG')}</span>
                                 <span style="color: var(--gold);">🆔 ${shop.id}</span>
                             </div>

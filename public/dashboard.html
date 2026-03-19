@@ -534,21 +534,9 @@
                 font-size: 24px;
             }
 
-            .orders-table {
-                font-size: 12px;
-            }
-
-            .orders-table th,
-            .orders-table td {
-                padding: 10px 8px;
-            }
-
-            .orders-table th:nth-child(4),
-            .orders-table td:nth-child(4),
-            .orders-table th:nth-child(6),
-            .orders-table td:nth-child(6) {
-                display: none;
-            }
+            /* Hide table on mobile, show mobile order cards */
+            .orders-table { display: none; }
+            .mobile-orders { display: block !important; }
 
             .section {
                 padding: 20px;
@@ -680,6 +668,64 @@
         /* Revenue display fix */
         .stat-value#revenueValue {
             font-size: 24px;
+        }
+
+        /* Mobile Order Cards */
+        .mobile-orders { display: none; }
+        .mobile-order-card {
+            background: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 16px;
+            margin-bottom: 12px;
+            transition: all 0.2s;
+        }
+        .mobile-order-card:last-child { margin-bottom: 0; }
+        .mobile-order-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .mobile-order-id {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        .mobile-order-date {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+        .mobile-order-mid {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .mobile-order-customer {
+            font-size: 13px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .mobile-order-price {
+            font-size: 15px;
+            font-weight: 800;
+            color: var(--text);
+        }
+        .mobile-order-bottom {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+        }
+        .mobile-order-bottom .status-badge {
+            flex: 1;
+            text-align: center;
+        }
+        .mobile-order-bottom .btn {
+            white-space: nowrap;
         }
 
         /* Toast Notification */
@@ -976,6 +1022,7 @@
         // Display statistics
         function displayStats(data) {
             const statsGrid = document.getElementById('statsGrid');
+            const revenue = data.revenue || 0;
             statsGrid.innerHTML = `
                 <div class="stat-card">
                     <div class="stat-icon">📦</div>
@@ -989,12 +1036,12 @@
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon">⏳</div>
-                    <div class="stat-value" id="pendingCount">-</div>
+                    <div class="stat-value" id="pendingCount">${data.pendingOrders || 0}</div>
                     <div class="stat-label">الطلبات المعلقة</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon">💰</div>
-                    <div class="stat-value">ج.م</div>
+                    <div class="stat-value" id="revenueValue">${revenue.toLocaleString()} ج.م</div>
                     <div class="stat-label">إجمالي الإيرادات</div>
                 </div>
             `;
@@ -1009,22 +1056,6 @@
                 if (response.ok) {
                     const data = await response.json();
                     displayOrders(data.orders);
-                    
-                    // Update pending count
-                    const pendingCount = data.orders.filter(o => o.status === 'PENDING').length;
-                    const pendingElement = document.getElementById('pendingCount');
-                    if (pendingElement) {
-                        pendingElement.textContent = pendingCount;
-                    }
-                    
-                    // Calculate and update revenue from delivered orders
-                    const revenue = data.orders
-                        .filter(o => o.status === 'DELIVERED')
-                        .reduce((sum, o) => sum + (o.totalPrice || 0), 0);
-                    const revenueElement = document.getElementById('revenueValue');
-                    if (revenueElement) {
-                        revenueElement.textContent = revenue.toLocaleString() + ' ج.م';
-                    }
                 } else {
                     displayOrders([]);
                 }
@@ -1048,7 +1079,8 @@
                 return;
             }
 
-            container.innerHTML = `
+            // Desktop table
+            const tableHTML = `
                 <table class="orders-table">
                     <thead>
                         <tr>
@@ -1081,8 +1113,35 @@
                             </tr>
                         `).join('')}
                     </tbody>
-                </table>
-            `;
+                </table>`;
+
+            // Mobile cards
+            const cardsHTML = `
+                <div class="mobile-orders">
+                    ${orders.map(order => `
+                        <div class="mobile-order-card">
+                            <div class="mobile-order-top">
+                                <span class="mobile-order-id">#${order.id.slice(-8)}</span>
+                                <span class="mobile-order-date">${new Date(order.createdAt).toLocaleDateString('ar-EG')}</span>
+                            </div>
+                            <div class="mobile-order-mid">
+                                <span class="mobile-order-customer">📱 ${esc(order.customerPhone)}</span>
+                                <span class="mobile-order-price">${order.totalPrice} ج.م</span>
+                            </div>
+                            <div class="mobile-order-bottom">
+                                <button class="status-badge status-${order.status.toLowerCase()}"
+                                        onclick="updateOrderStatus('${order.id}', '${order.status}')">
+                                    ${getStatusText(order.status)}
+                                </button>
+                                <button class="btn btn-small btn-outline" onclick="viewOrder('${order.id}')">
+                                    عرض التفاصيل
+                                </button>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>`;
+
+            container.innerHTML = tableHTML + cardsHTML;
         }
 
         // Get status text in Arabic
@@ -1112,7 +1171,7 @@
                 if (!response) return;
 
                 if (response.ok) {
-                    await loadRecentOrders();
+                    await Promise.all([loadStats(), loadRecentOrders()]);
                 } else {
                     alert('فشل تحديث حالة الطلب');
                 }
@@ -1133,9 +1192,9 @@
             await loadRecentOrders();
         }
 
-        // Refresh orders only
+        // Refresh orders and stats (revenue updates when status changes)
         async function refreshOrders() {
-            await loadRecentOrders();
+            await Promise.all([loadStats(), loadRecentOrders()]);
         }
 
         // Logout

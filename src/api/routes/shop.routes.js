@@ -301,44 +301,49 @@ router.put("/me", async (req, res) => {
 // Get shop statistics
 router.get("/stats", async (req, res) => {
   try {
-    const stats = await prisma.shop.findUnique({
-      where: { id: req.shop.id },
-      select: {
-        _count: {
-          select: {
-            products: {
-              where: { isAvailable: true }
-            },
-            orders: {
-              where: {
-                createdAt: {
-                  gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) // Last 30 days
-                }
+    const shopId = req.shop.id;
+
+    const [stats, pendingCount, revenueAgg, recentOrders] = await Promise.all([
+      prisma.shop.findUnique({
+        where: { id: shopId },
+        select: {
+          _count: {
+            select: {
+              products: { where: { isAvailable: true } },
+              orders: {
+                where: { createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } }
               }
             }
           }
         }
-      }
-    });
-
-    // Get recent orders
-    const recentOrders = await prisma.order.findMany({
-      where: { shopId: req.shop.id },
-      take: 5,
-      orderBy: { createdAt: "desc" },
-      select: {
-        id: true,
-        customerPhone: true,
-        customerName: true,
-        status: true,
-        totalPrice: true,
-        createdAt: true
-      }
-    });
+      }),
+      prisma.order.count({
+        where: { shopId, status: 'PENDING' }
+      }),
+      prisma.order.aggregate({
+        where: { shopId, status: 'DELIVERED' },
+        _sum: { totalPrice: true }
+      }),
+      prisma.order.findMany({
+        where: { shopId },
+        take: 5,
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          customerPhone: true,
+          customerName: true,
+          status: true,
+          totalPrice: true,
+          createdAt: true
+        }
+      })
+    ]);
 
     res.json({
       products: stats?._count?.products || 0,
       recentOrders: stats?._count?.orders || 0,
+      pendingOrders: pendingCount || 0,
+      revenue: revenueAgg?._sum?.totalPrice || 0,
       recentOrdersList: recentOrders
     });
 

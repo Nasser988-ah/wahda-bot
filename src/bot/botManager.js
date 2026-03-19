@@ -503,9 +503,14 @@ class BotManager {
             await sock.sendMessage(from, {
               text: `تم اختيار:\n${partialInfo}\n\n` +
                     `يرجى اختيار أيضاً:\n` +
-                    remaining.map(g =>
-                      `*${g.name}:* ${g.options.join('، ')}`
-                    ).join('\n') +
+                    remaining.map(g => {
+                      const avail = g.options.filter(o => {
+                        if (!g.stock) return true
+                        const s = g.stock[o]
+                        return s === null || s === undefined || s > 0
+                      })
+                      return `*${g.name}:* ${avail.join('، ')}`
+                    }).join('\n') +
                     `\n\nأو اكتب *إلغاء* للرجوع`
             })
             // Update pending with partial selections
@@ -555,13 +560,24 @@ class BotManager {
           return
         }
 
-        // Customer input didn't match any option - show friendly reminder
+        // Customer input didn't match any option - show friendly reminder (hide out-of-stock)
+        const availExample = variantGroups[0]?.options.find(o => {
+          if (!variantGroups[0]?.stock) return true
+          const s = variantGroups[0].stock[o]
+          return s === null || s === undefined || s > 0
+        }) || variantGroups[0]?.options[0] || 'أحمر'
+
         await sock.sendMessage(from, {
           text: `يرجى اختيار من الخيارات التالية:\n\n` +
-                variantGroups.map(g =>
-                  `*${g.name}:* ${g.options.join('، ')}`
-                ).join('\n') +
-                `\n\n💡 اكتب اسم الخيار مباشرة (مثال: ${variantGroups[0]?.options[0] || 'أحمر'})` +
+                variantGroups.map(g => {
+                  const avail = g.options.filter(o => {
+                    if (!g.stock) return true
+                    const s = g.stock[o]
+                    return s === null || s === undefined || s > 0
+                  })
+                  return `*${g.name}:* ${avail.join('، ')}`
+                }).join('\n') +
+                `\n\n💡 اكتب اسم الخيار مباشرة (مثال: ${availExample})` +
                 `\n\nأو اكتب *إلغاء* للرجوع`
         })
         return
@@ -2551,17 +2567,39 @@ ${productsList}
           variants: variantGroups
         }), { ex: 300 })
 
+        // Build variant options text, hiding out-of-stock options
+        const variantLines = variantGroups.map(g => {
+          const available = g.options.filter(o => {
+            if (!g.stock) return true
+            const s = g.stock[o]
+            return s === null || s === undefined || s > 0
+          })
+          const unavailable = g.options.filter(o => {
+            if (!g.stock) return false
+            const s = g.stock[o]
+            return s !== null && s !== undefined && s <= 0
+          })
+          let line = `*${g.name}:*\n` + available.map(o => `• ${o}`).join('\n')
+          if (unavailable.length > 0) {
+            line += `\n` + unavailable.map(o => `• ~${o}~ (غير متوفر حالياً)`).join('\n')
+          }
+          return line
+        })
+
+        const firstAvailable = variantGroups.map(g => {
+          const avail = g.options.find(o => {
+            if (!g.stock) return true
+            const s = g.stock[o]
+            return s === null || s === undefined || s > 0
+          })
+          return avail ? `${g.name}: ${avail}` : null
+        }).filter(Boolean)
+
         await sock.sendMessage(from, {
           text: `لإضافة *${product.name}* إلى سلتك،\n` +
                 `يرجى اختيار:\n\n` +
-                variantGroups.map(g =>
-                  `*${g.name}:*\n` +
-                  g.options.map(o => `• ${o}`).join('\n')
-                ).join('\n\n') +
-                `\n\nأرسل اختياراتك مثال:\n` +
-                variantGroups.map(g =>
-                  `${g.name}: ${g.options[0]}` 
-                ).join('\n') +
+                variantLines.join('\n\n') +
+                (firstAvailable.length > 0 ? `\n\nأرسل اختياراتك مثال:\n` + firstAvailable.join('\n') : '') +
                 `\n\nأو اكتب *إلغاء* للرجوع` 
         })
         return
@@ -2607,13 +2645,13 @@ ${productsList}
       const currentQty = existingIndex >= 0 ? cart[existingIndex].quantity : 0
       if (effectiveStock <= 0) {
         await sock.sendMessage(from, {
-          text: `عذراً، هذا الخيار غير متوفر حالياً 😔`
+          text: `عذراً، *${product.name}*${variantInfo ? ` (${variantInfo})` : ''} غير متوفر حالياً 😔\nسيتوفر قريباً إن شاء الله 🙏`
         })
         return
       }
       if (currentQty >= effectiveStock) {
         await sock.sendMessage(from, {
-          text: `عذراً، الكمية المتاحة من *${product.name}*${variantInfo ? ` (${variantInfo})` : ''} هي ${effectiveStock} فقط.`
+          text: `عذراً، وصلت للحد الأقصى المتاح من *${product.name}*${variantInfo ? ` (${variantInfo})` : ''} حالياً.\nجرّب خيار آخر أو تابعنا لمعرفة وقت التوفر 🙏`
         })
         return
       }
@@ -2887,40 +2925,101 @@ ${productsList}
         })
 
         if (!product) continue
-        if (product.stock === null ||
-            product.stock === undefined) continue
 
-        const newStock = Math.max(0, product.stock - item.quantity)
+        const updateData = {}
 
-        await prisma.product.update({
-          where: { id: item.productId },
-          data: {
-            stock: newStock,
-            isAvailable: newStock > 0
-          }
-        })
+        // Reduce variant-level stock if item has variantInfo
+        if (item.variantInfo && product.variants) {
+          try {
+            const vGroups = typeof product.variants === 'string' ? JSON.parse(product.variants) : product.variants
+            let variantChanged = false
 
-        this.invalidateShopCache(shop.id)
+            // Parse variantInfo like "اللون: أحمر - المقاس: L" or "اللون: أحمر، المقاس: L"
+            const parts = item.variantInfo.split(/\s*[-،,]\s*/)
+            for (const part of parts) {
+              const [, val] = part.split(':').map(s => s.trim())
+              if (!val) continue
+              for (const g of vGroups) {
+                if (g.stock && g.stock[val] !== null && g.stock[val] !== undefined) {
+                  const oldStock = g.stock[val]
+                  g.stock[val] = Math.max(0, oldStock - item.quantity)
+                  variantChanged = true
 
-        if (newStock > 0 && newStock <= 3) {
-          await sock.sendMessage(
-            `${shop.whatsappNumber}@s.whatsapp.net`,
-            {
-              text: `⚠️ *تنبيه: كمية منخفضة*\n` +
-                    `المنتج: *${product.name}*\n` +
-                    `الكمية المتبقية: ${newStock} فقط` 
+                  // Notify owner when a specific variant option runs out
+                  if (g.stock[val] === 0 && oldStock > 0) {
+                    try {
+                      await sock.sendMessage(
+                        `${shop.whatsappNumber}@s.whatsapp.net`,
+                        {
+                          text: `🔴 *تنبيه: نفذ خيار من المنتج*\n` +
+                                `المنتج: *${product.name}*\n` +
+                                `${g.name}: *${val}* نفذ بالكامل\n\n` +
+                                `يرجى إعادة تعبئة المخزون من لوحة التحكم`
+                        }
+                      )
+                    } catch (e) { console.error('Variant notify error:', e) }
+                  } else if (g.stock[val] > 0 && g.stock[val] <= 3 && oldStock > 3) {
+                    try {
+                      await sock.sendMessage(
+                        `${shop.whatsappNumber}@s.whatsapp.net`,
+                        {
+                          text: `⚠️ *تنبيه: كمية منخفضة*\n` +
+                                `المنتج: *${product.name}*\n` +
+                                `${g.name}: *${val}* - متبقي ${g.stock[val]} فقط`
+                        }
+                      )
+                    } catch (e) { console.error('Variant notify error:', e) }
+                  }
+                }
+              }
             }
-          )
+
+            if (variantChanged) {
+              updateData.variants = JSON.stringify(vGroups)
+            }
+          } catch (e) {
+            console.error('Variant stock reduce error:', e)
+          }
         }
 
-        if (newStock === 0) {
-          await sock.sendMessage(
-            `${shop.whatsappNumber}@s.whatsapp.net`,
-            {
-              text: `🔴 *تنبيه: نفذت الكمية*\n` +
-                    `المنتج: *${product.name}* نفذ بالكامل` 
-            }
-          )
+        // Reduce product-level stock
+        if (product.stock !== null && product.stock !== undefined) {
+          const newStock = Math.max(0, product.stock - item.quantity)
+          updateData.stock = newStock
+          updateData.isAvailable = newStock > 0
+
+          if (newStock > 0 && newStock <= 3) {
+            try {
+              await sock.sendMessage(
+                `${shop.whatsappNumber}@s.whatsapp.net`,
+                {
+                  text: `⚠️ *تنبيه: كمية منخفضة*\n` +
+                        `المنتج: *${product.name}*\n` +
+                        `الكمية المتبقية: ${newStock} فقط`
+                }
+              )
+            } catch (e) {}
+          }
+
+          if (newStock === 0) {
+            try {
+              await sock.sendMessage(
+                `${shop.whatsappNumber}@s.whatsapp.net`,
+                {
+                  text: `🔴 *تنبيه: نفذت الكمية*\n` +
+                        `المنتج: *${product.name}* نفذ بالكامل`
+                }
+              )
+            } catch (e) {}
+          }
+        }
+
+        if (Object.keys(updateData).length > 0) {
+          await prisma.product.update({
+            where: { id: item.productId },
+            data: updateData
+          })
+          this.invalidateShopCache(shop.id)
         }
 
       } catch (err) {

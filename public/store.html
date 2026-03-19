@@ -1344,10 +1344,11 @@
             ${g.options.map((opt, oi) => {
               const os = g.stock ? g.stock[opt] : null
               const dead = os !== null && os !== undefined && os <= 0
-              const low = os !== null && os !== undefined && os > 0 && os <= 5 ? ' ('+os+')' : ''
               const img = modalImgMap[opt]
-              if (img) return '<img src="'+esc(img)+'" class="variant-chip-img'+(dead?' out-of-stock-opt':'')+'" title="'+esc(opt)+'" alt="'+esc(opt)+'" onclick="modalSelectVariant('+gi+','+oi+',this)">'
-              return '<button class="variant-chip'+(dead?' out-of-stock-opt':'')+'" '+(dead?'disabled ':'')+' onclick="modalSelectVariant('+gi+','+oi+',this)">'+esc(opt)+low+(dead?' ❌':'')+'</button>'
+              if (img) return '<img src="'+esc(img)+'" class="variant-chip-img'+(dead?' out-of-stock-opt':'')+'" title="'+esc(opt)+(dead?' - غير متوفر حالياً':'')+'" alt="'+esc(opt)+'" onclick="'+(dead?'':'modalSelectVariant('+gi+','+oi+',this)')+'">'
+              return dead
+                ? '<button class="variant-chip out-of-stock-opt" disabled>'+esc(opt)+' - غير متوفر</button>'
+                : '<button class="variant-chip" onclick="modalSelectVariant('+gi+','+oi+',this)">'+esc(opt)+'</button>'
             }).join('')}
           </div>
         </div>`).join('')

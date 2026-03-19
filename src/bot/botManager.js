@@ -108,6 +108,93 @@ function findBestMatch(text, products) {
 
 const prisma = databaseService.getClient();
 
+// ===================== Working Hours Helpers =====================
+const DAY_NAMES_EN = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+const DAY_NAMES_AR = { saturday: 'السبت', sunday: 'الأحد', monday: 'الاثنين', tuesday: 'الثلاثاء', wednesday: 'الأربعاء', thursday: 'الخميس', friday: 'الجمعة' };
+
+function getEgyptNow() {
+  return new Date(new Date().toLocaleString('en-US', { timeZone: 'Africa/Cairo' }));
+}
+
+function isShopOpen(shop) {
+  if (shop.isAlwaysOpen === true || shop.isAlwaysOpen === undefined || shop.isAlwaysOpen === null) return true;
+  if (!shop.workingHours) return true;
+
+  let hours;
+  try { hours = typeof shop.workingHours === 'string' ? JSON.parse(shop.workingHours) : shop.workingHours; } catch { return true; }
+
+  const now = getEgyptNow();
+  const todayKey = DAY_NAMES_EN[now.getDay()];
+  const today = hours[todayKey];
+  if (!today || !today.active) return false;
+
+  const currentMin = now.getHours() * 60 + now.getMinutes();
+  const [oh, om] = today.open.split(':').map(Number);
+  const [ch, cm] = today.close.split(':').map(Number);
+  const openMin = oh * 60 + om;
+  const closeMin = ch * 60 + cm;
+
+  if (closeMin > openMin) {
+    return currentMin >= openMin && currentMin < closeMin;
+  } else {
+    // Midnight crossing (e.g. 20:00 - 02:00)
+    return currentMin >= openMin || currentMin < closeMin;
+  }
+}
+
+function getNextOpenTime(shop) {
+  if (!shop.workingHours) return '';
+  let hours;
+  try { hours = typeof shop.workingHours === 'string' ? JSON.parse(shop.workingHours) : shop.workingHours; } catch { return ''; }
+
+  const now = getEgyptNow();
+  const todayIdx = now.getDay();
+  const currentMin = now.getHours() * 60 + now.getMinutes();
+
+  // Check the next 7 days (including today's remaining time)
+  for (let offset = 0; offset < 7; offset++) {
+    const dayIdx = (todayIdx + offset) % 7;
+    const dayKey = DAY_NAMES_EN[dayIdx];
+    const day = hours[dayKey];
+    if (!day || !day.active) continue;
+
+    const [oh, om] = day.open.split(':').map(Number);
+    const openMin = oh * 60 + om;
+
+    if (offset === 0 && currentMin < openMin) {
+      const h = oh > 12 ? oh - 12 : oh || 12;
+      const ampm = oh >= 12 ? 'مساءً' : 'صباحاً';
+      return `اليوم الساعة ${h}:${String(om).padStart(2,'0')} ${ampm}`;
+    }
+    if (offset > 0) {
+      const h = oh > 12 ? oh - 12 : oh || 12;
+      const ampm = oh >= 12 ? 'مساءً' : 'صباحاً';
+      const label = offset === 1 ? 'غداً' : `يوم ${DAY_NAMES_AR[dayKey]}`;
+      return `${label} الساعة ${h}:${String(om).padStart(2,'0')} ${ampm}`;
+    }
+  }
+  return '';
+}
+
+function getWorkingHoursSchedule(shop) {
+  if (!shop.workingHours) return '';
+  let hours;
+  try { hours = typeof shop.workingHours === 'string' ? JSON.parse(shop.workingHours) : shop.workingHours; } catch { return ''; }
+
+  const lines = [];
+  const orderedDays = ['saturday','sunday','monday','tuesday','wednesday','thursday','friday'];
+  for (const key of orderedDays) {
+    const day = hours[key];
+    const name = DAY_NAMES_AR[key];
+    if (day && day.active) {
+      lines.push(`${name}: ${day.open} - ${day.close}`);
+    } else {
+      lines.push(`${name}: مغلق`);
+    }
+  }
+  return lines.join('\n');
+}
+
 // FIX 1: In-memory shop cache with 5-minute TTL
 const shopCache = new Map();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
@@ -751,6 +838,54 @@ class BotManager {
         }
       }
       
+      // ===== WORKING HOURS CHECK =====
+      const shopOpen = isShopOpen(shop);
+      if (!shopOpen) {
+        // Allow greetings and working hours questions even when closed
+        const isGreeting = this.matchesIntent(lowerText, 'greeting');
+        const isHoursQ = this.matchesIntent(lowerText, 'working_hours');
+
+        if (isGreeting) {
+          // Respond to greeting but mention shop is closed
+          const nextOpen = getNextOpenTime(shop);
+          const schedule = getWorkingHoursSchedule(shop);
+          const appUrl = process.env.APP_URL || process.env.RAILWAY_STATIC_URL || '';
+          const storeLink = appUrl ? `${appUrl}/store/${shop.id}` : '';
+          await this.safeSendMessage(sock, from,
+            `أهلاً بك! 👋\n\n` +
+            `عذراً، المتجر مغلق حالياً 🔴\n` +
+            (nextOpen ? `🕐 هنفتح ${nextOpen}\n\n` : '\n') +
+            `📅 *ساعات العمل:*\n${schedule}` +
+            (storeLink ? `\n\n🛍️ تصفح منتجاتنا: ${storeLink}` : ''),
+            shop.name, shop.id, customerPhone);
+          return;
+        }
+
+        if (isHoursQ) {
+          const schedule = getWorkingHoursSchedule(shop);
+          const nextOpen = getNextOpenTime(shop);
+          await this.safeSendMessage(sock, from,
+            `📅 *ساعات العمل:*\n${schedule}\n\n` +
+            `المتجر مغلق حالياً 🔴\n` +
+            (nextOpen ? `🕐 هنفتح ${nextOpen}` : ''),
+            shop.name, shop.id, customerPhone);
+          return;
+        }
+
+        // For all other messages when closed
+        const nextOpen = getNextOpenTime(shop);
+        const schedule = getWorkingHoursSchedule(shop);
+        const appUrl = process.env.APP_URL || process.env.RAILWAY_STATIC_URL || '';
+        const storeLink = appUrl ? `${appUrl}/store/${shop.id}` : '';
+        await this.safeSendMessage(sock, from,
+          `عذراً، المتجر مغلق حالياً 🔴\n` +
+          (nextOpen ? `🕐 هنفتح ${nextOpen}\n\n` : '\n') +
+          `📅 *ساعات العمل:*\n${schedule}` +
+          (storeLink ? `\n\n🛍️ يمكنك تصفح منتجاتنا: ${storeLink}` : ''),
+          shop.name, shop.id, customerPhone);
+        return;
+      }
+
       // Track message count for AI takeover decision
       const msgCountKey = `msgcount:${shop.id}:${customerPhone}`;
       const msgCount = parseInt(await redis.get(msgCountKey) || '0') + 1;
@@ -3065,16 +3200,21 @@ ${productsList}
 
   // Handle working hours questions
   async handleWorkingHoursQuestion(sock, from, shop, customerPhone) {
-    const hour = new Date().getHours();
-    const isLikelyOpen = hour >= 9 && hour <= 22;
-    
+    if (shop.isAlwaysOpen !== false) {
+      await this.safeSendMessage(sock, from,
+        `🕐 *مواعيد العمل:*\n\n` +
+        `نحن متاحون على مدار الساعة! 📱\n` +
+        `✅ المتجر مفتوح الآن\n\n` +
+        `اكتب *قائمة* لتصفح المنتجات 📋`, shop.name, shop.id, customerPhone);
+      return;
+    }
+
+    const schedule = getWorkingHoursSchedule(shop);
+    const open = isShopOpen(shop);
     await this.safeSendMessage(sock, from,
-      `🕐 *مواعيد العمل:*\n\n` +
-      `نحن نستقبل طلباتك على مدار الساعة عبر الواتساب! 📱\n` +
-      (isLikelyOpen 
-        ? `✅ نحن متاحون الآن! ابدأ طلبك 🚀\n`
-        : `⏰ قد يكون هناك تأخير بسيط في الرد حالياً.\nسجّل طلبك وسنرد عليك في أقرب وقت! 🙏\n`) +
-      `\nاكتب *قائمة* لتصفح المنتجات 📋`, shop.name, shop.id, customerPhone);
+      `🕐 *مواعيد العمل:*\n\n${schedule}\n\n` +
+      (open ? `✅ المتجر مفتوح الآن! ابدأ طلبك 🚀` : `🔴 المتجر مغلق حالياً\n🕐 هنفتح ${getNextOpenTime(shop)}`) +
+      `\n\nاكتب *قائمة* لتصفح المنتجات 📋`, shop.name, shop.id, customerPhone);
   }
 
   // Handle location/branch questions

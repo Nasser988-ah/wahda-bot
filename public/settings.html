@@ -337,6 +337,150 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+
+        /* Working Hours Styles */
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            background: var(--bg);
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+        .toggle-label {
+            font-size: 1rem;
+            font-weight: 500;
+        }
+        .toggle-switch {
+            position: relative;
+            width: 56px;
+            height: 30px;
+            cursor: pointer;
+        }
+        .toggle-switch input { display: none; }
+        .toggle-slider {
+            position: absolute;
+            inset: 0;
+            background: #333;
+            border-radius: 30px;
+            transition: 0.3s;
+        }
+        .toggle-slider::before {
+            content: '';
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            left: 3px;
+            bottom: 3px;
+            background: #fff;
+            border-radius: 50%;
+            transition: 0.3s;
+        }
+        .toggle-switch input:checked + .toggle-slider {
+            background: var(--gold);
+        }
+        .toggle-switch input:checked + .toggle-slider::before {
+            transform: translateX(26px);
+        }
+        .hours-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 8px;
+        }
+        .hours-table th {
+            text-align: right;
+            padding: 8px 12px;
+            font-size: 0.85rem;
+            color: var(--muted);
+            font-weight: 500;
+        }
+        .hours-table td {
+            padding: 10px 12px;
+            background: var(--bg);
+            vertical-align: middle;
+        }
+        .hours-table tr td:first-child { border-radius: 0 12px 12px 0; }
+        .hours-table tr td:last-child { border-radius: 12px 0 0 12px; }
+        .day-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+            min-width: 80px;
+        }
+        .day-checkbox {
+            width: 20px;
+            height: 20px;
+            accent-color: var(--gold);
+            cursor: pointer;
+        }
+        .time-input {
+            padding: 8px 12px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-family: 'Cairo', sans-serif;
+            font-size: 0.9rem;
+            width: 110px;
+            text-align: center;
+        }
+        .time-input:focus {
+            outline: none;
+            border-color: var(--gold);
+        }
+        .time-input:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        .time-separator {
+            color: var(--muted);
+            font-size: 0.85rem;
+            padding: 0 6px;
+        }
+        .shop-status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 20px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1rem;
+            margin-top: 15px;
+        }
+        .shop-status-badge.open {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid var(--success);
+            color: var(--success);
+        }
+        .shop-status-badge.closed {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid var(--error);
+            color: var(--error);
+        }
+        .hours-save-btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
+            color: #0f0f13;
+            border: none;
+            border-radius: 14px;
+            font-family: 'Cairo', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+        .hours-save-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(245, 200, 66, 0.3);
+        }
+        @media (max-width: 600px) {
+            .hours-table th { font-size: 0.75rem; padding: 6px; }
+            .hours-table td { padding: 8px 6px; }
+            .time-input { width: 90px; font-size: 0.8rem; padding: 6px 8px; }
+            .day-name { font-size: 0.85rem; min-width: 60px; }
+        }
     </style>
 </head>
 <body>
@@ -559,6 +703,41 @@
                 </label>
                 <input type="text" class="form-input" id="subscriptionEnd" disabled style="background: var(--bg); cursor: not-allowed;">
             </div>
+        </div>
+
+        <div class="settings-card">
+            <div class="card-title">
+                🕐 ساعات العمل
+            </div>
+
+            <div class="toggle-container">
+                <span class="toggle-label">المتجر مفتوح دائماً</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="isAlwaysOpen" checked onchange="toggleAlwaysOpen()">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+
+            <div id="hoursSchedule" style="display: none;">
+                <table class="hours-table">
+                    <thead>
+                        <tr>
+                            <th>اليوم</th>
+                            <th>مفتوح</th>
+                            <th>من</th>
+                            <th></th>
+                            <th>إلى</th>
+                        </tr>
+                    </thead>
+                    <tbody id="hoursTableBody"></tbody>
+                </table>
+            </div>
+
+            <div id="shopStatusPreview" style="text-align: center;"></div>
+
+            <button class="hours-save-btn" onclick="saveWorkingHours()">
+                💾 حفظ ساعات العمل
+            </button>
         </div>
 
         <button class="save-btn" id="saveBtn" onclick="saveSettings()">
@@ -971,6 +1150,145 @@
             showSuccess('تم استعادة التصميم الافتراضي - اضغط حفظ لتطبيق التغييرات');
         }
 
+        // ==================== Working Hours Functions ====================
+        const DAYS = [
+            { key: 'saturday',  label: 'السبت' },
+            { key: 'sunday',    label: 'الأحد' },
+            { key: 'monday',    label: 'الاثنين' },
+            { key: 'tuesday',   label: 'الثلاثاء' },
+            { key: 'wednesday', label: 'الأربعاء' },
+            { key: 'thursday',  label: 'الخميس' },
+            { key: 'friday',    label: 'الجمعة' }
+        ];
+
+        const DEFAULT_HOURS = {};
+        DAYS.forEach(d => {
+            DEFAULT_HOURS[d.key] = d.key === 'friday'
+                ? { open: '00:00', close: '00:00', active: false }
+                : { open: '10:00', close: '23:00', active: true };
+        });
+
+        function renderHoursTable(hours) {
+            const tbody = document.getElementById('hoursTableBody');
+            tbody.innerHTML = '';
+            DAYS.forEach(day => {
+                const h = hours[day.key] || DEFAULT_HOURS[day.key];
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><span class="day-name">${day.label}</span></td>
+                    <td><input type="checkbox" class="day-checkbox" data-day="${day.key}" ${h.active ? 'checked' : ''} onchange="onDayToggle('${day.key}', this.checked)"></td>
+                    <td><input type="time" class="time-input" id="open_${day.key}" value="${h.open}" ${h.active ? '' : 'disabled'}></td>
+                    <td><span class="time-separator">→</span></td>
+                    <td><input type="time" class="time-input" id="close_${day.key}" value="${h.close}" ${h.active ? '' : 'disabled'}></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function onDayToggle(dayKey, checked) {
+            document.getElementById('open_' + dayKey).disabled = !checked;
+            document.getElementById('close_' + dayKey).disabled = !checked;
+            updateShopStatus();
+        }
+
+        function toggleAlwaysOpen() {
+            const isAlways = document.getElementById('isAlwaysOpen').checked;
+            document.getElementById('hoursSchedule').style.display = isAlways ? 'none' : 'block';
+            updateShopStatus();
+        }
+
+        function getWorkingHoursFromForm() {
+            const hours = {};
+            DAYS.forEach(day => {
+                const cb = document.querySelector(`[data-day="${day.key}"]`);
+                hours[day.key] = {
+                    open: document.getElementById('open_' + day.key).value || '10:00',
+                    close: document.getElementById('close_' + day.key).value || '23:00',
+                    active: cb ? cb.checked : true
+                };
+            });
+            return hours;
+        }
+
+        function isCurrentlyOpen() {
+            const isAlways = document.getElementById('isAlwaysOpen').checked;
+            if (isAlways) return true;
+
+            const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Africa/Cairo' }));
+            const dayNames = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+            const todayKey = dayNames[now.getDay()];
+            const hours = getWorkingHoursFromForm();
+            const today = hours[todayKey];
+
+            if (!today || !today.active) return false;
+
+            const currentMin = now.getHours() * 60 + now.getMinutes();
+            const [oh, om] = today.open.split(':').map(Number);
+            const [ch, cm] = today.close.split(':').map(Number);
+            const openMin = oh * 60 + om;
+            const closeMin = ch * 60 + cm;
+
+            if (closeMin > openMin) {
+                return currentMin >= openMin && currentMin < closeMin;
+            } else {
+                return currentMin >= openMin || currentMin < closeMin;
+            }
+        }
+
+        function updateShopStatus() {
+            const el = document.getElementById('shopStatusPreview');
+            const open = isCurrentlyOpen();
+            el.innerHTML = open
+                ? '<div class="shop-status-badge open">✅ المتجر مفتوح الآن</div>'
+                : '<div class="shop-status-badge closed">❌ المتجر مغلق الآن</div>';
+        }
+
+        async function loadWorkingHours() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/shop/working-hours`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                });
+                if (!res.ok) return;
+                const data = await res.json();
+
+                document.getElementById('isAlwaysOpen').checked = data.isAlwaysOpen !== false;
+                const hours = data.workingHours || DEFAULT_HOURS;
+                renderHoursTable(hours);
+                toggleAlwaysOpen();
+                updateShopStatus();
+            } catch (e) {
+                console.error('Error loading working hours:', e);
+                renderHoursTable(DEFAULT_HOURS);
+                updateShopStatus();
+            }
+        }
+
+        async function saveWorkingHours() {
+            const isAlwaysOpen = document.getElementById('isAlwaysOpen').checked;
+            const workingHours = getWorkingHoursFromForm();
+
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/shop/working-hours`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({ isAlwaysOpen, workingHours })
+                });
+                if (res.ok) {
+                    showSuccess('تم حفظ ساعات العمل بنجاح');
+                    updateShopStatus();
+                } else {
+                    const err = await res.json();
+                    showError(err.error || 'فشل في حفظ ساعات العمل');
+                }
+            } catch (e) {
+                console.error('Save working hours error:', e);
+                showError('حدث خطأ أثناء حفظ ساعات العمل');
+            }
+        }
+
         // Initialize customization on page load
         document.addEventListener('DOMContentLoaded', async () => {
             const token = localStorage.getItem('token');
@@ -983,6 +1301,7 @@
             await loadCustomization();
             setupColorListeners();
             setupLogoUpload();
+            await loadWorkingHours();
         });
 
         // Allow Enter key to save
@@ -991,6 +1310,9 @@
                 saveSettings();
             }
         });
+
+        // Refresh shop status every minute
+        setInterval(updateShopStatus, 60000);
     </script>
 </body>
 </html>

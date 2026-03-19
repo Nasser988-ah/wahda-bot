@@ -502,4 +502,50 @@ router.post('/logo', authenticateToken, upload.single('image'), async (req, res)
   }
 });
 
+// Get working hours
+router.get('/working-hours', authenticateToken, async (req, res) => {
+  try {
+    const shop = await prisma.shop.findUnique({
+      where: { id: req.shop.id },
+      select: { isAlwaysOpen: true, workingHours: true }
+    });
+    if (!shop) return res.status(404).json({ error: 'المتجر غير موجود' });
+
+    let workingHours = null;
+    if (shop.workingHours) {
+      try { workingHours = JSON.parse(shop.workingHours); } catch {}
+    }
+
+    res.json({ isAlwaysOpen: shop.isAlwaysOpen, workingHours });
+  } catch (error) {
+    console.error('Get working hours error:', error);
+    res.status(500).json({ error: 'فشل في تحميل ساعات العمل' });
+  }
+});
+
+// Update working hours
+router.put('/working-hours', authenticateToken, async (req, res) => {
+  try {
+    const { isAlwaysOpen, workingHours } = req.body;
+
+    await prisma.shop.update({
+      where: { id: req.shop.id },
+      data: {
+        isAlwaysOpen: isAlwaysOpen === true,
+        workingHours: workingHours ? JSON.stringify(workingHours) : null
+      }
+    });
+
+    // Invalidate shop cache so bot picks up new hours immediately
+    if (botManager) {
+      botManager.invalidateShopCache(req.shop.id);
+    }
+
+    res.json({ success: true, message: 'تم حفظ ساعات العمل بنجاح' });
+  } catch (error) {
+    console.error('Update working hours error:', error);
+    res.status(500).json({ error: 'فشل في حفظ ساعات العمل' });
+  }
+});
+
 module.exports = router;

@@ -18,6 +18,10 @@ model Shop {
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
 
+  // Working Hours
+  workingHours      String?             // JSON: per-day open/close/active
+  isAlwaysOpen      Boolean             @default(true)
+
   // Store Customization
   logoUrl           String?             // Store logo URL
   primaryColor      String?             @default("#f5c842") // Gold theme default

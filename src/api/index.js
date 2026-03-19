@@ -55,7 +55,7 @@ router.get("/store/:shopId", async (req, res) => {
     res.json(shop);
   } catch (err) {
     console.error("Get store error:", err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "حدث خطأ في تحميل المتجر" });
   }
 });
 

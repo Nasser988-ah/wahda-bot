@@ -598,7 +598,7 @@
                 return;
             }
 
-            currentShop = JSON.parse(shop);
+            try { currentShop = JSON.parse(shop); } catch(e) { window.location.href = 'login.html'; return; }
             
             await checkConnectionStatus();
             startAutoRefresh();
@@ -691,7 +691,7 @@
 
         // Update QR display based on status
         function updateQRDisplay(data) {
-            const qrContainer = documentQRContainer('qrContainer');
+            const qrContainer = document.getElementById('qrContainer');
             
             if (data.status === 'expired') {
                 qrContainer.innerHTML = `
@@ -700,17 +700,6 @@
                         <div>كود QR منتهي الصلاحية</div>
                         <div style="font-size: 12px; margin-top: 10px;">
                             <button class="btn" onclick="refreshQR()">إنشاء كود جديد</button>
-                        </div>
-                    </div>
-                `;
-                document.getElementById('refreshBtn').textContent = 'إنشاء كود جديد';
-            } else if (data.status === 'error') {
-                qrContainer.innerHTML = `
-                    <div class="qr-placeholder">
-                        <div class="qr-placeholder-icon">❌</div>
-                        <div>حدث خطأء</div>
-                        <div style="font-size: 12px; margin-top: 10px;">
-                            ${data.error || 'يرجى المحاولة مرة أخرى'}
                         </div>
                     </div>
                 `;
@@ -723,8 +712,8 @@
             const qrContainer = document.getElementById('qrContainer');
             qrContainer.innerHTML = `
                 <img src="data:image/png;base64,${base64QR}" alt="WhatsApp QR Code" class="qr-image">
-                <div style="margin-top: 15px; font-size: 12px; color: #666;">
-                    ⏰️ صالحح الكود مع واتساب
+                <div style="margin-top: 15px; font-size: 12px; color: var(--text-muted);">
+                    ⏰ امسح الكود بواتساب الآن
                 </div>
             `;
             startConnectionCheck();
@@ -949,13 +938,19 @@
         }
 
         
-        // Disconnect
-        function disconnect() {
-            if (confirm('هل أنت متأكد من قطع الاتصال بواتساب؟')) {
-                localStorage.setItem('whatsappConnected', 'false');
-                updateConnectionStatus(false);
-                showMessage('تم قطع الاتصال بنجاح', 'success');
-            }
+        // Disconnect - actually calls the API to disconnect the bot
+        async function disconnect() {
+            if (!confirm('هل أنت متأكد من قطع الاتصال بواتساب؟')) return;
+            try {
+                const shop = JSON.parse(localStorage.getItem('shop') || '{}');
+                if (shop.id) {
+                    const res = await apiFetch(`${API_BASE}/shop/qr/refresh?shopId=${shop.id}`, { method: 'POST' });
+                    if (res && !res.ok) console.warn('Disconnect API failed');
+                }
+            } catch(e) { console.error('Disconnect error:', e); }
+            localStorage.setItem('whatsappConnected', 'false');
+            updateConnectionStatus(false);
+            showMessage('تم قطع الاتصال بنجاح', 'success');
         }
 
         // Refresh status

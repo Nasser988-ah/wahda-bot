@@ -112,7 +112,7 @@ router.post("/register", async (req, res) => {
       });
     }
     
-    res.status(500).json({ error: "Failed to register shop", details: error.message });
+    res.status(500).json({ error: "Failed to register shop" });
   }
 });
 
@@ -220,26 +220,6 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// DEBUG: List all registered phone numbers (remove in production)
-router.get("/debug/shops", async (req, res) => {
-  try {
-    // Check database availability
-    const prisma = getPrisma();
-
-    const shops = await prisma.shop.findMany({
-      select: { phone: true, name: true, createdAt: true },
-      orderBy: { createdAt: "desc" }
-    });
-    res.json({ shops });
-  } catch (error) {
-    if (error.message.includes('Database is not configured') || error.message.includes('DATABASE_URL')) {
-      return res.status(503).json({ 
-        error: "Service unavailable", 
-        message: "Database is not configured." 
-      });
-    }
-    res.status(500).json({ error: "Failed to get shops" });
-  }
-});
+// Debug endpoint removed for security
 
 module.exports = router;

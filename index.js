@@ -88,7 +88,8 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 app.use(morgan("dev"));
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: false, limit: '1mb' }));
 
 // Apply rate limiting
 app.use("/api/auth", authLimiter);
@@ -107,13 +108,14 @@ app.get('/health', (req, res) => {
 // DB health check
 app.get('/health/db', async (req, res) => {
   try {
-    const { PrismaClient } = require('@prisma/client');
-    const prisma = new PrismaClient();
+    if (!databaseService.isConnected) {
+      return res.status(503).json({ status: 'error', database: 'disconnected' });
+    }
+    const prisma = databaseService.getClient();
     await prisma.$queryRaw`SELECT 1`;
-    await prisma.$disconnect();
     res.status(200).json({ status: 'ok', database: 'connected' });
   } catch (error) {
-    res.status(500).json({ status: 'error', database: 'disconnected', error: error.message });
+    res.status(500).json({ status: 'error', database: 'disconnected' });
   }
 })
 

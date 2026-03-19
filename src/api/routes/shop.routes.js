@@ -42,8 +42,8 @@ const upload = multer({
 // Get botManager instance from qrService singleton
 const botManager = qrService.botManager;
 
-// QR routes (no auth required for initial connection)
-router.get("/qr", async (req, res) => {
+// QR routes - require auth to prevent unauthorized access
+router.get("/qr", authenticateTokenWithPending, async (req, res) => {
   try {
     const shopId = req.query.shopId;
     
@@ -72,7 +72,7 @@ router.get("/qr", async (req, res) => {
   }
 });
 
-router.post("/qr", async (req, res) => {
+router.post("/qr", authenticateTokenWithPending, async (req, res) => {
   try {
     const { shopId } = req.body;
     
@@ -126,27 +126,16 @@ router.post("/qr", async (req, res) => {
 
   } catch (error) {
     console.error("Generate QR error:", error);
-    
-    // Provide fallback QR for demo purposes
-    const fallbackQR = await require('qrcode').toDataURL(`WA-BOT-${Date.now()}`, {
-      width: 200,
-      margin: 2
-    });
-    
-    res.json({
-      qr: fallbackQR.split(',')[1],
-      shopId: req.body.shopId || "demo",
+    res.status(500).json({
       connected: false,
-      status: 'demo_mode',
-      message: "QR code generated (demo mode)",
-      error: error.message,
-      note: "Real WhatsApp connection requires BotManager integration"
+      status: 'error',
+      message: "فشل إنشاء كود QR، يرجى المحاولة مرة أخرى"
     });
   }
 });
 
 
-router.post("/qr/refresh", async (req, res) => {
+router.post("/qr/refresh", authenticateTokenWithPending, async (req, res) => {
   try {
     const shopId = req.query.shopId || req.body.shopId;
     

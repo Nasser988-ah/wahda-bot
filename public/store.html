@@ -1011,6 +1011,14 @@
 </div>
 
 <script>
+  // XSS sanitization - escape HTML in user-generated content
+  function esc(str) {
+    if (!str) return ''
+    const d = document.createElement('div')
+    d.textContent = str
+    return d.innerHTML
+  }
+
   // Extract shopId from URL path (e.g., /store/cmmsk09t1000a136jwrgk01jg)
   const pathParts = window.location.pathname.split('/')
   const shopId = pathParts[pathParts.length - 1] // Get the last part of the path
@@ -1067,7 +1075,7 @@
 
     bar.innerHTML = `<button class="category-chip active" onclick="setCategory(null, this)">الكل</button>` +
       categories.map(c => 
-        `<button class="category-chip" onclick="setCategory('${c}', this)">${c}</button>`
+        `<button class="category-chip" onclick="setCategory('${esc(c)}', this)">${esc(c)}</button>`
       ).join('')
     bar.classList.add('visible')
   }
@@ -1145,9 +1153,9 @@
                          p.stock <= 0
       return `
         <div class="product-card ${isOutOfStock ? 'out-of-stock' : ''}" data-product-id="${p.id}">
-          <div class="product-image-wrapper" onclick="openLightbox('${p.imageUrl || ''}', '${p.name}')">
+          <div class="product-image-wrapper" onclick="openLightbox('${esc(p.imageUrl || '')}', '${esc(p.name)}')">
             ${p.imageUrl 
-              ? `<img class="product-image" src="${p.imageUrl}" alt="${p.name}" loading="lazy" onload="smartFitImage(this)" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">` 
+              ? `<img class="product-image" src="${esc(p.imageUrl)}" alt="${esc(p.name)}" loading="lazy" onload="smartFitImage(this)" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">` 
               : ''
             }
             <div class="product-image placeholder" style="display: ${p.imageUrl ? 'none' : 'flex'}">🛍️</div>
@@ -1157,9 +1165,9 @@
               : ''}
           </div>
           <div class="product-info">
-            ${p.category ? `<div class="product-category">${p.category}</div>` : ''}
-            <div class="product-name">${p.name}</div>
-            ${p.description ? `<div class="product-desc">${p.description}</div>` : ''}
+            ${p.category ? `<div class="product-category">${esc(p.category)}</div>` : ''}
+            <div class="product-name">${esc(p.name)}</div>
+            ${p.description ? `<div class="product-desc">${esc(p.description)}</div>` : ''}
             <div class="product-price">${p.price}</div>
             ${!isOutOfStock ? renderVariantSelectors(p) : ''}
             <div class="quantity-control">

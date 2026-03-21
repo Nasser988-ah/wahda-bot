@@ -40,9 +40,19 @@ function normalizeArabic(text) {
     .trim();
 }
 
+// Strip common Egyptian request prefixes for better product matching
+function stripRequestPrefixes(text) {
+  const prefixes = /^(عايز|عاوز|هات|هاتلي|ابعتلي|ابعت|جيبلي|جيب|ضيف|اضيف|اضافة|ممكن|محتاج|نفسي في|بدي|اريد|أريد)\s+/i;
+  let cleaned = text.replace(prefixes, '').trim();
+  // Also strip "ال" article if it starts with it and the remaining text is long enough
+  return cleaned;
+}
+
 // Find best matching product
 function findBestMatch(text, products) {
   const normalizedInput = normalizeArabic(text);
+  // Also try with stripped prefixes for better matching
+  const strippedInput = normalizeArabic(stripRequestPrefixes(text));
   const candidates = [];
 
   products.filter(p => p.isAvailable).forEach(p => {
@@ -54,20 +64,27 @@ function findBestMatch(text, products) {
       return;
     }
 
+    // Also check stripped version for exact match
+    if (strippedInput !== normalizedInput && strippedInput === normalizedName) {
+      candidates.push({ product: p, score: 0.98 });
+      return;
+    }
+
     // Input is contained in product name
-    if (normalizedName.includes(normalizedInput)) {
+    if (normalizedName.includes(normalizedInput) || normalizedName.includes(strippedInput)) {
       candidates.push({ product: p, score: 0.95 });
       return;
     }
 
     // Product name is contained in input
-    if (normalizedInput.includes(normalizedName)) {
+    if (normalizedInput.includes(normalizedName) || strippedInput.includes(normalizedName)) {
       candidates.push({ product: p, score: 0.9 });
       return;
     }
 
-    // Word-by-word matching
-    const inputWords = normalizedInput.split(' ').filter(w => w.length > 1);
+    // Word-by-word matching (use stripped version for better matching)
+    const bestInput = strippedInput !== normalizedInput ? strippedInput : normalizedInput;
+    const inputWords = bestInput.split(' ').filter(w => w.length > 1);
     const nameWords = normalizedName.split(' ').filter(w => w.length > 1);
 
     let wordMatches = 0;
@@ -513,6 +530,15 @@ class BotManager {
         return;
       }
 
+      // Ignore very short meaningless messages (single punctuation, emoji-only, etc.)
+      const strippedText = text.replace(/[\s\.\,\!\?\؟\;\:\-\_\(\)\[\]\{\}…\u200f\u200e]/g, '').replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{27BF}\u{FE00}-\u{FEFF}\u{1FA00}-\u{1FAFF}\u{2700}-\u{27BF}\u{200D}\u{20E3}]/gu, '');
+      if (strippedText.length === 0) {
+        // Pure emoji or punctuation - just acknowledge
+        await this.safeSendMessage(sock, from,
+          `👋 أهلاً! اكتب *قائمة* لعرض المنتجات أو *مساعدة* للمساعدة`, shop.name, shop.id, customerPhone);
+        return;
+      }
+
       console.log(`📩 ${shop.name} - Message from ${customerPhone}: "${text}"`);
 
       const lowerText = text.toLowerCase().trim();
@@ -703,6 +729,25 @@ class BotManager {
       // FIX: Smart state handling - allow cancel and questions during info collection
       const orderState = await redis.get(`order_state:${shop.id}:${customerPhone}`);
       
+      // Handle "waiting_for_more" state (after cart summary, asking if they want more items)
+      if (orderState === 'waiting_for_more') {
+        // Clear the state first
+        await redis.del(`order_state:${shop.id}:${customerPhone}`);
+        
+        if (this.matchesIntent(lowerText, 'no') || this.matchesIntent(lowerText, 'done')) {
+          // Customer is done - proceed to collect delivery details
+          await this.askForCustomerDetails(sock, from, shop.id, customerPhone, shop);
+          return;
+        } else if (this.matchesIntent(lowerText, 'yes')) {
+          // Customer wants to add more
+          await this.safeSendMessage(sock, from,
+            `تمام! 👍 اكتب رقم المنتج أو اسمه لإضافته للسلة\n` +
+            `أو اكتب *قائمة* لعرض المنتجات 📋`, shop.name, shop.id, customerPhone);
+          return;
+        }
+        // Any other message - let it fall through to normal processing
+      }
+      
       if (orderState === 'waiting_for_name' || orderState === 'waiting_for_phone' || orderState === 'waiting_for_address') {
         // Check if customer wants to cancel during info collection
         // CRITICAL FIX: Only match EXACT cancel words as standalone commands
@@ -806,6 +851,26 @@ class BotManager {
           }
           return;
         } else if (orderState === 'waiting_for_address') {
+          // Check if customer doesn't know their address or is confused
+          const dontKnowPatterns = /مش عارف|مش فاكر|لا اعرف|لا أعرف|معرفش|مش متأكد|مش متاكد|لسه|مش عندي|ماعرفش/;
+          if (dontKnowPatterns.test(text.trim())) {
+            await this.safeSendMessage(sock, from,
+              `لا مشكلة! 😊\n\n` +
+              `يمكنك كتابة أقرب علامة مميزة أو اسم المنطقة فقط\n` +
+              `مثال: *المعادي - بجوار مسجد الفتح*\n\n` +
+              `أو اكتب *إلغاء* لإلغاء الطلب`, shop.name, shop.id, customerPhone);
+            return;
+          }
+          // Validate address minimum length
+          const cleanAddress = text.replace(/^عنوان[:\s]*/i, '').replace(/^العنوان[:\s]*/i, '').replace(/^address[:\s]*/i, '').trim();
+          if (cleanAddress.length < 5) {
+            await this.safeSendMessage(sock, from,
+              `⚠️ العنوان قصير جداً!\n\n` +
+              `يرجى كتابة عنوان أكثر تفصيلاً لنتمكن من التوصيل:\n` +
+              `مثال: *شارع التحرير، مدينة نصر، القاهرة*\n\n` +
+              `أو اكتب *إلغاء* لإلغاء الطلب`, shop.name, shop.id, customerPhone);
+            return;
+          }
           await this.handleAddressInput(sock, from, shop.id, customerPhone, shop, text);
           return;
         }
@@ -1034,17 +1099,24 @@ class BotManager {
         console.log(`✓ Matched: product number`);
         await this.addToCart(sock, from, shop.id, customerPhone, parseInt(text), shop);
         return;
-      } else if (/^\d+\s+.+/.test(text.trim()) || /.+\s+\d+$/.test(text.trim())) {
-        // Quantity + product name: "2 شاورما" or "شاورما 2"
-        const qtyMatch = text.trim().match(/^(\d+)\s+(.+)/) || text.trim().match(/^(.+)\s+(\d+)$/);
-        if (qtyMatch) {
+      } else if (/\d+/.test(text.trim()) && text.trim().length > 1 && !/^\d+$/.test(text.trim())) {
+        // Quantity + product name in various formats:
+        // "2 شاورما", "شاورما 2", "عايز 2 شاورما", "هاتلي 3 بيتزا"
+        const embeddedMatch = text.trim().match(/^(\d+)\s+(.+)/) || 
+                              text.trim().match(/^(.+)\s+(\d+)$/) ||
+                              text.trim().match(/^.+?\s+(\d+)\s+(.+)/);
+        if (embeddedMatch) {
           let qty, productName;
           if (/^\d/.test(text.trim())) {
-            qty = parseInt(qtyMatch[1]);
-            productName = qtyMatch[2];
+            qty = parseInt(embeddedMatch[1]);
+            productName = embeddedMatch[2];
+          } else if (/\d+$/.test(text.trim())) {
+            productName = embeddedMatch[1];
+            qty = parseInt(embeddedMatch[2]);
           } else {
-            productName = qtyMatch[1];
-            qty = parseInt(qtyMatch[2]);
+            // Embedded: "عايز 2 شاورما" → group1=2, group2=شاورما
+            qty = parseInt(embeddedMatch[1]);
+            productName = embeddedMatch[2];
           }
           if (qty > 0 && qty <= 20 && productName.length > 1) {
             console.log(`✓ Matched: quantity + product name: ${qty}x "${productName}"`);
@@ -1997,6 +2069,8 @@ ${contextMessage}
       greeting: [
         'مرحبا', 'سلام', 'اهلا', 'هلا', 'صباح', 'مساء', 'هاي', 'hello', 'hi', 
         'السلام', 'كيف حالك', 'أخبارك', 'حياك', 'أهلين', 'هلا والله', 'عامل ايه', 'ازيك', 'إيه الأخبار', 'الأخبار إيه',
+        'يا باشا', 'يا معلم', 'يا كبير', 'يا ريس', 'تصبح على خير', 'يسعد صباحك', 'يسعد مساك',
+        'نورت', 'نورتنا', 'السلام عليكم', 'وعليكم السلام',
         // Common misspellings
         'مرحب', 'مرحب', 'اهلان', 'اهلين', 'هلاا', 'سلامم', 'مرحباً', 'عامل', 'كيفك', 'ازيك', 'الاخبار', 'كيف الحال'
       ],
@@ -2045,6 +2119,8 @@ ${contextMessage}
       ],
       menu: [
         'قائمة', 'منيو', 'menu', 'قايمة', 'قائمه', 'القائمة', 'المنيو',
+        'ورني الحاجات', 'ورني المنتجات', 'عرض المنتجات', 'عايز اشوف المنتجات',
+        'المنتجات', 'منتجات', 'ايه اللي عندكم', 'ورني',
         // Misspellings
         'قايمه', 'قائمةة', 'منيوو', 'قايمةة', 'قائمه'
       ],
@@ -2060,19 +2136,22 @@ ${contextMessage}
       ],
       yes: [
         'نعم', 'ايوه', 'yes', 'أيوه', 'أيوة', 'ايوة', 'اوكي', 'حسنا', 'حسناً', 'ok', 'okay',
+        'اه', 'أه', 'ايوا', 'اا', 'اة', 'يب', 'طبعا', 'طبعاً', 'بالظبط', 'اكيد',
         // Misspellings
-        'نعما', 'ايووه', 'ايوهه', 'أيووه', 'اوكيي', 'حسناا'
+        'نعما', 'ايووه', 'ايوهه', 'أيووه', 'اوكيي', 'حسناا', 'ايواا', 'اهه'
       ],
       no: [
         'لا', 'no', 'لأ', 'لأ', 'ليس', 'لا أريد', 'لا أحب',
+        'مش عايز', 'مش عايزه', 'مش عايزة',
         // Misspellings
         'لأأ', 'لاا', 'ليسس'
       ],
       cancel: [
         'الغاء', 'cancel', 'stop', 'لا أريد', 'غير', 'ما أريد', 'لا أحب',
         'الفاء', 'إلغاء', 'الغي', 'إلغي', 'امسح الكل', 'اوقف', 'إيقاف', 'مسح الكل', 'صفر السلة',
+        'بلاش', 'مش عايز حاجه', 'مش عايز حاجة', 'مش عايزه حاجه',
         // Misspellings
-        'الغا', 'الغاءء', 'كانسل', 'cancle', 'الغيي', 'الغاء الطلب', 'إلغاء الطلب', 'الغي الطلب', 'امسح السلة'
+        'الغا', 'الغاءء', 'كانسل', 'cancle', 'الغيي', 'الغاء الطلب', 'إلغاء الطلب', 'الغي الطلب', 'امسح السلة', 'بلاشش'
       ],
       done: [
         'خلاص', 'بس', 'كده', 'بس كده', 'خلاص كده', 'كفاية', 'تم', 'مش عايز حاجة تاني',
@@ -2385,8 +2464,18 @@ ${contextMessage}
 
   async handleNameInput(sock, from, shopId, customerPhone, shop, name) {
     try {
+      // Validate name - must be at least 2 chars, not just numbers/URLs
+      const cleanName = name.trim();
+      if (cleanName.length < 2 || /^[\d\s\+\-]+$/.test(cleanName) || /^https?:\/\//i.test(cleanName)) {
+        await this.safeSendMessage(sock, from,
+          `⚠️ يرجى كتابة اسمك الحقيقي\n` +
+          `مثال: *محمد أحمد*\n\n` +
+          `أو اكتب *إلغاء* لإلغاء الطلب`, shop.name, shopId, customerPhone);
+        return;
+      }
+      
       // Store name
-      await redis.set(`customer_name:${shopId}:${customerPhone}`, name, { ex: 600 });
+      await redis.set(`customer_name:${shopId}:${customerPhone}`, cleanName, { ex: 600 });
       
       // Update state to waiting for phone
       await redis.set(`order_state:${shopId}:${customerPhone}`, 'waiting_for_phone', { ex: 600 });
@@ -3181,7 +3270,7 @@ ${productsList}
   async handleDiscountQuestion(sock, from, shop, customerPhone) {
     const responses = [
       `🏷️ أهلاً بك!\n\nأسعارنا تنافسية جداً ومناسبة للجميع.\nتابعنا دائماً لأن العروض والخصومات بتنزل باستمرار! 🔥\n\nاكتب *قائمة* لتصفح المنتجات والأسعار 📋`,
-      `💫 حالياً أسعارنا هي أفضل الأسعار في السوق!\n\nلو عايز تشوف المنتجات والأسعار اكتب *قائمة* 📋\nولو في عروض جديدة هنعلن عنها فوراً! 🎉`,
+      `💫 حالياً أسعارنا هي أفضل الأسعار في السوق!\n\nإذا أردت رؤية المنتجات والأسعار اكتب *قائمة* 📋\nوسنعلن عن أي عروض جديدة فوراً! 🎉`,
     ];
     await this.safeSendMessage(sock, from,
       responses[Math.floor(Math.random() * responses.length)], shop.name, shop.id, customerPhone);
@@ -3253,7 +3342,7 @@ ${productsList}
     const topProducts = availableProducts.slice(0, Math.min(3, availableProducts.length));
     
     await this.safeSendMessage(sock, from,
-      `⭐ *مقترحاتنا ليك:*\n\n` +
+      `⭐ *مقترحاتنا لك:*\n\n` +
       topProducts.map((p, i) => 
         `${i + 1}. *${p.name}* - ${p.price} جنيه`
       ).join('\n') +
@@ -3299,15 +3388,15 @@ ${productsList}
   async handleAffirmative(sock, from, shop, customerPhone, context) {
     if (context.hasItems) {
       await this.safeSendMessage(sock, from,
-        `تمام! 👍\n\n` +
+        `حسناً! 👍\n\n` +
         `لديك ${context.itemCount} منتج في السلة (${context.totalValue} جنيه)\n\n` +
         `اكتب *قائمة* لإضافة المزيد\n` +
         `أو *اطلب* لتأكيد الطلب ✅`, shop.name, shop.id, customerPhone);
     } else {
       await this.safeSendMessage(sock, from,
-        `تمام! 👍 ازاي أقدر أساعدك؟\n\n` +
+        `حسناً! 👍 كيف يمكنني مساعدتك؟\n\n` +
         `اكتب *قائمة* لتصفح المنتجات 📋\n` +
-        `أو اكتب اسم المنتج اللي عايزه مباشرة!`, shop.name, shop.id, customerPhone);
+        `أو اكتب اسم المنتج الذي تريده مباشرة!`, shop.name, shop.id, customerPhone);
     }
   }
 

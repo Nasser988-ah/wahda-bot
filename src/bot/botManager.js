@@ -1293,22 +1293,20 @@ class BotManager {
         // Customer has items in cart but didn't order
         const total = cart.reduce((s, i) => s + i.price * i.quantity, 0);
         const itemNames = cart.map(i => i.name).join('، ');
-        message = `👋 أهلاً! لسه فاكرينك 😊\n\n` +
-                  `لاحظنا إن عندك *${cart.length} منتج* في السلة:\n` +
+        message = `مرحباً 👋\n\n` +
+                  `لديك *${cart.length} منتج* في السلة:\n` +
                   `📦 ${itemNames}\n` +
                   `💰 الإجمالي: *${total} جنيه*\n\n` +
-                  `عايز تكمّل الطلب؟ 🚀\n\n` +
                   `✅ اكتب *اطلب* — لتأكيد الطلب\n` +
-                  `📋 اكتب *قائمة* — لإضافة حاجة تانية\n` +
-                  `❌ اكتب *إلغاء* — لو غيّرت رأيك`;
+                  `📋 اكتب *قائمة* — لإضافة المزيد\n` +
+                  `❌ اكتب *إلغاء* — لإلغاء السلة`;
       } else {
         // Customer browsed but didn't add anything
-        message = `👋 أهلاً! وحشتنا 😊\n\n` +
-                  `شفنا إنك كنت بتتصفح منتجاتنا\n` +
-                  `محتاج مساعدة في اختيار حاجة؟ 🤔\n\n` +
-                  `📋 اكتب *قائمة* — لتصفح المنتجات\n` +
-                  `⭐ اكتب *نصحني* — عشان أقترحلك الأحسن\n` +
-                  `❓ اكتب *مساعدة* — لو عندك أي سؤال`;
+        message = `مرحباً 👋\n\n` +
+                  `هل تحتاج مساعدة في اختيار منتج؟\n\n` +
+                  `📋 اكتب *قائمة* — لعرض المنتجات\n` +
+                  `⭐ اكتب *نصحني* — لاقتراح الأنسب لك\n` +
+                  `❓ اكتب *مساعدة* — للمساعدة`;
       }
       
       await this.safeSendMessage(sock, from, message, shop.name, shop.id, customerPhone);

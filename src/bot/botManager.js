@@ -492,9 +492,9 @@ class BotManager {
   }
 
   async handleMessage(sock, msg, shop) {
+    const from = msg.key.remoteJid;
+    const customerPhone = from.split('@')[0];
     try {
-      const from = msg.key.remoteJid;
-      const customerPhone = from.split('@')[0];
       
       // FIX: Fetch fresh shop data to get latest products
       // The 'shop' parameter is from connection time and may be stale
@@ -862,12 +862,14 @@ class BotManager {
               `أو اكتب *إلغاء* لإلغاء الطلب`, shop.name, shop.id, customerPhone);
             return;
           }
-          // Validate address minimum length
+          // Validate address minimum length and word count
           const cleanAddress = text.replace(/^عنوان[:\s]*/i, '').replace(/^العنوان[:\s]*/i, '').replace(/^address[:\s]*/i, '').trim();
-          if (cleanAddress.length < 5) {
+          const addressWords = cleanAddress.split(/\s+/).filter(w => w.length > 1);
+          if (cleanAddress.length < 10 || addressWords.length < 3) {
             await this.safeSendMessage(sock, from,
-              `⚠️ العنوان قصير جداً!\n\n` +
-              `يرجى كتابة عنوان أكثر تفصيلاً لنتمكن من التوصيل:\n` +
+              `⚠️ العنوان غير كافٍ للتوصيل\n\n` +
+              `يرجى كتابة عنوان تفصيلي يتضمن:\n` +
+              `*الشارع + المنطقة + المدينة*\n\n` +
               `مثال: *شارع التحرير، مدينة نصر، القاهرة*\n\n` +
               `أو اكتب *إلغاء* لإلغاء الطلب`, shop.name, shop.id, customerPhone);
             return;
@@ -1127,6 +1129,26 @@ class BotManager {
         }
       }
       
+      // MULTI-PRODUCT: Check if message contains multiple products separated by "و" / "," / newlines
+      const multiSeparators = /\s*[,،\n]\s*|\s+و\s+/;
+      const parts = text.split(multiSeparators).map(p => p.trim()).filter(p => p.length > 1);
+      if (parts.length > 1) {
+        let addedAny = false;
+        for (const part of parts) {
+          const partMatches = findBestMatch(part, shop.products);
+          if (partMatches.length >= 1 && partMatches[0].score >= 0.80) {
+            const product = partMatches[0].product;
+            const productIndex = shop.products.filter(p => p.isAvailable).indexOf(product) + 1;
+            if (productIndex > 0) {
+              console.log(`✓ Multi-product: matched "${part}" → "${product.name}" (score: ${partMatches[0].score.toFixed(2)})`);
+              await this.addToCart(sock, from, shop.id, customerPhone, productIndex, shop);
+              addedAny = true;
+            }
+          }
+        }
+        if (addedAny) return;
+      }
+
       // NAME-BASED ORDERING: Check if text matches a product name
       const matches = findBestMatch(text, shop.products);
       
@@ -1662,8 +1684,27 @@ class BotManager {
       } catch (e) { items = []; }
     }
     
-    // If cart is empty, just inform the user
+    // If cart is empty, check if there's a recent order
     if (items.length === 0) {
+      // Check if customer has a recent order (within last hour)
+      const recentOrder = await prisma.order.findFirst({
+        where: {
+          shopId: shop.id,
+          customerPhone: { contains: customerPhone.slice(-10) },
+          createdAt: { gte: new Date(Date.now() - 60 * 60 * 1000) } // last hour
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+      
+      if (recentOrder) {
+        // Customer wants to cancel after ordering
+        await this.safeSendMessage(sock, from, 
+          `⚠️ تم تسجيل طلبك بالفعل (رقم: ${recentOrder.id.slice(-6)})\n\n` +
+          `لإلغاء الطلب يرجى التواصل مباشرة مع الإدارة على نفس الرقم\n` +
+          `للتأكيد وإلغاء الطلب 🙏`, shop.name, shop.id, customerPhone);
+        return;
+      }
+      
       await this.safeSendMessage(sock, from, 
         "سلتك فارغة بالفعل! 🛒\n\nاكتب *قائمة* لتصفح منتجاتنا.", shop.name, shop.id, customerPhone);
       return;
@@ -2617,6 +2658,19 @@ ${contextMessage}
 
   async handlePhoneInput(sock, from, shopId, customerPhone, shop, phone) {
     try {
+      // Reject shop's own WhatsApp number
+      if (shop.whatsappNumber) {
+        const shopNum = shop.whatsappNumber.replace(/[\s\-\+]/g, '');
+        const normalizedShop = shopNum.startsWith('2') ? '0' + shopNum.slice(2) : shopNum;
+        if (phone === normalizedShop || phone === shopNum) {
+          await this.safeSendMessage(sock, from,
+            `⚠️ هذا رقم المتجر وليس رقمك الشخصي\n\n` +
+            `يرجى كتابة رقم هاتفك أنت للتواصل معك بخصوص التوصيل 📱\n\n` +
+            `أو اكتب *إلغاء* لإلغاء الطلب`, shop.name, shopId, customerPhone);
+          return;
+        }
+      }
+
       // Store phone number
       await redis.set(`customer_phone:${shopId}:${customerPhone}`, phone, { ex: 600 });
       

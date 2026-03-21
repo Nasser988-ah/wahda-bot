@@ -1429,19 +1429,19 @@ class BotManager {
         return;
       }
 
-      let message = `🛒 سلة التسوق:\n\n`;
       let total = 0;
+      let message = `📦 *سلتك الحالية:*\n\n`;
       items.forEach((item, i) => {
         const subtotal = item.price * item.quantity;
         total += subtotal;
-        message += `${i + 1}. ${item.name}` +
-          (item.variantInfo ? ` (${item.variantInfo})` : '') +
-          `\n`;
-        message += `الكمية: ${item.quantity} × ${item.price} = ${subtotal} جنيه\n`;
-        message += "-------------------\n";
+        message += `  ${i + 1}. *${item.name}*` +
+          (item.variantInfo ? ` _(${item.variantInfo})_` : '') +
+          ` — ${item.quantity} حبة × ${item.price} = *${subtotal} جنيه*\n`;
       });
-      message += `\nالإجمالي: ${total} جنيه\n\n`;
-      message += "اكتب *اطلب* لتأكيد الطلب ✅";
+      message += `\n💰 *الإجمالي: ${total} جنيه*\n\n`;
+      message += `🚀 اكتب *اطلب* — لتأكيد الطلب\n`;
+      message += `📋 اكتب *قائمة* — لإضافة المزيد\n`;
+      message += `❌ اكتب *إلغاء* — لتفريغ السلة`;
 
       await this.safeSendMessage(sock, from, message, shop.name, shopId, customerPhone);
     } catch (error) {
@@ -1639,23 +1639,50 @@ class BotManager {
       return;
     }
     
-    // Save cart to Redis
+    // MERGE with existing bot cart instead of replacing
     const cartKey = `cart:${shop.id}:${customerPhone}`;
-    await redis.set(cartKey, JSON.stringify(cart), { ex: 3600 });
+    const existingCartData = await redis.get(cartKey);
+    let existingCart = [];
+    if (existingCartData) {
+      try {
+        existingCart = typeof existingCartData === 'string' ? JSON.parse(existingCartData) : existingCartData;
+      } catch (e) { existingCart = []; }
+    }
+    
+    // Merge: if same product+variant exists, increase quantity; otherwise append
+    for (const newItem of cart) {
+      const key = newItem.variantInfo ? `${newItem.productId}__${newItem.variantInfo}` : newItem.productId;
+      const existingIndex = existingCart.findIndex(i => {
+        const existKey = i.variantInfo ? `${i.productId}__${i.variantInfo}` : i.productId;
+        return existKey === key;
+      });
+      
+      if (existingIndex >= 0) {
+        existingCart[existingIndex].quantity += newItem.quantity;
+      } else {
+        existingCart.push({ ...newItem, cartItemKey: key });
+      }
+    }
+    
+    // Save merged cart
+    await redis.set(cartKey, JSON.stringify(existingCart), { ex: 3600 });
+    
+    // Use merged cart for display
+    cart = existingCart;
     
     // Show cart summary and ask if they want more items (using askForMoreItems format)
     const total = cart.reduce((s, i) => s + i.price * i.quantity, 0);
     
-    let message = `🛒 سلة التسوق:\n\n`;
+    let message = `تم استلام طلبك! ✅\n\n`;
+    message += `📦 *طلبك حتى الآن:*\n\n`;
     cart.forEach((item, i) => {
-      message += `${i + 1}. ${item.name}${item.variantInfo ? ` (${item.variantInfo})` : ''}\n`;
-      message += `   الكمية: ${item.quantity} × ${item.price} = ${item.price * item.quantity} جنيه\n\n`;
+      message += `  ${i + 1}. *${item.name}*${item.variantInfo ? ` _(${item.variantInfo})_` : ''}`;
+      message += ` — ${item.quantity} حبة × ${item.price} = *${item.price * item.quantity} جنيه*\n`;
     });
-    message += `💰 الإجمالي: ${total} جنيه\n\n`;
-    message += `━━━━━━━━━━━━━━━━━━━━━\n\n`;
-    message += `هل ترغب في إضافة شيء آخر؟ 🤔\n\n`;
-    message += `👍 اكتب "نعم" إذا كنت ترغب في إضافة منتج آخر\n`;
-    message += `✅ اكتب "لا" إذا كان هذا كل شيء وترغب في إكمال الطلب`;
+    message += `\n💰 *الإجمالي: ${total} جنيه*\n\n`;
+    message += `عايز تضيف حاجة تانية؟ 😊\n\n`;
+    message += `✅ *نعم* — أضيف كمان\n`;
+    message += `🚀 *لا* — خلّص الطلب وابعته`;
     
     await sock.sendMessage(from, { text: message });
     
@@ -2427,19 +2454,18 @@ ${contextMessage}
 
       const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
       
-      let message = `🛒 سلة التسوق:\n\n`;
+      let message = `📦 *طلبك حتى الآن:*\n\n`;
       items.forEach((item, i) => {
-        message += `${i + 1}. ${item.name}${item.variantInfo ? ` (${item.variantInfo})` : ''}\n`;
-        message += `   الكمية: ${item.quantity} × ${item.price} = ${item.price * item.quantity} جنيه\n\n`;
+        message += `  ${i + 1}. *${item.name}*${item.variantInfo ? ` _(${item.variantInfo})_` : ''}`;
+        message += ` — ${item.quantity} حبة × ${item.price} = *${item.price * item.quantity} جنيه*\n`;
       });
-      message += `💰 الإجمالي: ${total} جنيه\n\n`;
-      message += `━━━━━━━━━━━━━━━━━━━━━\n\n`;
-      message += `هل ترغب في إضافة شيء آخر؟ 🤔\n\n`;
-      message += `👍 اكتب "نعم" إذا كنت ترغب في إضافة منتج آخر\n`;
-      message += `✅ اكتب "لا" إذا كان هذا كل شيء وترغب في إكمال الطلب`;
+      message += `\n💰 *الإجمالي: ${total} جنيه*\n\n`;
+      message += `عايز تضيف حاجة تانية؟ 😊\n\n`;
+      message += `✅ *نعم* — أضيف كمان\n`;
+      message += `🚀 *لا* — خلّص الطلب وابعته`;
       
-      // Set state for tracking
-      await redis.set(`order_state:${shopId}:${customerPhone}`, 'waiting_for_more', { ex: 300 });
+      // Set state for tracking (10 min TTL to give user time)
+      await redis.set(`order_state:${shopId}:${customerPhone}`, 'waiting_for_more', { ex: 600 });
       
       await this.safeSendMessage(sock, from, message, shop.name);
       

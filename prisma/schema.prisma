@@ -69,6 +69,7 @@ model Order {
   id             String      @id @default(cuid())
   shopId         String
   customerPhone  String
+  whatsappNumber String?     // WhatsApp JID for matching
   customerName   String
   customerAddress String?
   status         OrderStatus @default(PENDING)

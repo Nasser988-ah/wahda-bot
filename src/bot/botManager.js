@@ -1686,11 +1686,14 @@ class BotManager {
     
     // If cart is empty, check if there's a recent order
     if (items.length === 0) {
-      // Check if customer has a recent order (within last hour)
+      // Check if customer has a recent order (within last hour) - search by whatsappNumber or customerPhone
       const recentOrder = await prisma.order.findFirst({
         where: {
           shopId: shop.id,
-          customerPhone: { contains: customerPhone.slice(-10) },
+          OR: [
+            { whatsappNumber: { contains: customerPhone.slice(-10) } },
+            { customerPhone: { contains: customerPhone.slice(-10) } }
+          ],
           createdAt: { gte: new Date(Date.now() - 60 * 60 * 1000) } // last hour
         },
         orderBy: { createdAt: 'desc' }
@@ -2741,6 +2744,7 @@ ${contextMessage}
         data: {
           shopId,
           customerPhone: customerPhoneNumber,
+          whatsappNumber: customerPhone, // Store the WhatsApp JID for matching later
           customerName,
           customerAddress,
           status: "PENDING",

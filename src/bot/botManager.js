@@ -328,6 +328,7 @@ class BotManager {
     this.currentQrs = new Map();
     this.reconnectAttempts = new Map();
     this.processingQueue = new Map(); // FIX 2: Queue per shop
+    this.followupTimers = new Map(); // Track follow-up timers per customer
   }
 
   // BUG 2 FIX: Invalidate shop cache when products change
@@ -1217,6 +1218,107 @@ class BotManager {
 
     } catch (error) {
       console.error(`❌ Error handling message:`, error.message);
+    } finally {
+      // Schedule a follow-up reminder if customer doesn't order
+      this.scheduleFollowUp(sock, from, shop, customerPhone);
+    }
+  }
+
+  // Schedule a follow-up message if customer doesn't order within 15 minutes
+  scheduleFollowUp(sock, from, shop, customerPhone) {
+    const timerKey = `${shop.id}:${customerPhone}`;
+    
+    // Clear any existing timer for this customer (resets the countdown)
+    if (this.followupTimers.has(timerKey)) {
+      clearTimeout(this.followupTimers.get(timerKey));
+    }
+    
+    // Schedule follow-up after 15 minutes
+    const FOLLOWUP_DELAY = 15 * 60 * 1000;
+    
+    const timer = setTimeout(async () => {
+      try {
+        this.followupTimers.delete(timerKey);
+        await this.sendFollowUpIfNeeded(sock, from, shop, customerPhone);
+      } catch (err) {
+        console.error(`❌ Follow-up error for ${customerPhone}:`, err.message);
+      }
+    }, FOLLOWUP_DELAY);
+    
+    this.followupTimers.set(timerKey, timer);
+  }
+
+  // Cancel follow-up (called when order is placed)
+  cancelFollowUp(shopId, customerPhone) {
+    const timerKey = `${shopId}:${customerPhone}`;
+    if (this.followupTimers.has(timerKey)) {
+      clearTimeout(this.followupTimers.get(timerKey));
+      this.followupTimers.delete(timerKey);
+    }
+  }
+
+  // Send the follow-up message if customer hasn't ordered
+  async sendFollowUpIfNeeded(sock, from, shop, customerPhone) {
+    try {
+      // Check if follow-up was already sent this session (don't spam)
+      const followupSentKey = `followup_sent:${shop.id}:${customerPhone}`;
+      const alreadySent = await redis.get(followupSentKey);
+      if (alreadySent) return;
+      
+      // Check if customer placed an order recently
+      const lastOrder = await prisma.order.findFirst({
+        where: {
+          shopId: shop.id,
+          customerPhone: { contains: customerPhone.slice(-10) },
+          createdAt: { gte: new Date(Date.now() - 30 * 60 * 1000) } // last 30 min
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+      if (lastOrder) return; // Already ordered, no need to follow up
+      
+      // Check if customer is mid-order (collecting info)
+      const orderState = await redis.get(`order_state:${shop.id}:${customerPhone}`);
+      if (orderState) return; // In the middle of ordering, don't interrupt
+      
+      // Check cart status for context-aware message
+      const cartKey = `cart:${shop.id}:${customerPhone}`;
+      const cartData = await redis.get(cartKey);
+      let cart = [];
+      if (cartData) {
+        try { cart = typeof cartData === 'string' ? JSON.parse(cartData) : cartData; } catch (e) { cart = []; }
+      }
+      
+      let message;
+      if (cart.length > 0) {
+        // Customer has items in cart but didn't order
+        const total = cart.reduce((s, i) => s + i.price * i.quantity, 0);
+        const itemNames = cart.map(i => i.name).join('، ');
+        message = `👋 أهلاً! لسه فاكرينك 😊\n\n` +
+                  `لاحظنا إن عندك *${cart.length} منتج* في السلة:\n` +
+                  `📦 ${itemNames}\n` +
+                  `💰 الإجمالي: *${total} جنيه*\n\n` +
+                  `عايز تكمّل الطلب؟ 🚀\n\n` +
+                  `✅ اكتب *اطلب* — لتأكيد الطلب\n` +
+                  `📋 اكتب *قائمة* — لإضافة حاجة تانية\n` +
+                  `❌ اكتب *إلغاء* — لو غيّرت رأيك`;
+      } else {
+        // Customer browsed but didn't add anything
+        message = `👋 أهلاً! وحشتنا 😊\n\n` +
+                  `شفنا إنك كنت بتتصفح منتجاتنا\n` +
+                  `محتاج مساعدة في اختيار حاجة؟ 🤔\n\n` +
+                  `📋 اكتب *قائمة* — لتصفح المنتجات\n` +
+                  `⭐ اكتب *نصحني* — عشان أقترحلك الأحسن\n` +
+                  `❓ اكتب *مساعدة* — لو عندك أي سؤال`;
+      }
+      
+      await this.safeSendMessage(sock, from, message, shop.name, shop.id, customerPhone);
+      
+      // Mark follow-up as sent (expires in 2 hours - one follow-up per session)
+      await redis.set(followupSentKey, '1', { ex: 7200 });
+      
+      console.log(`📨 Follow-up sent to ${customerPhone} (cart: ${cart.length} items)`);
+    } catch (err) {
+      console.error(`❌ Follow-up send error:`, err.message);
     }
   }
 
@@ -2620,6 +2722,9 @@ ${contextMessage}
       msg += `شكراً لاختيارك ${shop.name}! 🙏`;
 
       await this.safeSendMessage(sock, from, msg, shop.name, shopId, customerPhone);
+      
+      // Cancel follow-up timer since customer ordered
+      this.cancelFollowUp(shopId, customerPhone);
       
       // Clear cart and temp data
       await redis.del(cartKey);

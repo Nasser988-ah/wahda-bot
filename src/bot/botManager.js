@@ -1708,7 +1708,7 @@ class BotManager {
       !l.includes('[ORDER_FROM_WEBSITE]')
     );
     
-    const cart = [];
+    let cart = [];
     
     for (const line of lines) {
       // Format: "اسم المنتج (اللون: أحمر) × 2" or "اسم المنتج × 2"

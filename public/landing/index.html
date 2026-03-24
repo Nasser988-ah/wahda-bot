@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ذكي - نظام البيع الذكي عبر واتساب</title>
+  <meta name="description" content="ذكي موظف خدمة عملاء رقمي يرد على عملاءك في ثانية واحدة، يأخذ الطلبات كاملة، ويبعتها لك جاهزة على واتساب.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/animations.css">
+</head>
+<body>
+
+  <!-- Page loader overlay -->
+  <div class="page-loader" id="pageLoader"></div>
+
+  <!-- Particle canvas -->
+  <canvas id="particleCanvas"></canvas>
+
+  <!-- ======================================== -->
+  <!-- NAVIGATION                               -->
+  <!-- ======================================== -->
+  <nav class="nav" id="mainNav">
+    <div class="nav-inner">
+      <a href="#" class="nav-logo">ذكي</a>
+      <div class="nav-links" id="navLinks">
+        <a href="#how">كيف يعمل</a>
+        <a href="#features">المميزات</a>
+        <a href="#pricing">الأسعار</a>
+        <a href="https://wa.me/201128511900?text=%D8%A3%D9%87%D9%84%D8%A7%D9%8B%D8%8C%20%D8%B9%D8%A7%D9%8A%D8%B2%20%D8%A3%D8%B9%D8%B1%D9%81%20%D8%A3%D9%83%D8%AA%D8%B1%20%D8%B9%D9%86%20%D8%B0%D9%83%D9%8A" target="_blank">تواصل معنا</a>
+      </div>
+      <a href="https://wa.me/201553766199?text=%D8%A3%D9%87%D9%84%D8%A7%D9%8B%D8%8C%20%D8%B9%D8%A7%D9%8A%D8%B2%20%D8%A3%D8%AC%D8%B1%D8%A8%20%D8%B0%D9%83%D9%8A" target="_blank" class="nav-cta">ابدأ مجانا</a>
+      <button class="nav-mobile-toggle" id="navToggle" aria-label="فتح القائمة">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ======================================== -->
+  <!-- SECTION 1 — HERO                         -->
+  <!-- ======================================== -->
+  <section class="hero" id="hero">
+    <div class="hero-glow"></div>
+    <div class="hero-noise"></div>
+    <div class="hero-lines">
+      <div class="hero-line hero-line--tl"></div>
+      <div class="hero-line hero-line--br"></div>
+    </div>
+
+    <div class="hero-content">
+      <div class="hero-pill anim-fade-down" data-delay="0.2">
+        <span class="hero-pill-star">&#10022;</span>
+        نظام البيع الذكي عبر واتساب
+      </div>
+
+      <h1 class="hero-title">
+        <span class="hero-title-line anim-fade-up" data-delay="0.3">متجرك يبيع</span>
+        <span class="hero-title-line hero-title-gold anim-fade-up" data-delay="0.5">وأنت نايم</span>
+        <span class="hero-title-line anim-fade-up" data-delay="0.7">24 ساعة</span>
+      </h1>
+
+      <p class="hero-subtitle anim-fade-up" data-delay="0.9">
+        ذكي موظف خدمة عملاء رقمي يرد على عملاءك في ثانية واحدة،
+        يأخذ الطلبات كاملة، ويبعتها لك جاهزة على واتساب.
+      </p>
+
+      <div class="hero-buttons anim-fade-up" data-delay="1.1">
+        <a href="https://wa.me/201553766199?text=%D8%A3%D9%87%D9%84%D8%A7%D9%8B%D8%8C%20%D8%B9%D8%A7%D9%8A%D8%B2%20%D8%A3%D8%AC%D8%B1%D8%A8%20%D8%B0%D9%83%D9%8A" target="_blank" class="btn btn-primary btn-pulse">
+          جرب البوت دلوقتي
+        </a>
+        <a href="https://wa.me/201128511900?text=%D8%A3%D9%87%D9%84%D8%A7%D9%8B%D8%8C%20%D8%B9%D8%A7%D9%8A%D8%B2%20%D8%A3%D8%B9%D8%B1%D9%81%20%D8%A3%D9%83%D8%AA%D8%B1%20%D8%B9%D9%86%20%D8%B0%D9%83%D9%8A" target="_blank" class="btn btn-ghost">
+          تكلم معانا
+          <span class="btn-arrow">&larr;</span>
+        </a>
+      </div>
+
+      <div class="hero-proof anim-fade-up" data-delay="1.3">
+        <div class="hero-avatars">
+          <span class="hero-avatar">م</span>
+          <span class="hero-avatar">أ</span>
+          <span class="hero-avatar">ع</span>
+          <span class="hero-avatar">س</span>
+          <span class="hero-avatar">ي</span>
+        </div>
+        <div class="hero-proof-text">
+          <div class="hero-proof-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+          <span>انضم لأكثر من 100 متجر يستخدم ذكي</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="scroll-indicator anim-fade-up" data-delay="1.6">
+      <div class="scroll-arrow"></div>
+    </div>
+  </section>
+
+  <!-- ======================================== -->
+  <!-- SECTION 2 — PROBLEM                      -->
+  <!-- ======================================== -->
+  <section class="section section-problem" id="problem">
+    <div class="container">
+      <h2 class="problem-headline anim-reveal">كل يوم بتخسر عملاء مش عارف بيهم</h2>
+
+      <div class="problem-cards">
+        <div class="problem-card anim-slide-up" data-delay="0.1">
+          <div class="problem-card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <h3>العميل مستنيك</h3>
+          <p>العميل بعت الساعة 11 بالليل. أنت نايم. الصبح اشترى من منافسك.</p>
+        </div>
+
+        <div class="problem-card anim-slide-up" data-delay="0.2">
+          <div class="problem-card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/></svg>
+          </div>
+          <h3>وقتك بيضيع</h3>
+          <p>3 ساعات يوميا بترد على نفس الأسئلة. كل يوم. من غير توقف.</p>
+        </div>
+
+        <div class="problem-card anim-slide-up" data-delay="0.3">
+          <div class="problem-card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg>
+          </div>
+          <h3>المبيعات بتفوتك</h3>
+          <p>70% من العملاء اللي مش بيلاقوا رد بيشتروا من المنافس في نفس اليوم.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================================== -->
+  <!-- SECTION 3 — SOLUTION (Chat Demo)         -->
+  <!-- ======================================== -->
+  <section class="section section-solution" id="solution">
+    <div class="solution-mesh"></div>
+    <div class="container">
+      <h2 class="section-title anim-slide-up">ذكي بيشتغل بدالك</h2>
+      <p class="section-subtitle anim-slide-up" data-delay="0.1">شوف إزاي المحادثة بتتم من أول رسالة لتأكيد الأوردر</p>
+
+      <div class="chat-wrapper anim-slide-up" data-delay="0.2">
+        <!-- Floating badges -->
+        <div class="chat-badge chat-badge--1 anim-float-badge" data-delay="0.4">رد في ثانية واحدة</div>
+        <div class="chat-badge chat-badge--2 anim-float-badge" data-delay="0.6">يفهم العامية</div>
+        <div class="chat-badge chat-badge--3 anim-float-badge" data-delay="0.8">يأخذ الطلب كامل</div>
+        <div class="chat-badge chat-badge--4 anim-float-badge" data-delay="1.0">إشعار فوري</div>
+
+        <!-- Phone mockup -->
+        <div class="phone-mockup">
+          <div class="phone-notch"></div>
+          <div class="phone-header">
+            <div class="phone-header-avatar">ذ</div>
+            <div class="phone-header-info">
+              <div class="phone-header-name">ذكي</div>
+              <div class="phone-header-status">متصل الآن</div>
+            </div>
+          </div>
+          <div class="phone-chat" id="chatContainer">
+            <!-- Messages injected by chat.js -->
+          </div>
+          <div class="phone-input">
+            <span class="phone-input-text">اكتب رسالة...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================================== -->
+  <!-- SECTION 4 — FEATURES BENTO GRID          -->
+  <!-- ======================================== -->
+  <section class="section section-features" id="features">
+    <div class="container">
+      <h2 class="section-title anim-slide-up">كل اللي محتاجه في مكان واحد</h2>
+
+      <div class="bento-grid">
+        <!-- Row 1: wide card (cols 1-2) + tall card (col 3, rows 1-2) -->
+        <div class="bento-card bento-card--wide anim-slide-up" data-delay="0.05">
+          <div class="bento-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>
+          </div>
+          <h3>متجر إلكتروني احترافي</h3>
+          <p>متجر جاهز بتصميم مميز يشاركه عملاءك عبر رابط واحد. يعمل على كل الأجهزة.</p>
+        </div>
+
+        <div class="bento-card bento-card--tall anim-slide-up" data-delay="0.1">
+          <div class="bento-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+          </div>
+          <h3>إشعارات فورية</h3>
+          <p>كل طلب جديد يوصلك إشعار فوري على واتساب ببيانات العميل كاملة. الاسم، الرقم، العنوان، والمنتجات.</p>
+        </div>
+
+        <!-- Row 2: fills under the wide card (cols 1-2) -->
+        <div class="bento-card anim-slide-up" data-delay="0.15">
+          <div class="bento-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2a4 4 0 0 1 4 4c0 1.95-2 5-4 5s-4-3.05-4-5a4 4 0 0 1 4-4z"/><path d="M12 11c-4 0-8 2-8 6v1h16v-1c0-4-4-6-8-6z"/><circle cx="12" cy="18" r="3"/></svg>
+          </div>
+          <h3>ذكاء اصطناعي</h3>
+          <p>يفهم العامية والفصحى ويرد بشكل طبيعي تماما.</p>
+        </div>
+
+        <div class="bento-card anim-slide-up" data-delay="0.2">
+          <div class="bento-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4h-4z"/></svg>
+          </div>
+          <h3>نظام مخزون ذكي</h3>
+          <p>المخزون يتحدث تلقائيا مع كل طلب. تنبيهات عند نفاد الكمية.</p>
+        </div>
+
+        <!-- Row 3: three small cards -->
+        <div class="bento-card anim-slide-up" data-delay="0.25">
+          <div class="bento-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="15.5" r="2.5"/><circle cx="8.5" cy="15.5" r="2.5"/></svg>
+          </div>
+          <h3>ألوان ومقاسات</h3>
+          <p>كل منتج بخيارات مختلفة وصورة لكل خيار.</p>
+        </div>
+
+        <div class="bento-card anim-slide-up" data-delay="0.3">
+          <div class="bento-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <h3>ساعات العمل</h3>
+          <p>حدد مواعيد العمل والبوت يرد خارج الأوقات تلقائيا.</p>
+        </div>
+
+        <div class="bento-card anim-slide-up" data-delay="0.35">
+          <span class="bento-badge">جديد</span>
+          <div class="bento-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+          </div>
+          <h3>نظام الجملة</h3>
+          <p>حجز بالجملة بدون بيانات شحن. العميل يشحن لما يكون جاهز.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================================== -->
+  <!-- SECTION 5 — HOW IT WORKS                 -->
+  <!-- ======================================== -->
+  <section class="section section-how" id="how">
+    <div class="container">
+      <h2 class="section-title anim-slide-up">ابدأ في 3 خطوات بس</h2>
+
+      <div class="steps">
+        <div class="steps-line">
+          <div class="steps-line-fill" id="stepsLineFill"></div>
+        </div>
+
+        <div class="step anim-slide-up" data-delay="0.1">
+          <div class="step-number">1</div>
+          <div class="step-content">
+            <h3>سجّل متجرك</h3>
+            <p>أنشئ حسابك وأدخل بيانات متجرك في دقائق</p>
+          </div>
+        </div>
+
+        <div class="step anim-slide-up" data-delay="0.25">
+          <div class="step-number">2</div>
+          <div class="step-content">
+            <h3>امسح الـ QR</h3>
+            <p>افتح واتساب وامسح رمز QR مرة واحدة فقط</p>
+          </div>
+        </div>
+
+        <div class="step anim-slide-up" data-delay="0.4">
+          <div class="step-number">3</div>
+          <div class="step-content">
+            <h3>ابدأ تستقبل أوردرات</h3>
+            <p>ذكي يشتغل على رقمك فورا من غير أي تدخل</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================================== -->
+  <!-- SECTION 6 — PRICING                      -->
+  <!-- ======================================== -->
+  <section class="section section-pricing" id="pricing">
+    <div class="container">
+      <h2 class="section-title anim-slide-up">سعر مخصص لكل متجر</h2>
+      <p class="section-subtitle anim-slide-up" data-delay="0.1">كل متجر مختلف، فالسعر بيتحدد بناء على احتياجاتك</p>
+
+      <div class="pricing-grid">
+        <!-- Basic -->
+        <div class="pricing-card anim-slide-up" data-delay="0.1">
+          <div class="pricing-card-header">
+            <h3>أساسي</h3>
+          </div>
+          <ul class="pricing-features">
+            <li><span class="check">&#10003;</span> بوت واتساب ذكي</li>
+            <li><span class="check">&#10003;</span> متجر إلكتروني احترافي</li>
+            <li><span class="check">&#10003;</span> نظام أوردرات كامل</li>
+            <li><span class="check">&#10003;</span> إشعارات فورية</li>
+            <li><span class="check">&#10003;</span> لوحة تحكم كاملة</li>
+          </ul>
+          <a href="https://wa.me/201128511900?text=%D8%A3%D9%87%D9%84%D8%A7%D9%8B%D8%8C%20%D8%B9%D8%A7%D9%8A%D8%B2%20%D8%A3%D8%B9%D8%B1%D9%81%20%D8%B3%D8%B9%D8%B1%20%D8%B0%D9%83%D9%8A%20%D8%A7%D9%84%D9%85%D9%86%D8%A7%D8%B3%D8%A8%20%D9%84%D9%85%D8%AA%D8%AC%D8%B1%D9%8A" target="_blank" class="btn btn-outline">اعرف السعر المناسب ليك</a>
+        </div>
+
+        <!-- Advanced (popular) -->
+        <div class="pricing-card pricing-card--popular anim-slide-up" data-delay="0.2">
+          <span class="pricing-popular-badge">الأكثر طلبا</span>
+          <div class="pricing-card-header">
+            <h3>متقدم</h3>
+          </div>
+          <ul class="pricing-features">
+            <li><span class="check">&#10003;</span> كل مميزات الأساسي</li>
+            <li><span class="check">&#10003;</span> نظام مخزون ذكي</li>
+            <li><span class="check">&#10003;</span> ألوان ومقاسات لكل منتج</li>
+            <li><span class="check">&#10003;</span> صورة لكل لون</li>
+            <li><span class="check">&#10003;</span> ساعات عمل ذكية</li>
+            <li><span class="check">&#10003;</span> أولوية في الدعم الفني</li>
+          </ul>
+          <a href="https://wa.me/201128511900?text=%D8%A3%D9%87%D9%84%D8%A7%D9%8B%D8%8C%20%D8%B9%D8%A7%D9%8A%D8%B2%20%D8%A3%D8%B9%D8%B1%D9%81%20%D8%B3%D8%B9%D8%B1%20%D8%B0%D9%83%D9%8A%20%D8%A7%D9%84%D9%85%D9%86%D8%A7%D8%B3%D8%A8%20%D9%84%D9%85%D8%AA%D8%AC%D8%B1%D9%8A" target="_blank" class="btn btn-primary">اعرف السعر المناسب ليك</a>
+        </div>
+
+        <!-- Wholesale (new) -->
+        <div class="pricing-card anim-slide-up" data-delay="0.3">
+          <span class="pricing-new-badge">جديد</span>
+          <div class="pricing-card-header">
+            <h3>جملة</h3>
+          </div>
+          <ul class="pricing-features">
+            <li><span class="check">&#10003;</span> كل مميزات المتقدم</li>
+            <li><span class="check">&#10003;</span> نظام حجز الجملة</li>
+            <li><span class="check">&#10003;</span> صفحة الحجوزات</li>
+            <li><span class="check">&#10003;</span> إدارة شحن متقدمة</li>
+            <li><span class="check">&#10003;</span> تقارير مبيعات</li>
+          </ul>
+          <a href="https://wa.me/201128511900?text=%D8%A3%D9%87%D9%84%D8%A7%D9%8B%D8%8C%20%D8%B9%D8%A7%D9%8A%D8%B2%20%D8%A3%D8%B9%D8%B1%D9%81%20%D8%B3%D8%B9%D8%B1%20%D8%B0%D9%83%D9%8A%20%D8%A7%D9%84%D9%85%D9%86%D8%A7%D8%B3%D8%A8%20%D9%84%D9%85%D8%AA%D8%AC%D8%B1%D9%8A" target="_blank" class="btn btn-outline">اعرف السعر المناسب ليك</a>
+        </div>
+      </div>
+
+      <p class="pricing-trial anim-slide-up" data-delay="0.4">&#9733; 14 يوم تجربة مجانية لكل الباقات</p>
+    </div>
+  </section>
+
+  <!-- ======================================== -->
+  <!-- SECTION 7 — FINAL CTA                    -->
+  <!-- ======================================== -->
+  <section class="section section-cta" id="cta">
+    <div class="cta-glow"></div>
+    <div class="container">
+      <h2 class="cta-title anim-slide-up">جاهز تخلي متجرك يبيع 24 ساعة؟</h2>
+      <p class="cta-subtitle anim-slide-up" data-delay="0.1">كلمنا دلوقتي وهنجهز متجرك في نفس اليوم</p>
+
+      <div class="cta-buttons anim-slide-up" data-delay="0.2">
+        <a href="https://wa.me/201553766199?text=%D8%A3%D9%87%D9%84%D8%A7%D9%8B%D8%8C%20%D8%B9%D8%A7%D9%8A%D8%B2%20%D8%A3%D8%AC%D8%B1%D8%A8%20%D8%B0%D9%83%D9%8A" target="_blank" class="btn btn-primary btn-pulse btn-lg">
+          جرب البوت دلوقتي
+        </a>
+        <a href="https://wa.me/201128511900?text=%D8%A3%D9%87%D9%84%D8%A7%D9%8B%D8%8C%20%D8%B9%D8%A7%D9%8A%D8%B2%20%D8%A3%D8%B9%D8%B1%D9%81%20%D8%A3%D9%83%D8%AA%D8%B1%20%D8%B9%D9%86%20%D8%B0%D9%83%D9%8A" target="_blank" class="btn btn-whatsapp btn-lg">
+          <svg class="btn-wa-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
+          تكلم معانا على واتساب
+        </a>
+      </div>
+
+      <p class="cta-response-time anim-slide-up" data-delay="0.35">متوسط وقت الرد: أقل من 5 دقايق</p>
+    </div>
+  </section>
+
+  <!-- ======================================== -->
+  <!-- FOOTER                                   -->
+  <!-- ======================================== -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-logo">ذكي</div>
+      <p class="footer-tagline">صُنع بـ &#10084; في مصر</p>
+      <div class="footer-links">
+        <a href="https://wa.me/201128511900" target="_blank">واتساب</a>
+      </div>
+      <p class="footer-copy">&copy; 2026 ذكي. جميع الحقوق محفوظة</p>
+    </div>
+  </footer>
+
+  <script src="js/main.js"></script>
+  <script src="js/chat.js"></script>
+</body>
+</html>

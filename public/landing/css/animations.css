@@ -1,0 +1,169 @@
+/* ============================================
+   ZAKI LANDING PAGE — ANIMATIONS.CSS
+   Keyframes, scroll reveals, micro-interactions
+   ============================================ */
+
+/* --- Gold shimmer on hero title --- */
+@keyframes shimmer {
+  0%   { background-position: 200% 50%; }
+  100% { background-position: -200% 50%; }
+}
+
+.hero-title-gold {
+  animation: shimmer 6s ease-in-out infinite;
+}
+
+/* --- Pulse glow on primary CTA --- */
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 20px rgba(245, 200, 66, 0.15); }
+  50%      { box-shadow: 0 0 40px rgba(245, 200, 66, 0.3); }
+}
+
+.btn-pulse {
+  animation: pulseGlow 3s ease-in-out infinite;
+}
+
+/* --- Scroll arrow bounce --- */
+@keyframes scrollBounce {
+  0%, 100% { transform: rotate(-45deg) translateY(0); opacity: 0.5; }
+  50%      { transform: rotate(-45deg) translateY(8px); opacity: 1; }
+}
+
+.scroll-arrow {
+  animation: scrollBounce 2s ease-in-out infinite;
+}
+
+/* --- Chat typing dots --- */
+@keyframes typingDot {
+  0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+  30%           { opacity: 1; transform: translateY(-3px); }
+}
+
+.chat-typing span:nth-child(1) { animation: typingDot 1.2s ease-in-out infinite 0s; }
+.chat-typing span:nth-child(2) { animation: typingDot 1.2s ease-in-out infinite 0.15s; }
+.chat-typing span:nth-child(3) { animation: typingDot 1.2s ease-in-out infinite 0.3s; }
+
+/* --- Floating badges gentle hover --- */
+@keyframes floatBadge1 {
+  0%, 100% { transform: translateY(0) rotate(-1deg); }
+  50%      { transform: translateY(-10px) rotate(1deg); }
+}
+
+@keyframes floatBadge2 {
+  0%, 100% { transform: translateY(0) rotate(1deg); }
+  50%      { transform: translateY(-8px) rotate(-1deg); }
+}
+
+.chat-badge--1, .chat-badge--3 {
+  animation: floatBadge1 5s ease-in-out infinite;
+}
+
+.chat-badge--2, .chat-badge--4 {
+  animation: floatBadge2 6s ease-in-out infinite;
+}
+
+/* ============================================
+   SCROLL REVEAL ANIMATION BASE
+   Elements start hidden, revealed by main.js
+   ============================================ */
+
+/* Fade up (default reveal) */
+.anim-slide-up {
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 0.7s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.anim-slide-up.in-view {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Fade down (hero pill) */
+.anim-fade-down {
+  opacity: 0;
+  transform: translateY(-20px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.anim-fade-down.in-view {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Fade up (hero stagger) */
+.anim-fade-up {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.anim-fade-up.in-view {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Reveal (problem headline) */
+.anim-reveal {
+  opacity: 0;
+  transform: scale(0.95);
+  transition: opacity 0.8s ease, transform 0.8s ease;
+}
+
+.anim-reveal.in-view {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Float badge reveal */
+.anim-float-badge {
+  opacity: 0;
+  transform: translateY(20px) scale(0.9);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.anim-float-badge.in-view {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* ============================================
+   PERFORMANCE HINTS
+   ============================================ */
+.anim-slide-up,
+.anim-fade-up,
+.anim-fade-down,
+.anim-reveal,
+.anim-float-badge,
+.btn-pulse,
+.scroll-arrow,
+.chat-typing span,
+.chat-badge {
+  will-change: transform, opacity;
+}
+
+/* Remove will-change after animation completes for non-infinite */
+.anim-slide-up.in-view,
+.anim-fade-up.in-view,
+.anim-fade-down.in-view,
+.anim-reveal.in-view,
+.anim-float-badge.in-view {
+  will-change: auto;
+}
+
+/* ============================================
+   MOBILE ACTIVE STATES (instead of hover)
+   ============================================ */
+@media (hover: none) {
+  .btn:active {
+    transform: scale(0.97);
+  }
+
+  .problem-card:active,
+  .bento-card:active,
+  .pricing-card:active {
+    transform: translateY(-2px);
+    border-color: rgba(245, 200, 66, 0.15);
+  }
+}

@@ -116,7 +116,7 @@ protectedPages.forEach(page => {
 // Serve landing page assets at /landing
 app.use('/landing', express.static(path.join(__dirname, 'public', 'landing'), {
   dotfiles: 'deny',
-  maxAge: '7d'
+  maxAge: '1h'
 }));
 
 // Serve static files (HTML dashboard)

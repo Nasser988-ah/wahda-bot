@@ -156,6 +156,7 @@ app.use(errorHandler);
 
 // Serve landing page at root
 app.get("/", (req, res) => {
+  res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.sendFile(path.join(__dirname, "public", "landing", "index.html"));
 });
 

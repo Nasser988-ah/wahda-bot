@@ -1025,7 +1025,7 @@
 
 <div class="header">
   <h1 id="shopName">جارٍ التحميل...</h1>
-  <p>اطلب الآن عبر واتساب</p>
+  <p id="shopSubtitle">اطلب الآن عبر واتساب</p>
 </div>
 
 <div class="search-container">
@@ -1209,6 +1209,12 @@
       
       document.title = data.name
       document.getElementById('shopName').textContent = data.name
+
+      // Wholesale mode UI changes
+      if (data.isWholesale) {
+        document.getElementById('shopSubtitle').textContent = 'اختر منتجاتك واحجز'
+        document.querySelector('.drawer-order-btn').textContent = 'احجز الآن 📦'
+      }
       
       // Show all products including out of stock
       allProducts = data.products
@@ -1513,8 +1519,9 @@
       return vs ? p.name + ' (' + vs + ') × ' + item.qty : p.name + ' × ' + item.qty
     })
     const total = cart.reduce((s, item) => s + allProducts[item.productIndex].price * item.qty, 0)
+    const tag = shopData?.isWholesale ? '[WHOLESALE_RESERVATION]' : '[ORDER_FROM_WEBSITE]'
     const message = 'طلب جديد من المتجر:\n━━━━━━━━━━━━━━━━━━━━\n' +
-      lines.join('\n') + '\n━━━━━━━━━━━━━━━━━━━━\nالإجمالي: ' + total + ' جنيه\n[ORDER_FROM_WEBSITE]'
+      lines.join('\n') + '\n━━━━━━━━━━━━━━━━━━━━\nالإجمالي: ' + total + ' جنيه\n' + tag
     const phoneNumber = shopData?.whatsappNumber || ''
     if (!phoneNumber) { showToast('رقم الواتساب غير متاح'); return }
     const cleanPhone = phoneNumber.replace(/\D/g, '')

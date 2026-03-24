@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الحجوزات - وصلة</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0f0f13;
+            --card: #1a1a22;
+            --card-hover: #1f1f2a;
+            --gold: #f5c842;
+            --gold-light: #fde98a;
+            --gold-dim: rgba(245, 200, 66, 0.12);
+            --text: #ffffff;
+            --muted: #8a8a9a;
+            --border: rgba(255, 255, 255, 0.07);
+            --radius: 20px;
+            --success: #10b981;
+            --error: #ef4444;
+            --warning: #f59e0b;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .page-header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--gold);
+        }
+
+        .back-link {
+            color: var(--muted);
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.2s;
+        }
+        .back-link:hover { color: var(--gold); }
+
+        .filters {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            background: var(--card);
+            color: var(--muted);
+            border: 1px solid var(--border);
+            padding: 8px 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+        .filter-btn:hover { border-color: var(--gold); color: var(--text); }
+        .filter-btn.active { background: var(--gold-dim); color: var(--gold); border-color: var(--gold); }
+
+        .reservation-card {
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-bottom: 16px;
+            border: 1px solid var(--border);
+            transition: border-color 0.2s;
+        }
+        .reservation-card:hover { border-color: rgba(245, 200, 66, 0.3); }
+
+        .res-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .res-phone {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text);
+            direction: ltr;
+            text-align: right;
+        }
+
+        .res-name {
+            font-size: 14px;
+            color: var(--gold);
+            margin-bottom: 4px;
+        }
+
+        .res-status {
+            padding: 4px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .status-PENDING { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+        .status-CONFIRMED { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+        .status-SHIPPED { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+        .status-CANCELLED { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+
+        .res-items {
+            margin: 12px 0;
+            padding: 12px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+        }
+
+        .res-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            font-size: 14px;
+            color: var(--muted);
+        }
+        .res-item-name { color: var(--text); }
+
+        .res-total {
+            text-align: left;
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--gold);
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid var(--border);
+        }
+
+        .res-date {
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 8px;
+        }
+
+        .res-shipping {
+            margin-top: 12px;
+            padding: 12px;
+            background: rgba(16, 185, 129, 0.08);
+            border-radius: 12px;
+            font-size: 13px;
+            color: var(--muted);
+        }
+        .res-shipping strong { color: var(--text); }
+
+        .res-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .res-action-btn {
+            padding: 6px 14px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--card);
+            color: var(--muted);
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+        .res-action-btn:hover { border-color: var(--gold); color: var(--gold); }
+        .res-action-btn.shipped { background: rgba(59, 130, 246, 0.15); color: #3b82f6; border-color: #3b82f6; }
+        .res-action-btn.cancel { background: rgba(239, 68, 68, 0.1); color: #ef4444; border-color: #ef4444; }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--muted);
+        }
+        .empty-state h2 { font-size: 18px; margin-bottom: 8px; color: var(--text); }
+
+        .loading { text-align: center; padding: 40px; color: var(--muted); }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-family: inherit;
+            z-index: 1000;
+            animation: fadeIn 0.3s;
+        }
+        .toast.success { background: rgba(16,185,129,0.9); color: white; }
+        .toast.error { background: rgba(239,68,68,0.9); color: white; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateX(-50%) translateY(10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+    </style>
+</head>
+<body>
+
+<div class="page-header">
+    <h1>📋 الحجوزات</h1>
+    <a href="settings.html" class="back-link">← العودة للإعدادات</a>
+</div>
+
+<div class="filters">
+    <button class="filter-btn active" onclick="filterReservations('')">الكل</button>
+    <button class="filter-btn" onclick="filterReservations('PENDING')">قيد الانتظار</button>
+    <button class="filter-btn" onclick="filterReservations('CONFIRMED')">مؤكد</button>
+    <button class="filter-btn" onclick="filterReservations('SHIPPED')">تم الشحن</button>
+    <button class="filter-btn" onclick="filterReservations('CANCELLED')">ملغي</button>
+</div>
+
+<div id="reservationsList">
+    <div class="loading">جارٍ التحميل...</div>
+</div>
+
+<script>
+    const API_BASE_URL = window.location.origin;
+    let currentFilter = '';
+
+    function translateStatus(s) {
+        return { PENDING: 'قيد الانتظار', CONFIRMED: 'مؤكد', SHIPPED: 'تم الشحن', CANCELLED: 'ملغي' }[s] || s;
+    }
+
+    function formatDate(d) {
+        const date = new Date(d);
+        return date.toLocaleDateString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+
+    function showToast(msg, type = 'success') {
+        const t = document.createElement('div');
+        t.className = 'toast ' + type;
+        t.textContent = msg;
+        document.body.appendChild(t);
+        setTimeout(() => t.remove(), 3000);
+    }
+
+    async function loadReservations() {
+        const token = localStorage.getItem('token');
+        if (!token) { window.location.href = '/login.html'; return; }
+
+        const url = currentFilter
+            ? `${API_BASE_URL}/api/shop/reservations?status=${currentFilter}`
+            : `${API_BASE_URL}/api/shop/reservations`;
+
+        try {
+            const res = await fetch(url, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!res.ok) throw new Error('Failed');
+            const data = await res.json();
+            renderReservations(data.reservations);
+        } catch (e) {
+            console.error('Load reservations error:', e);
+            document.getElementById('reservationsList').innerHTML =
+                '<div class="empty-state"><h2>خطأ في التحميل</h2><p>يرجى المحاولة مرة أخرى</p></div>';
+        }
+    }
+
+    function renderReservations(reservations) {
+        const container = document.getElementById('reservationsList');
+
+        if (!reservations || reservations.length === 0) {
+            container.innerHTML = '<div class="empty-state"><h2>لا توجد حجوزات</h2><p>ستظهر الحجوزات هنا عندما يحجز العملاء من المتجر</p></div>';
+            return;
+        }
+
+        container.innerHTML = reservations.map(r => {
+            const items = Array.isArray(r.items) ? r.items : [];
+            const itemsHtml = items.map(i =>
+                `<div class="res-item"><span class="res-item-name">${i.name}${i.variantInfo ? ' (' + i.variantInfo + ')' : ''}</span><span>${i.quantity} × ${i.price} جنيه</span></div>`
+            ).join('');
+
+            const shippingHtml = (r.customerName || r.shippingPhone || r.shippingAddress)
+                ? `<div class="res-shipping">
+                    ${r.customerName ? '<div><strong>الاسم:</strong> ' + r.customerName + '</div>' : ''}
+                    ${r.shippingPhone ? '<div><strong>الهاتف:</strong> ' + r.shippingPhone + '</div>' : ''}
+                    ${r.shippingAddress ? '<div><strong>العنوان:</strong> ' + r.shippingAddress + '</div>' : ''}
+                  </div>` : '';
+
+            const actionsHtml = r.status === 'PENDING'
+                ? `<div class="res-actions">
+                    <button class="res-action-btn shipped" onclick="updateStatus('${r.id}', 'CONFIRMED')">تأكيد</button>
+                    <button class="res-action-btn cancel" onclick="updateStatus('${r.id}', 'CANCELLED')">إلغاء</button>
+                  </div>`
+                : r.status === 'CONFIRMED'
+                ? `<div class="res-actions">
+                    <button class="res-action-btn shipped" onclick="updateStatus('${r.id}', 'SHIPPED')">تم الشحن</button>
+                  </div>` : '';
+
+            return `<div class="reservation-card">
+                <div class="res-header">
+                    <div>
+                        ${r.customerName ? '<div class="res-name">' + r.customerName + '</div>' : ''}
+                        <div class="res-phone">${r.customerPhone}</div>
+                    </div>
+                    <span class="res-status status-${r.status}">${translateStatus(r.status)}</span>
+                </div>
+                <div class="res-items">${itemsHtml}</div>
+                <div class="res-total">الإجمالي: ${r.totalPrice} جنيه</div>
+                ${shippingHtml}
+                ${actionsHtml}
+                <div class="res-date">${formatDate(r.createdAt)}</div>
+            </div>`;
+        }).join('');
+    }
+
+    function filterReservations(status) {
+        currentFilter = status;
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        event.target.classList.add('active');
+        loadReservations();
+    }
+
+    async function updateStatus(id, status) {
+        const token = localStorage.getItem('token');
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/shop/reservations/${id}/status`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ status })
+            });
+            if (res.ok) {
+                showToast('تم تحديث الحالة');
+                loadReservations();
+            } else {
+                showToast('فشل التحديث', 'error');
+            }
+        } catch (e) {
+            showToast('حدث خطأ', 'error');
+        }
+    }
+
+    loadReservations();
+</script>
+</body>
+</html>

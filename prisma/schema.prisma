@@ -22,6 +22,9 @@ model Shop {
   workingHours      String?             // JSON: per-day open/close/active
   isAlwaysOpen      Boolean             @default(true)
 
+  // Wholesale Mode
+  isWholesale       Boolean             @default(false)
+
   // Store Customization
   logoUrl           String?             // Store logo URL
   primaryColor      String?             @default("#f5c842") // Gold theme default
@@ -34,6 +37,7 @@ model Shop {
   // Relations
   products          Product[]
   orders            Order[]
+  reservations      Reservation[]
   sessions          BotSession[]
   messages          Message[]
   whatsappSession   WhatsAppSession?
@@ -151,6 +155,32 @@ enum OrderStatus {
   CONFIRMED
   CANCELLED
   DELIVERED
+}
+
+enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  SHIPPED
+  CANCELLED
+}
+
+model Reservation {
+  id             String            @id @default(cuid())
+  shopId         String
+  customerPhone  String
+  whatsappNumber String?
+  customerName   String?
+  items          String            @db.Text  // JSON array of reserved products
+  status         ReservationStatus @default(PENDING)
+  totalPrice     Float
+  shippingPhone  String?
+  shippingAddress String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  shop           Shop              @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@map("reservations")
 }
 
 enum Direction {

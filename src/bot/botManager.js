@@ -676,6 +676,11 @@ class BotManager {
       }
 
       // Check if message is from the mini store website
+      if (text.includes('[WHOLESALE_RESERVATION]')) {
+        console.log(`📦 Wholesale website reservation detected from ${customerPhone}`);
+        await this.handleWebsiteOrder(sock, from, text.replace('[WHOLESALE_RESERVATION]', '[ORDER_FROM_WEBSITE]'), shop, customerPhone, true);
+        return;
+      }
       if (text.includes('[ORDER_FROM_WEBSITE]')) {
         console.log(`🛒 Website order detected from ${customerPhone}`);
         await this.handleWebsiteOrder(sock, from, text, shop, customerPhone);
@@ -749,6 +754,20 @@ class BotManager {
         // Any other message - let it fall through to normal processing
       }
       
+      // Handle wholesale shipping info collection state
+      if (orderState === 'waiting_shipping') {
+        const exactCancelPattern = /^(الغاء|إلغاء|الغي|إلغي|cancel)$/i;
+        if (exactCancelPattern.test(text.trim())) {
+          await redis.del(`order_state:${shop.id}:${customerPhone}`);
+          await redis.del(`shipping_reservation_ids:${shop.id}:${customerPhone}`);
+          await this.safeSendMessage(sock, from,
+            `تم إلغاء طلب الشحن ✅\n\nحجوزاتك لا تزال محفوظة.\nأرسل *شحن* في أي وقت عندما تكون جاهزاً.`, shop.name, shop.id, customerPhone);
+          return;
+        }
+        await this.handleShippingInfo(sock, from, shop, customerPhone, text);
+        return;
+      }
+
       if (orderState === 'waiting_for_name' || orderState === 'waiting_for_phone' || orderState === 'waiting_for_address') {
         // Check if customer wants to cancel during info collection
         // CRITICAL FIX: Only match EXACT cancel words as standalone commands
@@ -1008,6 +1027,13 @@ class BotManager {
         console.log(`✓ Matched: cart`);
         await this.showCart(sock, from, shop.id, customerPhone, shop);
         return;
+      } else if (this.matchesIntent(lowerText, 'shipping')) {
+        if (shop.isWholesale) {
+          console.log(`✓ Matched: shipping request (wholesale)`);
+          await this.handleShippingRequest(sock, from, shop, customerPhone);
+          return;
+        }
+        // Not wholesale - fall through to AI
       } else if (this.matchesIntent(lowerText, 'order')) {
         console.log(`✓ Matched: order`);
         await this.askForMoreItems(sock, from, shop.id, customerPhone, shop);
@@ -1738,8 +1764,8 @@ class BotManager {
   }
 
   // Handle orders coming from the mini store website
-  async handleWebsiteOrder(sock, from, text, shop, customerPhone) {
-    console.log(`🛒 Processing website order from ${customerPhone}`);
+  async handleWebsiteOrder(sock, from, text, shop, customerPhone, isWholesaleReservation = false) {
+    console.log(`🛒 Processing website order from ${customerPhone} (wholesale: ${isWholesaleReservation})`);
     
     // Parse the order message
     const lines = text.split('\n').filter(l => 
@@ -1814,6 +1840,63 @@ class BotManager {
     // Use merged cart for display
     cart = existingCart;
     
+    // WHOLESALE: Save as reservation directly from website
+    if (isWholesaleReservation || shop.isWholesale) {
+      const total = cart.reduce((s, i) => s + i.price * i.quantity, 0);
+
+      // Reduce stock immediately
+      await this.reduceStock(cart, shop, sock);
+
+      const reservation = await prisma.reservation.create({
+        data: {
+          shopId: shop.id,
+          customerPhone: customerPhone,
+          whatsappNumber: customerPhone,
+          items: JSON.stringify(cart),
+          status: 'PENDING',
+          totalPrice: total
+        }
+      });
+
+      // Clear cart
+      await redis.del(cartKey);
+
+      this.cancelFollowUp(shop.id, customerPhone);
+
+      let message = `تم تسجيل حجزك بنجاح! ✅\n\n`;
+      message += `📦 *تفاصيل الحجز:*\n\n`;
+      cart.forEach((item, i) => {
+        message += `  ${i + 1}. *${item.name}*${item.variantInfo ? ` _(${item.variantInfo})_` : ''}`;
+        message += ` — ${item.quantity} × ${item.price} = *${item.price * item.quantity} جنيه*\n`;
+      });
+      message += `\n💰 *الإجمالي: ${total} جنيه*\n\n`;
+      message += `📌 حجزك محفوظ ويمكنك إضافة حجوزات أخرى في أي وقت.\n`;
+      message += `🚚 عندما تكون جاهزاً للشحن، أرسل *شحن* وسنطلب منك بيانات التوصيل.`;
+
+      await sock.sendMessage(from, { text: message });
+
+      // Notify owner
+      if (shop.whatsappNumber) {
+        const ownerMsg =
+          `📦 *حجز جملة جديد #${reservation.id.slice(-6)}*\n` +
+          `━━━━━━━━━━━━━━━━━━━━\n` +
+          `📱 *العميل:* ${customerPhone}\n\n` +
+          `📦 *المنتجات المحجوزة:*\n` +
+          cart.map((i, idx) =>
+            `   ${idx + 1}. ${i.name}${i.variantInfo ? ` (${i.variantInfo})` : ''}\n` +
+            `      الكمية: ${i.quantity} × ${i.price} جنيه = ${i.quantity * i.price} جنيه`
+          ).join('\n') +
+          `\n\n━━━━━━━━━━━━━━━━━━━━\n` +
+          `💰 *الإجمالي: ${total} جنيه*\n` +
+          `⏰ *الوقت: ${new Date().toLocaleString('ar-EG')}*\n` +
+          `━━━━━━━━━━━━━━━━━━━━`;
+        await this.safeSendMessage(sock, `${shop.whatsappNumber}@s.whatsapp.net`, ownerMsg, shop.name);
+      }
+
+      console.log(`📦 Website wholesale reservation for ${customerPhone}, ${cart.length} items, ${total} EGP`);
+      return;
+    }
+
     // Show cart summary and ask if they want more items (using askForMoreItems format)
     const total = cart.reduce((s, i) => s + i.price * i.quantity, 0);
     
@@ -2305,6 +2388,12 @@ ${contextMessage}
         // Misspellings
         'اطلبب', 'اطللب', 'احجزز', 'حجزز'
       ],
+      shipping: [
+        'شحن', 'اشحن', 'جاهز للشحن', 'عايز اشحن', 'ابعت', 'ابعتلي',
+        'شحن الطلب', 'اشحنلي', 'عاوز اشحن', 'جاهز', 'ابعتوا',
+        // Misspellings
+        'شحنن', 'اشحنن', 'ابعتت'
+      ],
       yes: [
         'نعم', 'ايوه', 'yes', 'أيوه', 'أيوة', 'ايوة', 'اوكي', 'حسنا', 'حسناً', 'ok', 'okay',
         'اه', 'أه', 'ايوا', 'اا', 'اة', 'يب', 'طبعا', 'طبعاً', 'بالظبط', 'اكيد',
@@ -2621,6 +2710,12 @@ ${contextMessage}
 
   async askForCustomerDetails(sock, from, shopId, customerPhone, shop) {
     try {
+      // WHOLESALE MODE: Save reservation instead of collecting shipping details
+      if (shop.isWholesale) {
+        await this.handleWholesaleReservation(sock, from, shop, customerPhone);
+        return;
+      }
+
       // Set state to waiting for name first
       await redis.set(`order_state:${shopId}:${customerPhone}`, 'waiting_for_name', { ex: 600 });
       
@@ -3339,6 +3434,326 @@ ${productsList}
     } else {
       await this.safeSendMessage(sock, from,
         `لم أجد منتج بهذا الاسم 😕\nاكتب *قائمة* لرؤية المنتجات المتاحة.`, shop.name, shop.id, customerPhone);
+    }
+  }
+
+  // ==================== WHOLESALE RESERVATION SYSTEM ====================
+
+  async handleWholesaleReservation(sock, from, shop, customerPhone) {
+    try {
+      const cartKey = `cart:${shop.id}:${customerPhone}`;
+      const cartData = await redis.get(cartKey);
+      let items = [];
+      if (cartData) {
+        try { items = typeof cartData === 'string' ? JSON.parse(cartData) : cartData; } catch (e) { items = []; }
+      }
+
+      if (items.length === 0) {
+        await this.safeSendMessage(sock, from,
+          `سلتك فارغة! 🛒\n\nاكتب *قائمة* لتصفح المنتجات وإضافتها للسلة.`, shop.name, shop.id, customerPhone);
+        return;
+      }
+
+      const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+
+      // Reduce stock immediately on reservation
+      await this.reduceStock(items, shop, sock);
+
+      // Save reservation to database
+      const reservation = await prisma.reservation.create({
+        data: {
+          shopId: shop.id,
+          customerPhone: customerPhone,
+          whatsappNumber: customerPhone,
+          items: JSON.stringify(items),
+          status: 'PENDING',
+          totalPrice: total
+        }
+      });
+
+      // Clear cart
+      await redis.del(cartKey);
+      await redis.del(`order_state:${shop.id}:${customerPhone}`);
+
+      // Cancel follow-up timer
+      this.cancelFollowUp(shop.id, customerPhone);
+
+      // Send customer confirmation
+      let msg = `تم تسجيل حجزك بنجاح! ✅\n\n`;
+      msg += `📦 *تفاصيل الحجز:*\n\n`;
+      items.forEach((i, idx) => {
+        msg += `  ${idx + 1}. *${i.name}*${i.variantInfo ? ` _(${i.variantInfo})_` : ''}`;
+        msg += ` — ${i.quantity} × ${i.price} = *${i.price * i.quantity} جنيه*\n`;
+      });
+      msg += `\n💰 *الإجمالي: ${total} جنيه*\n\n`;
+      msg += `📌 حجزك محفوظ ويمكنك إضافة حجوزات أخرى في أي وقت.\n`;
+      msg += `🚚 عندما تكون جاهزاً للشحن، أرسل *شحن* وسنطلب منك بيانات التوصيل.`;
+
+      await this.safeSendMessage(sock, from, msg, shop.name, shop.id, customerPhone);
+
+      // Notify owner
+      if (shop.whatsappNumber) {
+        const ownerMsg =
+          `📦 *حجز جملة جديد #${reservation.id.slice(-6)}*\n` +
+          `━━━━━━━━━━━━━━━━━━━━\n` +
+          `📱 *العميل:* ${customerPhone}\n\n` +
+          `📦 *المنتجات المحجوزة:*\n` +
+          items.map((i, idx) =>
+            `   ${idx + 1}. ${i.name}${i.variantInfo ? ` (${i.variantInfo})` : ''}\n` +
+            `      الكمية: ${i.quantity} × ${i.price} جنيه = ${i.quantity * i.price} جنيه`
+          ).join('\n') +
+          `\n\n━━━━━━━━━━━━━━━━━━━━\n` +
+          `💰 *الإجمالي: ${total} جنيه*\n` +
+          `⏰ *الوقت: ${new Date().toLocaleString('ar-EG')}*\n` +
+          `━━━━━━━━━━━━━━━━━━━━`;
+
+        await this.safeSendMessage(sock, `${shop.whatsappNumber}@s.whatsapp.net`, ownerMsg, shop.name);
+      }
+
+      console.log(`📦 Wholesale reservation created for ${customerPhone}, ${items.length} items, ${total} EGP`);
+    } catch (error) {
+      console.error(`❌ Error in handleWholesaleReservation:`, error);
+      await this.safeSendMessage(sock, from, "❌ حدث خطأ أثناء تسجيل الحجز. يرجى المحاولة مرة أخرى.", shop.name);
+    }
+  }
+
+  async handleShippingRequest(sock, from, shop, customerPhone) {
+    try {
+      // Find ALL pending reservations for this customer
+      const reservations = await prisma.reservation.findMany({
+        where: {
+          shopId: shop.id,
+          status: 'PENDING',
+          OR: [
+            { customerPhone: customerPhone },
+            { whatsappNumber: customerPhone }
+          ]
+        },
+        orderBy: { createdAt: 'asc' }
+      });
+
+      if (reservations.length === 0) {
+        await this.safeSendMessage(sock, from,
+          `لا توجد حجوزات معلقة حالياً 📋\n\nاكتب *قائمة* لتصفح المنتجات وإضافتها للسلة.`, shop.name, shop.id, customerPhone);
+        return;
+      }
+
+      // Merge all items from all reservations
+      const mergedItems = {};
+      let grandTotal = 0;
+
+      for (const res of reservations) {
+        let items = [];
+        try { items = JSON.parse(res.items); } catch (e) { continue; }
+        for (const item of items) {
+          const key = item.variantInfo ? `${item.productId}__${item.variantInfo}` : item.productId;
+          if (mergedItems[key]) {
+            mergedItems[key].quantity += item.quantity;
+          } else {
+            mergedItems[key] = { ...item };
+          }
+        }
+        grandTotal += res.totalPrice;
+      }
+
+      const itemsList = Object.values(mergedItems);
+
+      // Save reservation IDs in Redis for later update
+      const resIds = reservations.map(r => r.id);
+      await redis.set(`shipping_reservation_ids:${shop.id}:${customerPhone}`, JSON.stringify(resIds), { ex: 1800 });
+
+      // Show summary and ask for shipping details
+      let msg = `🚚 *ملخص جميع حجوزاتك المعلقة:*\n\n`;
+      itemsList.forEach((i, idx) => {
+        msg += `  ${idx + 1}. *${i.name}*${i.variantInfo ? ` _(${i.variantInfo})_` : ''}`;
+        msg += ` — ${i.quantity} × ${i.price} = *${i.price * i.quantity} جنيه*\n`;
+      });
+      msg += `\n💰 *الإجمالي الكلي: ${grandTotal} جنيه*\n`;
+      msg += `📦 *عدد الحجوزات: ${reservations.length}*\n\n`;
+      msg += `━━━━━━━━━━━━━━━━━━━━\n`;
+      msg += `لإتمام الشحن، أرسل بياناتك بهذا الشكل:\n\n`;
+      msg += `*الاسم:* محمد أحمد\n`;
+      msg += `*الهاتف:* 01012345678\n`;
+      msg += `*العنوان:* شارع التحرير، مدينة نصر، القاهرة\n\n`;
+      msg += `أو اكتب *إلغاء* للرجوع (حجوزاتك تبقى محفوظة)`;
+
+      await this.safeSendMessage(sock, from, msg, shop.name, shop.id, customerPhone);
+
+      // Set state
+      await redis.set(`order_state:${shop.id}:${customerPhone}`, 'waiting_shipping', { ex: 1800 });
+
+      console.log(`🚚 Shipping request from ${customerPhone}, ${reservations.length} pending reservations, total ${grandTotal} EGP`);
+    } catch (error) {
+      console.error(`❌ Error in handleShippingRequest:`, error);
+      await this.safeSendMessage(sock, from, "❌ حدث خطأ. يرجى المحاولة مرة أخرى.", shop.name);
+    }
+  }
+
+  async handleShippingInfo(sock, from, shop, customerPhone, text) {
+    try {
+      // Parse shipping info from message
+      // Expected format: الاسم: xxx / الهاتف: xxx / العنوان: xxx
+      // But also accept free-form with labeled lines
+      let name = null, phone = null, address = null;
+
+      // Try structured format first
+      const nameMatch = text.match(/(?:الاسم|اسم|name)[:\s]+(.+?)(?:\n|$)/i);
+      const phoneMatch = text.match(/(?:الهاتف|هاتف|تليفون|رقم|phone)[:\s]+(.+?)(?:\n|$)/i);
+      const addressMatch = text.match(/(?:العنوان|عنوان|address)[:\s]+(.+?)(?:\n|$)/i);
+
+      if (nameMatch) name = nameMatch[1].trim();
+      if (phoneMatch) phone = phoneMatch[1].trim();
+      if (addressMatch) address = addressMatch[1].trim();
+
+      // If not all fields found via labeled format, try line-by-line (3 lines = name, phone, address)
+      if (!name || !phone || !address) {
+        const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        if (lines.length >= 3 && !name && !phone && !address) {
+          name = lines[0];
+          phone = lines[1];
+          address = lines[2];
+        }
+      }
+
+      // Build missing fields message
+      const missing = [];
+      if (!name) missing.push('*الاسم*');
+      if (!phone) missing.push('*الهاتف*');
+      if (!address) missing.push('*العنوان*');
+
+      if (missing.length > 0) {
+        await this.safeSendMessage(sock, from,
+          `⚠️ ينقص بعض البيانات: ${missing.join('، ')}\n\n` +
+          `أرسل بياناتك بهذا الشكل:\n` +
+          `*الاسم:* محمد أحمد\n` +
+          `*الهاتف:* 01012345678\n` +
+          `*العنوان:* شارع التحرير، مدينة نصر، القاهرة\n\n` +
+          `أو اكتب *إلغاء* للرجوع`, shop.name, shop.id, customerPhone);
+        return;
+      }
+
+      // Normalize phone
+      phone = phone.replace(/[\s\-\+]/g, '');
+      if (/^00201\d{9}$/.test(phone)) phone = '0' + phone.slice(4);
+      else if (/^201\d{9}$/.test(phone)) phone = '0' + phone.slice(2);
+      else if (/^1\d{9}$/.test(phone)) phone = '0' + phone;
+
+      // Validate phone
+      if (!/^01[0125]\d{8}$/.test(phone)) {
+        await this.safeSendMessage(sock, from,
+          `⚠️ رقم الهاتف غير صحيح\n\nيرجى كتابة رقم مصري صحيح مثل: 01012345678`, shop.name, shop.id, customerPhone);
+        return;
+      }
+
+      // Validate address
+      const addressWords = address.split(/\s+/).filter(w => w.length > 1);
+      if (address.length < 10 || addressWords.length < 3) {
+        await this.safeSendMessage(sock, from,
+          `⚠️ العنوان غير كافٍ للتوصيل\n\n` +
+          `يرجى كتابة عنوان تفصيلي يتضمن:\n` +
+          `*الشارع + المنطقة + المدينة*`, shop.name, shop.id, customerPhone);
+        return;
+      }
+
+      // Get reservation IDs from Redis
+      const resIdsData = await redis.get(`shipping_reservation_ids:${shop.id}:${customerPhone}`);
+      if (!resIdsData) {
+        await this.safeSendMessage(sock, from,
+          `⚠️ انتهت صلاحية الجلسة. أرسل *شحن* مرة أخرى.`, shop.name, shop.id, customerPhone);
+        await redis.del(`order_state:${shop.id}:${customerPhone}`);
+        return;
+      }
+
+      let resIds = [];
+      try { resIds = JSON.parse(resIdsData); } catch (e) { resIds = []; }
+
+      if (resIds.length === 0) {
+        await this.safeSendMessage(sock, from,
+          `⚠️ لا توجد حجوزات للتحديث. أرسل *شحن* مرة أخرى.`, shop.name, shop.id, customerPhone);
+        await redis.del(`order_state:${shop.id}:${customerPhone}`);
+        return;
+      }
+
+      // Update ALL pending reservations to confirmed
+      await prisma.reservation.updateMany({
+        where: { id: { in: resIds } },
+        data: {
+          status: 'CONFIRMED',
+          customerName: name,
+          shippingPhone: phone,
+          shippingAddress: address
+        }
+      });
+
+      // Merge all items for the confirmation message
+      const reservations = await prisma.reservation.findMany({
+        where: { id: { in: resIds } }
+      });
+
+      const mergedItems = {};
+      let grandTotal = 0;
+      for (const res of reservations) {
+        let items = [];
+        try { items = JSON.parse(res.items); } catch (e) { continue; }
+        for (const item of items) {
+          const key = item.variantInfo ? `${item.productId}__${item.variantInfo}` : item.productId;
+          if (mergedItems[key]) {
+            mergedItems[key].quantity += item.quantity;
+          } else {
+            mergedItems[key] = { ...item };
+          }
+        }
+        grandTotal += res.totalPrice;
+      }
+      const itemsList = Object.values(mergedItems);
+
+      // Clear Redis state
+      await redis.del(`order_state:${shop.id}:${customerPhone}`);
+      await redis.del(`shipping_reservation_ids:${shop.id}:${customerPhone}`);
+
+      // Send customer confirmation
+      let msg = `تم تأكيد طلب الشحن بنجاح! 🎉\n\n`;
+      msg += `👤 *الاسم:* ${name}\n`;
+      msg += `📱 *الهاتف:* ${phone}\n`;
+      msg += `📍 *العنوان:* ${address}\n\n`;
+      msg += `📦 *المنتجات:*\n`;
+      itemsList.forEach((i, idx) => {
+        msg += `  ${idx + 1}. *${i.name}*${i.variantInfo ? ` (${i.variantInfo})` : ''}`;
+        msg += ` × ${i.quantity} = ${i.price * i.quantity} جنيه\n`;
+      });
+      msg += `\n💰 *الإجمالي: ${grandTotal} جنيه*\n\n`;
+      msg += `سنتواصل معك قريباً لتأكيد التوصيل 📞\n`;
+      msg += `شكراً لاختيارك ${shop.name}! 🙏`;
+
+      await this.safeSendMessage(sock, from, msg, shop.name, shop.id, customerPhone);
+
+      // Notify owner with complete shipping order
+      if (shop.whatsappNumber) {
+        const ownerMsg =
+          `🚚 *طلب شحن جملة*\n` +
+          `━━━━━━━━━━━━━━━━━━━━\n` +
+          `👤 *بيانات العميل:*\n` +
+          `   الاسم: ${name}\n` +
+          `   الهاتف: ${phone}\n` +
+          `   العنوان: ${address}\n\n` +
+          `📦 *تفاصيل الطلب:*\n` +
+          itemsList.map((i, idx) =>
+            `   ${idx + 1}. ${i.name}${i.variantInfo ? ` (${i.variantInfo})` : ''}\n` +
+            `      الكمية: ${i.quantity} × ${i.price} جنيه = ${i.quantity * i.price} جنيه`
+          ).join('\n') +
+          `\n\n━━━━━━━━━━━━━━━━━━━━\n` +
+          `💰 *الإجمالي: ${grandTotal} جنيه*\n` +
+          `📦 *عدد الحجوزات: ${resIds.length}*\n` +
+          `⏰ *الوقت: ${new Date().toLocaleString('ar-EG')}*\n` +
+          `━━━━━━━━━━━━━━━━━━━━`;
+
+        await this.safeSendMessage(sock, `${shop.whatsappNumber}@s.whatsapp.net`, ownerMsg, shop.name);
+      }
+
+      console.log(`🚚 Shipping confirmed for ${customerPhone}, ${resIds.length} reservations, total ${grandTotal} EGP`);
+    } catch (error) {
+      console.error(`❌ Error in handleShippingInfo:`, error);
+      await this.safeSendMessage(sock, from, "❌ حدث خطأ أثناء تأكيد الشحن. يرجى المحاولة مرة أخرى.", shop.name);
     }
   }
 

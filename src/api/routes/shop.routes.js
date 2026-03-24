@@ -548,4 +548,103 @@ router.put('/working-hours', authenticateToken, async (req, res) => {
   }
 });
 
+// Get wholesale mode
+router.get('/wholesale', authenticateToken, async (req, res) => {
+  try {
+    const shop = await prisma.shop.findUnique({
+      where: { id: req.shop.id },
+      select: { isWholesale: true }
+    });
+    if (!shop) return res.status(404).json({ error: 'المتجر غير موجود' });
+    res.json({ isWholesale: shop.isWholesale });
+  } catch (error) {
+    console.error('Get wholesale mode error:', error);
+    res.status(500).json({ error: 'فشل في تحميل الإعداد' });
+  }
+});
+
+// Update wholesale mode
+router.put('/wholesale', authenticateToken, async (req, res) => {
+  try {
+    const { isWholesale } = req.body;
+    await prisma.shop.update({
+      where: { id: req.shop.id },
+      data: { isWholesale: isWholesale === true }
+    });
+
+    // Invalidate shop cache so bot picks up change immediately
+    if (botManager) {
+      botManager.invalidateShopCache(req.shop.id);
+    }
+
+    res.json({ success: true, message: isWholesale ? 'تم تفعيل نظام الجملة' : 'تم إلغاء نظام الجملة' });
+  } catch (error) {
+    console.error('Update wholesale mode error:', error);
+    res.status(500).json({ error: 'فشل في تحديث الإعداد' });
+  }
+});
+
+// Get reservations for this shop
+router.get('/reservations', authenticateToken, async (req, res) => {
+  try {
+    const { status, page = 1, limit = 50 } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const where = {
+      shopId: req.shop.id,
+      ...(status && { status })
+    };
+
+    const [reservations, total] = await Promise.all([
+      prisma.reservation.findMany({
+        where,
+        skip,
+        take: parseInt(limit),
+        orderBy: { createdAt: 'desc' }
+      }),
+      prisma.reservation.count({ where })
+    ]);
+
+    // Parse items JSON for each reservation
+    const parsed = reservations.map(r => ({
+      ...r,
+      items: (() => { try { return JSON.parse(r.items); } catch { return []; } })()
+    }));
+
+    res.json({
+      reservations: parsed,
+      pagination: { page: parseInt(page), limit: parseInt(limit), total, pages: Math.ceil(total / parseInt(limit)) }
+    });
+  } catch (error) {
+    console.error('Get reservations error:', error);
+    res.status(500).json({ error: 'فشل في تحميل الحجوزات' });
+  }
+});
+
+// Update reservation status
+router.put('/reservations/:id/status', authenticateToken, async (req, res) => {
+  try {
+    const { status } = req.body;
+    const validStatuses = ['PENDING', 'CONFIRMED', 'SHIPPED', 'CANCELLED'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ error: 'حالة غير صالحة' });
+    }
+
+    const reservation = await prisma.reservation.findFirst({
+      where: { id: req.params.id, shopId: req.shop.id }
+    });
+    if (!reservation) return res.status(404).json({ error: 'الحجز غير موجود' });
+
+    const updated = await prisma.reservation.update({
+      where: { id: req.params.id },
+      data: { status }
+    });
+
+    res.json({ success: true, reservation: updated });
+  } catch (error) {
+    console.error('Update reservation status error:', error);
+    res.status(500).json({ error: 'فشل في تحديث حالة الحجز' });
+  }
+});
+
 module.exports = router;

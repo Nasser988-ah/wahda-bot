@@ -974,7 +974,26 @@
 
         <div class="settings-card">
             <div class="card-title">
-                🕐 ساعات العمل
+                � نظام الحجز للجملة
+            </div>
+
+            <div class="toggle-container">
+                <span class="toggle-label">تفعيل نظام الحجز للجملة</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="isWholesale" onchange="saveWholesaleMode()">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            <p style="color: var(--muted, #8a8a9a); font-size: 13px; margin-top: 8px; line-height: 1.8;">
+                عند التفعيل: العميل يحجز بدون بيانات شحن.<br>
+                عندما يكون جاهزاً يطلب الشحن بنفسه بإرسال "شحن".
+            </p>
+            <a href="reservations.html" style="display:inline-block;margin-top:12px;color:var(--gold, #f5c842);text-decoration:none;font-size:14px;">📋 عرض الحجوزات ←</a>
+        </div>
+
+        <div class="settings-card">
+            <div class="card-title">
+                � ساعات العمل
             </div>
 
             <div class="toggle-container">
@@ -1547,6 +1566,45 @@
             }
         }
 
+        // ==================== Wholesale Mode Functions ====================
+        async function loadWholesaleMode() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/shop/wholesale`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                });
+                if (!res.ok) return;
+                const data = await res.json();
+                document.getElementById('isWholesale').checked = data.isWholesale === true;
+            } catch (e) {
+                console.error('Error loading wholesale mode:', e);
+            }
+        }
+
+        async function saveWholesaleMode() {
+            const isWholesale = document.getElementById('isWholesale').checked;
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/shop/wholesale`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({ isWholesale })
+                });
+                if (res.ok) {
+                    showSuccess(isWholesale ? 'تم تفعيل نظام الحجز للجملة' : 'تم إلغاء نظام الحجز للجملة');
+                } else {
+                    const err = await res.json();
+                    showError(err.error || 'فشل في تحديث الإعداد');
+                    document.getElementById('isWholesale').checked = !isWholesale;
+                }
+            } catch (e) {
+                console.error('Save wholesale error:', e);
+                showError('حدث خطأ أثناء حفظ الإعداد');
+                document.getElementById('isWholesale').checked = !isWholesale;
+            }
+        }
+
         // Initialize customization on page load
         document.addEventListener('DOMContentLoaded', async () => {
             const token = localStorage.getItem('token');
@@ -1560,6 +1618,7 @@
             setupColorListeners();
             setupLogoUpload();
             await loadWorkingHours();
+            await loadWholesaleMode();
         });
 
         // Allow Enter key to save

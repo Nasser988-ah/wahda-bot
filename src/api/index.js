@@ -23,6 +23,7 @@ router.get("/store/:shopId", async (req, res) => {
         id: true,
         name: true,
         whatsappNumber: true,
+        isWholesale: true,
         logoUrl: true,
         primaryColor: true,
         secondaryColor: true,

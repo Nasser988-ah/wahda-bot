@@ -3,7 +3,7 @@
    Keyframes, scroll reveals, micro-interactions
    ============================================ */
 
-/* --- Gold shimmer on hero title --- */
+/* --- Gradient shimmer on hero title --- */
 @keyframes shimmer {
   0%   { background-position: 200% 50%; }
   100% { background-position: -200% 50%; }
@@ -15,8 +15,8 @@
 
 /* --- Pulse glow on primary CTA --- */
 @keyframes pulseGlow {
-  0%, 100% { box-shadow: 0 0 20px rgba(245, 200, 66, 0.15); }
-  50%      { box-shadow: 0 0 40px rgba(245, 200, 66, 0.3); }
+  0%, 100% { box-shadow: 0 0 20px rgba(99, 102, 241, 0.2); }
+  50%      { box-shadow: 0 0 40px rgba(99, 102, 241, 0.4); }
 }
 
 .btn-pulse {
@@ -164,6 +164,6 @@
   .bento-card:active,
   .pricing-card:active {
     transform: translateY(-2px);
-    border-color: rgba(245, 200, 66, 0.15);
+    border-color: rgba(99, 102, 241, 0.2);
   }
 }

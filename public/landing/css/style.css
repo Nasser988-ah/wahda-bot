@@ -5,16 +5,18 @@
 
 /* --- CSS Variables --- */
 :root {
-  --bg-deep: #0a0a0f;
-  --bg: #0f0f13;
-  --bg-card: #1a1a22;
-  --gold: #f5c842;
-  --gold-light: #fde98a;
-  --gold-dim: rgba(245, 200, 66, 0.08);
+  --bg-deep: #050508;
+  --bg: #0a0a0f;
+  --bg-card: rgba(20, 20, 30, 0.8);
+  --primary: #6366f1;
+  --primary-dark: #4f46e5;
+  --secondary: #06b6d4;
+  --accent: #8b5cf6;
+  --primary-dim: rgba(99, 102, 241, 0.08);
   --white: #ffffff;
-  --muted: #8a8a9a;
-  --border: rgba(255,255,255,0.06);
-  --font: 'Cairo', sans-serif;
+  --muted: #94a3b8;
+  --border: rgba(255,255,255,0.1);
+  --font: 'Tajawal', sans-serif;
   --radius: 16px;
   --radius-sm: 10px;
   --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -150,10 +152,7 @@ img {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 28px;
-  font-weight: 900;
-  color: var(--gold);
-  letter-spacing: -1px;
+  font-weight: 800;
   flex-shrink: 0;
 }
 
@@ -161,6 +160,21 @@ img {
   width: 38px;
   height: 38px;
   border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.3);
+}
+
+.nav-brand {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--white);
+  letter-spacing: -0.5px;
+}
+
+.brand-highlight {
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .nav-links {
@@ -185,12 +199,12 @@ img {
   right: 0;
   width: 0;
   height: 2px;
-  background: var(--gold);
+  background: var(--primary);
   transition: width var(--transition);
 }
 
 .nav-links a:hover {
-  color: var(--gold);
+  color: var(--primary);
 }
 
 .nav-links a:hover::after {
@@ -200,8 +214,8 @@ img {
 .nav-cta {
   font-size: 14px;
   font-weight: 700;
-  color: var(--gold);
-  border: 1.5px solid var(--gold);
+  color: var(--primary);
+  border: 1.5px solid var(--primary);
   padding: 8px 24px;
   border-radius: 100px;
   transition: background var(--transition), color var(--transition), transform var(--transition);
@@ -210,7 +224,7 @@ img {
 }
 
 .nav-cta:hover {
-  background: var(--gold);
+  background: var(--primary);
   color: var(--bg-deep);
   transform: scale(1.03);
 }
@@ -281,7 +295,7 @@ img {
   position: absolute;
   width: 700px;
   height: 700px;
-  background: radial-gradient(circle, rgba(245, 200, 66, 0.12) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 70%);
   top: 50%;
   left: 50%;
   transform: translate(-50%, -55%);
@@ -311,7 +325,7 @@ img {
   position: absolute;
   width: 200px;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(245, 200, 66, 0.15), transparent);
+  background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.12), transparent);
 }
 
 .hero-line--tl {
@@ -342,13 +356,13 @@ img {
   align-items: center;
   gap: 8px;
   padding: 8px 20px;
-  border: 1px solid rgba(245, 200, 66, 0.3);
+  border: 1px solid rgba(99, 102, 241, 0.3);
   border-radius: 100px;
   font-size: 14px;
-  color: var(--gold);
+  color: var(--secondary);
   font-weight: 700;
   margin-bottom: 32px;
-  background: rgba(245, 200, 66, 0.04);
+  background: rgba(99, 102, 241, 0.06);
 }
 
 .hero-pill-star {
@@ -373,7 +387,7 @@ img {
 
 .hero-title-gold {
   font-weight: 900;
-  background: linear-gradient(135deg, var(--gold), var(--gold-light), var(--gold));
+  background: linear-gradient(135deg, var(--primary), var(--secondary), var(--primary));
   background-size: 200% 200%;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -418,14 +432,14 @@ img {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--gold-dim), rgba(245, 200, 66, 0.2));
+  background: linear-gradient(135deg, var(--primary-dim), rgba(99, 102, 241, 0.2));
   border: 2px solid var(--bg-deep);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 13px;
   font-weight: 700;
-  color: var(--gold);
+  color: var(--primary);
   margin-left: -10px;
 }
 
@@ -441,7 +455,7 @@ img {
 }
 
 .hero-proof-stars {
-  color: var(--gold);
+  color: var(--primary);
   font-size: 14px;
   letter-spacing: 2px;
 }
@@ -464,8 +478,8 @@ img {
 .scroll-arrow {
   width: 24px;
   height: 24px;
-  border-left: 2px solid var(--gold);
-  border-bottom: 2px solid var(--gold);
+  border-left: 2px solid var(--primary);
+  border-bottom: 2px solid var(--primary);
   transform: rotate(-45deg);
   opacity: 0.5;
 }
@@ -498,32 +512,32 @@ img {
   font-size: 18px;
 }
 
-/* Primary gold button */
+/* Primary button */
 .btn-primary {
-  background: linear-gradient(135deg, var(--gold), var(--gold-light));
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
   color: var(--bg-deep);
 }
 
 .btn-primary:hover {
-  box-shadow: 0 0 30px rgba(245, 200, 66, 0.35);
+  box-shadow: 0 0 30px rgba(99, 102, 241, 0.4);
 }
 
 /* Outline button */
 .btn-outline {
   background: transparent;
-  color: var(--gold);
-  border: 1.5px solid rgba(245, 200, 66, 0.4);
+  color: var(--primary);
+  border: 1.5px solid rgba(99, 102, 241, 0.4);
 }
 
 .btn-outline:hover {
-  background: var(--gold-dim);
-  border-color: var(--gold);
+  background: var(--primary-dim);
+  border-color: var(--primary);
 }
 
 /* Ghost button */
 .btn-ghost {
   background: transparent;
-  color: var(--gold);
+  color: var(--primary);
   padding: 14px 16px;
   position: relative;
 }
@@ -535,7 +549,7 @@ img {
   right: 16px;
   left: 16px;
   height: 1px;
-  background: var(--gold);
+  background: var(--primary);
   transform: scaleX(0);
   transform-origin: right;
   transition: transform var(--transition);
@@ -581,7 +595,7 @@ img {
   font-size: clamp(26px, 5vw, 44px);
   font-weight: 900;
   text-align: center;
-  color: var(--gold);
+  color: var(--primary);
   margin-bottom: 64px;
   line-height: 1.3;
 }
@@ -603,7 +617,7 @@ img {
 
 .problem-card:hover {
   transform: translateY(-6px);
-  border-color: rgba(245, 200, 66, 0.15);
+  border-color: rgba(99, 102, 241, 0.2);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 }
 
@@ -611,7 +625,7 @@ img {
   width: 56px;
   height: 56px;
   margin: 0 auto 24px;
-  color: var(--gold);
+  color: var(--primary);
 }
 
 .problem-card-icon svg {
@@ -646,7 +660,7 @@ img {
   left: 0;
   right: 0;
   height: 300px;
-  background: linear-gradient(180deg, rgba(245, 200, 66, 0.03) 0%, transparent 100%);
+  background: linear-gradient(180deg, rgba(99, 102, 241, 0.04) 0%, transparent 100%);
   pointer-events: none;
 }
 
@@ -667,7 +681,7 @@ img {
   border-radius: 100px;
   font-size: 13px;
   font-weight: 700;
-  color: var(--gold);
+  color: var(--primary);
   white-space: nowrap;
   z-index: 3;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
@@ -711,7 +725,7 @@ img {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--gold), var(--gold-light));
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -835,8 +849,8 @@ img {
 
 .bento-card:hover {
   transform: translateY(-4px);
-  border-color: rgba(245, 200, 66, 0.2);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(245, 200, 66, 0.06);
+  border-color: rgba(99, 102, 241, 0.2);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(99, 102, 241, 0.08);
 }
 
 .bento-card--wide {
@@ -852,7 +866,7 @@ img {
 .bento-icon {
   width: 44px;
   height: 44px;
-  color: var(--gold);
+  color: var(--primary);
   margin-bottom: 20px;
 }
 
@@ -879,7 +893,7 @@ img {
   position: absolute;
   top: 16px;
   left: 16px;
-  background: linear-gradient(135deg, var(--gold), var(--gold-light));
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
   color: var(--bg-deep);
   font-size: 11px;
   font-weight: 900;
@@ -916,7 +930,7 @@ img {
 .steps-line-fill {
   width: 100%;
   height: 0;
-  background: linear-gradient(180deg, var(--gold), rgba(245, 200, 66, 0.2));
+  background: linear-gradient(180deg, var(--primary), rgba(99, 102, 241, 0.2));
   transition: height 1.2s cubic-bezier(0.4, 0, 0.2, 1);
   border-radius: 2px;
 }
@@ -934,13 +948,13 @@ img {
   min-width: 46px;
   border-radius: 50%;
   background: var(--bg-card);
-  border: 2px solid rgba(245, 200, 66, 0.3);
+  border: 2px solid rgba(99, 102, 241, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 18px;
   font-weight: 900;
-  color: var(--gold);
+  color: var(--primary);
   position: absolute;
   right: -60px;
   z-index: 2;
@@ -988,13 +1002,13 @@ img {
 }
 
 .pricing-card--popular {
-  border-color: rgba(245, 200, 66, 0.3);
-  box-shadow: 0 0 60px rgba(245, 200, 66, 0.06);
+  border-color: rgba(99, 102, 241, 0.3);
+  box-shadow: 0 0 60px rgba(99, 102, 241, 0.08);
 }
 
 .pricing-card--popular:hover {
-  border-color: var(--gold);
-  box-shadow: 0 0 80px rgba(245, 200, 66, 0.1);
+  border-color: var(--primary);
+  box-shadow: 0 0 80px rgba(99, 102, 241, 0.15);
 }
 
 .pricing-popular-badge {
@@ -1002,7 +1016,7 @@ img {
   top: -14px;
   left: 50%;
   transform: translateX(-50%);
-  background: linear-gradient(135deg, var(--gold), var(--gold-light));
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
   color: var(--bg-deep);
   font-size: 12px;
   font-weight: 900;
@@ -1017,8 +1031,8 @@ img {
   left: 50%;
   transform: translateX(-50%);
   background: var(--bg-card);
-  border: 1px solid rgba(245, 200, 66, 0.3);
-  color: var(--gold);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  color: var(--primary);
   font-size: 12px;
   font-weight: 900;
   padding: 5px 20px;
@@ -1054,7 +1068,7 @@ img {
 }
 
 .check {
-  color: var(--gold);
+  color: var(--primary);
   font-weight: 900;
   font-size: 16px;
   flex-shrink: 0;
@@ -1062,7 +1076,7 @@ img {
 
 .pricing-trial {
   text-align: center;
-  color: var(--gold);
+  color: var(--primary);
   font-size: 15px;
   font-weight: 700;
   margin-top: 48px;
@@ -1083,7 +1097,7 @@ img {
   position: absolute;
   width: 800px;
   height: 800px;
-  background: radial-gradient(circle, rgba(245, 200, 66, 0.08) 0%, transparent 65%);
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.1) 0%, transparent 65%);
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
@@ -1146,7 +1160,7 @@ img {
 .footer-logo {
   font-size: 32px;
   font-weight: 900;
-  color: var(--gold);
+  color: var(--primary);
   margin-bottom: 8px;
 }
 
@@ -1172,7 +1186,7 @@ img {
 }
 
 .footer-links a:hover {
-  color: var(--gold);
+  color: var(--primary);
 }
 
 .footer-copy {
@@ -1243,7 +1257,7 @@ img {
   }
 
   .nav-link-register {
-    color: var(--gold) !important;
+    color: var(--primary) !important;
     font-weight: 900 !important;
   }
 

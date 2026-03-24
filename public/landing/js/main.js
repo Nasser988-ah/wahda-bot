@@ -21,7 +21,7 @@
 
   /* -----------------------------------------
      PARTICLE CANVAS
-     80 tiny gold dots floating slowly
+     80 tiny dots floating slowly (indigo/purple/cyan)
      ----------------------------------------- */
   var canvas = document.getElementById('particleCanvas');
   var ctx = canvas ? canvas.getContext('2d') : null;
@@ -69,7 +69,9 @@
 
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(245, 200, 66, ' + p.alpha + ')';
+      /* Alternate between indigo and purple particles */
+      var color = (i % 3 === 0) ? '99, 102, 241' : (i % 3 === 1) ? '139, 92, 246' : '6, 182, 212';
+      ctx.fillStyle = 'rgba(' + color + ', ' + p.alpha + ')';
       ctx.fill();
     }
 

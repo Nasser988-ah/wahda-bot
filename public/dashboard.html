@@ -385,6 +385,12 @@
             border: 1px solid rgba(239, 68, 68, 0.3);
         }
 
+        .status-shipped {
+            background: rgba(139, 92, 246, 0.15);
+            color: var(--accent);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+        }
+
         /* Quick Actions */
         .quick-actions {
             display: grid;
@@ -922,7 +928,7 @@
         <!-- Recent Orders -->
         <div class="section">
             <div class="section-header">
-                <h2 class="section-title">الطلبات الأخيرة</h2>
+                <h2 class="section-title" id="ordersSectionTitle">الطلبات الأخيرة</h2>
                 <button class="btn btn-small" onclick="refreshOrders()">تحديث</button>
             </div>
             <div id="ordersContainer">
@@ -961,6 +967,7 @@
 
         const API_BASE = window.location.origin + '/api';
         let currentShop = null;
+        let isWholesaleMode = false;
 
         // Global API fetch helper with 401 handling
         async function apiFetch(url, options = {}) {
@@ -985,6 +992,21 @@
             return res;
         }
 
+        // Check if wholesale mode is enabled
+        async function checkWholesaleMode() {
+            try {
+                const response = await apiFetch(`${API_BASE}/shop/wholesale`);
+                if (!response) return false;
+                if (response.ok) {
+                    const data = await response.json();
+                    return data.isWholesale === true;
+                }
+            } catch (e) {
+                console.error('Error checking wholesale mode:', e);
+            }
+            return false;
+        }
+
         // Initialize dashboard
         window.addEventListener('load', async () => {
             const token = localStorage.getItem('token');
@@ -998,8 +1020,22 @@
             currentShop = JSON.parse(shop);
             document.getElementById('userName').textContent = currentShop.name;
 
+            // Check wholesale mode first
+            isWholesaleMode = await checkWholesaleMode();
+
+            // Update section title based on mode
+            const ordersSectionTitle = document.getElementById('ordersSectionTitle');
+            if (isWholesaleMode && ordersSectionTitle) {
+                ordersSectionTitle.textContent = 'حجوزات الجملة الأخيرة';
+            }
+
             await loadStats();
-            await loadRecentOrders();
+
+            if (isWholesaleMode) {
+                await loadRecentReservations();
+            } else {
+                await loadRecentOrders();
+            }
         });
 
         // Load statistics
@@ -1023,28 +1059,59 @@
         function displayStats(data) {
             const statsGrid = document.getElementById('statsGrid');
             const revenue = data.revenue || 0;
-            statsGrid.innerHTML = `
-                <div class="stat-card">
-                    <div class="stat-icon">📦</div>
-                    <div class="stat-value">${data.products || 0}</div>
-                    <div class="stat-label">المنتجات المتاحة</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">📋</div>
-                    <div class="stat-value">${data.recentOrders || 0}</div>
-                    <div class="stat-label">الطلبات (30 يوم)</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">⏳</div>
-                    <div class="stat-value" id="pendingCount">${data.pendingOrders || 0}</div>
-                    <div class="stat-label">الطلبات المعلقة</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">💰</div>
-                    <div class="stat-value" id="revenueValue">${revenue.toLocaleString()} ج.م</div>
-                    <div class="stat-label">إجمالي الإيرادات</div>
-                </div>
-            `;
+
+            if (isWholesaleMode) {
+                // Wholesale stats - show reservation-focused metrics
+                const pendingRes = data.pendingReservations || 0;
+                const confirmedRes = data.confirmedReservations || 0;
+                const totalRes = data.totalReservations || 0;
+                const resRevenue = data.reservationRevenue || 0;
+                statsGrid.innerHTML = `
+                    <div class="stat-card">
+                        <div class="stat-icon">📦</div>
+                        <div class="stat-value">${data.products || 0}</div>
+                        <div class="stat-label">المنتجات المتاحة</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">📋</div>
+                        <div class="stat-value">${totalRes}</div>
+                        <div class="stat-label">إجمالي الحجوزات</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">⏳</div>
+                        <div class="stat-value">${pendingRes}</div>
+                        <div class="stat-label">حجوزات معلقة</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">💰</div>
+                        <div class="stat-value" id="revenueValue">${resRevenue.toLocaleString()} ج.م</div>
+                        <div class="stat-label">إيرادات الحجوزات</div>
+                    </div>
+                `;
+            } else {
+                statsGrid.innerHTML = `
+                    <div class="stat-card">
+                        <div class="stat-icon">📦</div>
+                        <div class="stat-value">${data.products || 0}</div>
+                        <div class="stat-label">المنتجات المتاحة</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">📋</div>
+                        <div class="stat-value">${data.recentOrders || 0}</div>
+                        <div class="stat-label">الطلبات (30 يوم)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">⏳</div>
+                        <div class="stat-value" id="pendingCount">${data.pendingOrders || 0}</div>
+                        <div class="stat-label">الطلبات المعلقة</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">💰</div>
+                        <div class="stat-value" id="revenueValue">${revenue.toLocaleString()} ج.م</div>
+                        <div class="stat-label">إجمالي الإيرادات</div>
+                    </div>
+                `;
+            }
         }
 
         // Load recent orders
@@ -1144,6 +1211,176 @@
             container.innerHTML = tableHTML + cardsHTML;
         }
 
+        // ============ WHOLESALE: Reservations ============
+
+        // Load recent reservations (wholesale mode)
+        async function loadRecentReservations() {
+            try {
+                const response = await apiFetch(`${API_BASE}/shop/reservations?limit=10`);
+                if (!response) return;
+
+                if (response.ok) {
+                    const data = await response.json();
+                    displayReservations(data.reservations || []);
+                } else {
+                    displayReservations([]);
+                }
+            } catch (error) {
+                console.error('Error loading reservations:', error);
+                displayReservations([]);
+            }
+        }
+
+        // Display reservations (wholesale mode)
+        function displayReservations(reservations) {
+            const container = document.getElementById('ordersContainer');
+
+            if (reservations.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">📦</div>
+                        <div>لا توجد حجوزات حالياً</div>
+                    </div>
+                `;
+                return;
+            }
+
+            // Desktop table
+            const tableHTML = `
+                <table class="orders-table">
+                    <thead>
+                        <tr>
+                            <th>رقم الحجز</th>
+                            <th>العميل</th>
+                            <th>المنتجات</th>
+                            <th>الإجمالي</th>
+                            <th>الحالة</th>
+                            <th>التاريخ</th>
+                            <th>إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${reservations.map(res => {
+                            const items = Array.isArray(res.items) ? res.items : [];
+                            const itemsSummary = items.map(i => `${i.name} ×${i.quantity}`).join('، ');
+                            return `
+                            <tr>
+                                <td>#${res.id.slice(-8)}</td>
+                                <td>${esc(res.customerPhone)}</td>
+                                <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(itemsSummary)}">${esc(itemsSummary) || '-'}</td>
+                                <td>${res.totalPrice} ج.م</td>
+                                <td>
+                                    <button class="status-badge status-${res.status.toLowerCase()}" 
+                                            onclick="updateReservationStatus('${res.id}', '${res.status}')">
+                                        ${getReservationStatusText(res.status)}
+                                    </button>
+                                </td>
+                                <td>${new Date(res.createdAt).toLocaleDateString('ar-EG')}</td>
+                                <td>
+                                    <button class="btn btn-small btn-outline" onclick="viewReservationDetails('${res.id}')">
+                                        عرض
+                                    </button>
+                                </td>
+                            </tr>`;
+                        }).join('')}
+                    </tbody>
+                </table>`;
+
+            // Mobile cards
+            const cardsHTML = `
+                <div class="mobile-orders">
+                    ${reservations.map(res => {
+                        const items = Array.isArray(res.items) ? res.items : [];
+                        const itemsSummary = items.map(i => `${i.name} ×${i.quantity}`).join('، ');
+                        return `
+                        <div class="mobile-order-card">
+                            <div class="mobile-order-top">
+                                <span class="mobile-order-id">#${res.id.slice(-8)}</span>
+                                <span class="mobile-order-date">${new Date(res.createdAt).toLocaleDateString('ar-EG')}</span>
+                            </div>
+                            <div class="mobile-order-mid">
+                                <span class="mobile-order-customer">📱 ${esc(res.customerPhone)}</span>
+                                <span class="mobile-order-price">${res.totalPrice} ج.م</span>
+                            </div>
+                            <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                                📦 ${esc(itemsSummary) || '-'}
+                            </div>
+                            <div class="mobile-order-bottom">
+                                <button class="status-badge status-${res.status.toLowerCase()}"
+                                        onclick="updateReservationStatus('${res.id}', '${res.status}')">
+                                    ${getReservationStatusText(res.status)}
+                                </button>
+                                <button class="btn btn-small btn-outline" onclick="viewReservationDetails('${res.id}')">
+                                    تفاصيل
+                                </button>
+                            </div>
+                        </div>`;
+                    }).join('')}
+                </div>`;
+
+            container.innerHTML = tableHTML + cardsHTML;
+        }
+
+        // Get reservation status text
+        function getReservationStatusText(status) {
+            const map = {
+                'PENDING': '⏳ معلق',
+                'CONFIRMED': '✅ مؤكد',
+                'SHIPPED': '🚚 تم الشحن',
+                'CANCELLED': '❌ ملغي'
+            };
+            return map[status] || status;
+        }
+
+        // Update reservation status
+        async function updateReservationStatus(resId, currentStatus) {
+            const statusOptions = ['PENDING', 'CONFIRMED', 'SHIPPED', 'CANCELLED'];
+            const currentIndex = statusOptions.indexOf(currentStatus);
+            const nextIndex = (currentIndex + 1) % statusOptions.length;
+            const newStatus = statusOptions[nextIndex];
+
+            try {
+                const response = await apiFetch(`${API_BASE}/shop/reservations/${resId}/status`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ status: newStatus })
+                });
+                if (!response) return;
+
+                if (response.ok) {
+                    await Promise.all([loadStats(), loadRecentReservations()]);
+                    showToast('تم تحديث حالة الحجز', 'success');
+                } else {
+                    showToast('فشل تحديث حالة الحجز', 'error');
+                }
+            } catch (error) {
+                console.error('Error updating reservation status:', error);
+                showToast('حدث خطأ', 'error');
+            }
+        }
+
+        // View reservation details (show alert with full info)
+        function viewReservationDetails(resId) {
+            // For now, find the reservation in the displayed data and show details
+            // Could be enhanced to open a dedicated page
+            showToast('رقم الحجز: #' + resId.slice(-8), 'success');
+        }
+
+        // Toast notification helper
+        function showToast(message, type = 'success') {
+            let toast = document.querySelector('.toast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.className = 'toast';
+                document.body.appendChild(toast);
+            }
+            toast.textContent = message;
+            toast.className = 'toast ' + type;
+            setTimeout(() => toast.classList.add('show'), 10);
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // ============ END WHOLESALE ============
+
         // Get status text in Arabic
         function getStatusText(status) {
             const statusMap = {
@@ -1194,7 +1431,11 @@
 
         // Refresh orders and stats (revenue updates when status changes)
         async function refreshOrders() {
-            await Promise.all([loadStats(), loadRecentOrders()]);
+            if (isWholesaleMode) {
+                await Promise.all([loadStats(), loadRecentReservations()]);
+            } else {
+                await Promise.all([loadStats(), loadRecentOrders()]);
+            }
         }
 
         // Logout

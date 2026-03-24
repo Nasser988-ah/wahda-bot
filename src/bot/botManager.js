@@ -1920,6 +1920,45 @@ class BotManager {
     console.log(`✅ Website order processed for ${customerPhone}, ${cart.length} items, ${total} EGP`);
   }
 
+  // Build detailed product catalog for AI prompts (prevents hallucination)
+  buildDetailedProductCatalog(shop) {
+    const products = shop.products?.filter(p => p.isAvailable) || [];
+    if (products.length === 0) return 'لا توجد منتجات متاحة حالياً.';
+
+    return products.map((p, i) => {
+      let line = `${i + 1}. ${p.name} - ${p.price} جنيه`;
+      if (p.description) line += ` | الوصف: ${p.description}`;
+      if (p.stock !== null && p.stock !== undefined) line += ` | المخزون: ${p.stock > 0 ? p.stock + ' قطعة' : 'نفذ'}`;
+
+      // Parse variants (colors, sizes, etc.)
+      if (p.variants) {
+        let variantGroups = [];
+        try { variantGroups = typeof p.variants === 'string' ? JSON.parse(p.variants) : p.variants; } catch {}
+        if (variantGroups.length > 0) {
+          variantGroups.forEach(g => {
+            const available = g.options.filter(o => {
+              if (!g.stock) return true;
+              const s = g.stock[o];
+              return s === null || s === undefined || s > 0;
+            });
+            const unavailable = g.options.filter(o => {
+              if (!g.stock) return false;
+              const s = g.stock[o];
+              return s !== null && s !== undefined && s <= 0;
+            });
+            if (available.length > 0) {
+              line += `\n   ${g.name} المتاحة: ${available.join('، ')}`;
+            }
+            if (unavailable.length > 0) {
+              line += `\n   ${g.name} غير متاحة: ${unavailable.join('، ')}`;
+            }
+          });
+        }
+      }
+      return line;
+    }).join('\n');
+  }
+
   // Validate AI response
   validateAIResponse(response) {
     if (!response || response.length < 5) {
@@ -2047,6 +2086,10 @@ class BotManager {
         ? `العميل لديه ${cart.length} منتج في السلة` 
         : `سلة العميل فارغة`;
 
+      // Build detailed product catalog with variants
+      const detailedCatalog = this.buildDetailedProductCatalog(shop);
+      const isWholesale = shop.isWholesale || false;
+
       // Create system prompt with shop context - STRICT FORMAL ARABIC ONLY
       const systemPrompt = `أنت موظف خدمة عملاء اسمك *ذكي* تعمل في متجر "${shop.name}".
 
@@ -2057,31 +2100,35 @@ class BotManager {
 - إذا سألك من أنت قل: "أنا ذكي، موظف خدمة العملاء في ${shop.name}"
 - لا تقل أبداً أنك بوت أو روبوت أو ذكاء اصطناعي
 
-قواعد اللغة - صارمة جداً:
-1. استخدم اللغة العربية الفصحى الرسمية فقط
-2. ممنوع منعاً باتاً: أيوه، لأ، تمام، ماشي، كويس،
-   عامل، ازيك، يلا، بص، معلش، خلاص، زي، أوي،
-   دلوقتي، عايز، مش، إيه، فين، ازاي، بقى، كمان
-3. الكلمات الصحيحة: نعم، لا، حسناً، الآن، تريد،
-   ليس، ما، أين، كيف، أيضاً، عفواً
-4. لا أخطاء إملائية أبداً
-5. ردودك قصيرة ومختصرة لا تتجاوز 3 جمل
-6. كن محترفاً ومهذباً في جميع الأوقات
-7. لا تكرر نفس الرد مرتين
-8. تذكر دائماً أنك تمثل صورة المتجر
+═══════ قائمة المنتجات الكاملة ═══════
+${detailedCatalog}
+═══════ نهاية القائمة ═══════
 
-المنتجات المتاحة: ${shop.products?.filter(p => p.isAvailable).map(p => `${p.name} (${p.price} جنيه)`).join(', ') || 'منتجات متنوعة'}
+⛔ قواعد المنتجات - صارمة للغاية:
+1. لا تذكر أبداً أي منتج أو لون أو مقاس أو خيار غير موجود في القائمة أعلاه
+2. إذا سأل العميل عن لون أو مقاس، أجب فقط بالخيارات المتاحة من القائمة أعلاه
+3. إذا سأل عن منتج غير موجود، اعتذر بلطف وقل "هذا المنتج غير متوفر لدينا حالياً" واقترح منتجات مشابهة من القائمة
+4. إذا سأل عن لون أو مقاس غير موجود، قل "هذا الخيار غير متوفر حالياً" واذكر الخيارات المتاحة فقط
+5. لا تخترع أو تتخيل أي معلومة عن المنتجات - استخدم فقط ما هو مكتوب في القائمة
+6. إذا سئلت عن شيء لا تعرفه عن المنتج (مثل المادة أو الوزن)، قل "للمزيد من التفاصيل يرجى التواصل مع صاحب المتجر"
+
+قواعد اللغة:
+1. استخدم اللغة العربية الفصحى الرسمية فقط
+2. ممنوع: أيوه، لأ، تمام، ماشي، كويس، عامل، ازيك، يلا، بص، معلش، خلاص، زي، أوي، دلوقتي، عايز، مش، إيه، فين، ازاي، بقى، كمان
+3. استخدم: نعم، لا، حسناً، الآن، تريد، ليس، ما، أين، كيف، أيضاً، عفواً
+4. ردودك قصيرة ومختصرة (2-3 جمل كحد أقصى)
+5. كن محترفاً ومهذباً وإيجابياً دائماً
 
 ${contextMessage}
+معلومات العميل: ${context.name || 'غير معروف'} | السلة: ${context.hasItems ? `${context.itemCount} منتج (${context.totalValue} جنيه)` : 'فارغة'}
+${isWholesale ? `\n═══════ وضع الجملة ═══════\nهذا متجر جملة. العميل يحجز منتجات ويدفع لاحقاً.\n- بدلاً من "اطلب" يكتب العميل "احجز" أو "اطلب" لحفظ الحجز\n- عندما يريد الشحن يكتب "شحن"\n- كن ذكياً في فهم نية العميل حتى لو لم يكتب بوضوح\n- إذا ذكر العميل كميات كبيرة أو أسعار جملة، تعامل معه بما يناسب تاجر الجملة` : ''}
 
-معلومات العميل:
-الاسم: ${context.name || 'غير معروف'}
-السلة: ${context.hasItems ? `${context.itemCount} منتج (${context.totalValue} جنيه)` : 'فارغة'}
-
-تعليمات إضافية:
-- إذا سأل العميل "كيف أطلب" أو "طريقة الطلب"، اشرح: اكتب قائمة ثم اختر رقم المنتج ثم اكتب اطلب
-- إذا شكا العميل من مشكلة، اعتذر بلطف واقترح التواصل مع صاحب المحل
-- كن إيجابياً ومحفزاً دائماً`;
+تعليمات المحادثة:
+- اقرأ رسالة العميل بعناية وافهم نيته قبل الرد
+- إذا سأل "كيف أطلب" اشرح: اكتب قائمة ثم اختر رقم المنتج ثم اكتب اطلب
+- إذا ذكر اسم منتج، حاول مطابقته مع القائمة واقترح الأقرب
+- إذا شكا العميل، اعتذر بلطف واقترح التواصل مع صاحب المتجر
+- لا تكرر نفس الرد مرتين`;
 
       // Prepare messages for Groq
       const groqMessages = [
@@ -2095,9 +2142,9 @@ ${contextMessage}
       const chatCompletion = await groq.chat.completions.create({
         messages: groqMessages,
         model: 'llama-3.3-70b-versatile',
-        temperature: 0.9, // Increased for more creative and friendly responses
-        max_tokens: 200, // Increased for longer helpful responses
-        top_p: 0.95, // Slightly higher for more natural responses
+        temperature: 0.6, // Lower temperature for more accurate, grounded responses
+        max_tokens: 250, // Enough for helpful responses
+        top_p: 0.85, // Focused responses to reduce hallucination
         stream: false
       });
 
@@ -2991,12 +3038,8 @@ ${contextMessage}
         } catch (e) { cart = []; }
       }
       
-      const productsList = shop.products
-        ? shop.products
-            .filter(p => p.isAvailable)
-            .map((p, i) => `${i+1}. ${p.name} - ${p.price} جنيه`)
-            .join('\n')
-        : 'جاري تحميل المنتجات...';
+      const detailedCatalog = this.buildDetailedProductCatalog(shop);
+      const isWholesale = shop.isWholesale || false;
       
       const cartSummary = cart.length > 0
         ? `السلة تحتوي على: ${cart.map(i => `${i.quantity}x ${i.name}`).join('، ')}` 
@@ -3011,28 +3054,34 @@ ${contextMessage}
 - إذا سألك من أنت قل: "أنا ذكي، موظف خدمة العملاء في ${shop.name}"
 - لا تقل أبداً أنك بوت أو روبوت أو ذكاء اصطناعي
 
-قواعد اللغة - صارمة جداً:
-1. استخدم اللغة العربية الفصحى الرسمية فقط
-2. ممنوع منعاً باتاً: أيوه، لأ، تمام، ماشي، كويس،
-   عامل، ازيك، يلا، بص، معلش، خلاص، زي، أوي،
-   دلوقتي، عايز، مش، إيه، فين، ازاي، بقى، كمان
-3. الكلمات الصحيحة: نعم، لا، حسناً، الآن، تريد،
-   ليس، ما، أين، كيف، أيضاً، عفواً
-4. لا أخطاء إملائية أبداً
-5. ردودك قصيرة ومختصرة لا تتجاوز 3 جمل
-6. كن محترفاً ومهذباً في جميع الأوقات
-7. لا تكرر نفس الرد مرتين
-8. تذكر دائماً أنك تمثل صورة المتجر
+═══════ قائمة المنتجات الكاملة ═══════
+${detailedCatalog}
+═══════ نهاية القائمة ═══════
 
-منتجاتنا المتاحة:
-${productsList}
+⛔ قواعد المنتجات - صارمة للغاية:
+1. لا تذكر أبداً أي منتج أو لون أو مقاس أو خيار غير موجود في القائمة أعلاه
+2. إذا سأل العميل عن لون أو مقاس، أجب فقط بالخيارات المتاحة من القائمة أعلاه
+3. إذا سأل عن منتج غير موجود، اعتذر بلطف وقل "هذا المنتج غير متوفر لدينا حالياً" واقترح منتجات مشابهة من القائمة
+4. إذا سأل عن لون أو مقاس غير موجود، قل "هذا الخيار غير متوفر حالياً" واذكر الخيارات المتاحة فقط
+5. لا تخترع أو تتخيل أي معلومة عن المنتجات - استخدم فقط ما هو مكتوب في القائمة
+6. إذا سئلت عن شيء لا تعرفه عن المنتج، قل "للمزيد من التفاصيل يرجى التواصل مع صاحب المتجر"
+
+قواعد اللغة:
+1. استخدم اللغة العربية الفصحى الرسمية فقط
+2. ممنوع: أيوه، لأ، تمام، ماشي، كويس، عامل، ازيك، يلا، بص، معلش، خلاص، زي، أوي، دلوقتي، عايز، مش، إيه، فين، ازاي، بقى، كمان
+3. استخدم: نعم، لا، حسناً، الآن، تريد، ليس، ما، أين، كيف، أيضاً، عفواً
+4. ردودك قصيرة ومختصرة (2-3 جمل كحد أقصى)
+5. كن محترفاً ومهذباً وإيجابياً دائماً
 
 حالة سلة العميل: ${cartSummary}
+${isWholesale ? `\n═══════ وضع الجملة ═══════\nهذا متجر جملة. العميل يحجز ويدفع لاحقاً.\n- "اطلب" = حفظ حجز | "شحن" = طلب شحن الحجوزات\n- افهم نية العميل بذكاء حتى لو لم يكتب بوضوح` : ''}
 
-تعليمات إضافية:
+تعليمات المحادثة:
+- اقرأ رسالة العميل بعناية وافهم نيته قبل الرد
 - إذا أراد العميل إلغاء شيء قله يكتب "إلغاء"
 - إذا أراد رؤية القائمة قله يكتب "قائمة"
 - إذا أراد تأكيد الطلب قله يكتب "اطلب"
+- إذا ذكر اسم منتج، حاول مطابقته مع القائمة واقترح الأقرب
 - إذا بدا العميل محبطاً اعتذر بلطف وساعده`;
       
       const aiReply = await this.getGroqResponse(text, shop, { hasItems: cart.length > 0 }, 'neutral', 'general', customerPhone, '');

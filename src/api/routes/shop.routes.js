@@ -307,6 +307,7 @@ router.get("/stats", async (req, res) => {
       prisma.shop.findUnique({
         where: { id: shopId },
         select: {
+          isWholesale: true,
           _count: {
             select: {
               products: { where: { isAvailable: true } },
@@ -339,13 +340,32 @@ router.get("/stats", async (req, res) => {
       })
     ]);
 
-    res.json({
+    const result = {
       products: stats?._count?.products || 0,
       recentOrders: stats?._count?.orders || 0,
       pendingOrders: pendingCount || 0,
       revenue: revenueAgg?._sum?.totalPrice || 0,
       recentOrdersList: recentOrders
-    });
+    };
+
+    // Add reservation stats if wholesale mode
+    if (stats?.isWholesale) {
+      const [totalRes, pendingRes, confirmedRes, resRevenueAgg] = await Promise.all([
+        prisma.reservation.count({ where: { shopId } }),
+        prisma.reservation.count({ where: { shopId, status: 'PENDING' } }),
+        prisma.reservation.count({ where: { shopId, status: 'CONFIRMED' } }),
+        prisma.reservation.aggregate({
+          where: { shopId, status: { in: ['CONFIRMED', 'SHIPPED'] } },
+          _sum: { totalPrice: true }
+        })
+      ]);
+      result.totalReservations = totalRes;
+      result.pendingReservations = pendingRes;
+      result.confirmedReservations = confirmedRes;
+      result.reservationRevenue = resRevenueAgg?._sum?.totalPrice || 0;
+    }
+
+    res.json(result);
 
   } catch (error) {
     console.error("Get stats error:", error);

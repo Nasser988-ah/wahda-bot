@@ -8,8 +8,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;700;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css">
-  <link rel="stylesheet" href="css/animations.css">
+  <link rel="icon" href="/landing/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/landing/css/style.css">
+  <link rel="stylesheet" href="/landing/css/animations.css">
 </head>
 <body>
 
@@ -24,14 +25,23 @@
   <!-- ======================================== -->
   <nav class="nav" id="mainNav">
     <div class="nav-inner">
-      <a href="#" class="nav-logo">ذكي</a>
+      <a href="/" class="nav-logo">
+        <img src="/landing/logo.svg" alt="ذكي" class="nav-logo-img">
+        <span>ذكي</span>
+      </a>
       <div class="nav-links" id="navLinks">
         <a href="#how">كيف يعمل</a>
         <a href="#features">المميزات</a>
         <a href="#pricing">الأسعار</a>
         <a href="https://wa.me/201128511900?text=%D8%A3%D9%87%D9%84%D8%A7%D9%8B%D8%8C%20%D8%B9%D8%A7%D9%8A%D8%B2%20%D8%A3%D8%B9%D8%B1%D9%81%20%D8%A3%D9%83%D8%AA%D8%B1%20%D8%B9%D9%86%20%D8%B0%D9%83%D9%8A" target="_blank">تواصل معنا</a>
+        <div class="nav-links-divider"></div>
+        <a href="/login.html" class="nav-link-auth">تسجيل الدخول</a>
+        <a href="/register.html" class="nav-link-auth nav-link-register">إنشاء متجر</a>
       </div>
-      <a href="https://wa.me/201553766199?text=%D8%A3%D9%87%D9%84%D8%A7%D9%8B%D8%8C%20%D8%B9%D8%A7%D9%8A%D8%B2%20%D8%A3%D8%AC%D8%B1%D8%A8%20%D8%B0%D9%83%D9%8A" target="_blank" class="nav-cta">ابدأ مجانا</a>
+      <div class="nav-auth">
+        <a href="/login.html" class="nav-login">تسجيل الدخول</a>
+        <a href="/register.html" class="nav-cta">إنشاء متجر مجانا</a>
+      </div>
       <button class="nav-mobile-toggle" id="navToggle" aria-label="فتح القائمة">
         <span></span><span></span><span></span>
       </button>
@@ -368,16 +378,19 @@
   <!-- ======================================== -->
   <footer class="footer">
     <div class="container">
+      <img src="/landing/logo.svg" alt="ذكي" class="footer-logo-img">
       <div class="footer-logo">ذكي</div>
       <p class="footer-tagline">صُنع بـ &#10084; في مصر</p>
       <div class="footer-links">
+        <a href="/login.html">تسجيل الدخول</a>
+        <a href="/register.html">إنشاء متجر</a>
         <a href="https://wa.me/201128511900" target="_blank">واتساب</a>
       </div>
       <p class="footer-copy">&copy; 2026 ذكي. جميع الحقوق محفوظة</p>
     </div>
   </footer>
 
-  <script src="js/main.js"></script>
-  <script src="js/chat.js"></script>
+  <script src="/landing/js/main.js"></script>
+  <script src="/landing/js/chat.js"></script>
 </body>
 </html>

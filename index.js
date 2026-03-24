@@ -113,6 +113,12 @@ protectedPages.forEach(page => {
   });
 });
 
+// Serve landing page assets at /landing
+app.use('/landing', express.static(path.join(__dirname, 'public', 'landing'), {
+  dotfiles: 'deny',
+  maxAge: '7d'
+}));
+
 // Serve static files (HTML dashboard)
 app.use(express.static("public", {
   dotfiles: 'deny',
@@ -148,9 +154,9 @@ app.use("/api", apiRoutes);
 // Error handling middleware
 app.use(errorHandler);
 
-// Redirect root to login page
+// Serve landing page at root
 app.get("/", (req, res) => {
-  res.redirect("/login.html");
+  res.sendFile(path.join(__dirname, "public", "landing", "index.html"));
 });
 
 // Store page route
@@ -187,7 +193,7 @@ app.use((req, res) => {
       <div>
         <h1>404</h1>
         <p>الصفحة غير موجودة</p>
-        <a href="/login.html">العودة للرئيسية</a>
+        <a href="/">العودة للرئيسية</a>
       </div>
     </body>
     </html>

@@ -286,6 +286,9 @@ async function handleMessage(sock, msg, shop) {
       
       // Handle technical support completion - no address needed
       if (state.data.isTechSupport) {
+        // Send problem data to support groups
+        await sendProblemToSupportGroups(shop, customerPhone, state.data.orderNotes, state.data.customerPhone);
+        
         await setState(shop.id, customerPhone, { currentMenuId: null, step: 'idle', data: {} });
         await redis.del(keys.menuStack(shop.id, customerPhone));
         const confirmMsg = 'تم التواصل مع القسم المختص وهيتواصل مع حضرتك في أقرب وقت 🌹';
@@ -518,6 +521,65 @@ async function executeAction(sock, from, shop, config, menus, state, item, custo
       await safeSend(sock, from, `✅ ${item.label}`);
       break;
     }
+  }
+}
+
+// Send problem data to support groups
+async function sendProblemToSupportGroups(shop, customerPhone, problemType, customerCode) {
+  try {
+    const { getPrisma } = require('../services/databaseService');
+    const prisma = getPrisma();
+    
+    // Get active support groups for this shop
+    const supportGroups = await prisma.supportGroup.findMany({
+      where: { 
+        shopId: shop.id, 
+        isActive: true 
+      }
+    });
+    
+    if (supportGroups.length === 0) {
+      console.log(`[DEBUG] No active support groups found for shop ${shop.id}`);
+      return;
+    }
+    
+    // Use the provided customer code
+    
+    // Format problem message
+    const problemMessage = `🚨 **بلاغ مشكلة جديدة** 🚨
+
+📋 **تفاصيل المشكلة:**
+👤 **العميل:** ${customerPhone}
+📱 **كود العميل:** ${customerCode}
+⚠️ **نوع المشكلة:** ${problemType}
+📝 **وصف المشكلة:** تم الإبلاغ عن مشكلة فنية عبر البوت
+
+🏢 **المتجر:** ${shop.name}
+⏰ **التوقيت:** ${new Date().toLocaleString('ar-EG')}
+
+يرجى المتابعة مع العميل في أقرب وقت ممكن 🙏`;
+
+    // Send to each support group
+    for (const group of supportGroups) {
+      try {
+        // Here you would integrate with WhatsApp to send to the group
+        // For now, we'll just log it (you can implement the actual WhatsApp sending later)
+        console.log(`[DEBUG] Sending to support group: ${group.name} (${group.groupNumber})`);
+        console.log(`[DEBUG] Message: ${problemMessage}`);
+        
+        // TODO: Implement actual WhatsApp group message sending
+        // const botManager = require('../bot/botManager');
+        // await botManager.sendMessageToGroup(group.groupNumber, problemMessage);
+        
+      } catch (error) {
+        console.error(`[ERROR] Failed to send to group ${group.name}:`, error);
+      }
+    }
+    
+    console.log(`[DEBUG] Sent problem to ${supportGroups.length} support groups`);
+    
+  } catch (error) {
+    console.error('[ERROR] Failed to send problem to support groups:', error);
   }
 }
 

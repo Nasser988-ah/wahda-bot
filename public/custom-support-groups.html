@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مجموعات الدعم - دلتا واي ماكس</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0f0f13;
+            --card: #1a1a22;
+            --border: #2a2a35;
+            --text: #ffffff;
+            --muted: #9ca3af;
+            --gold: #f5c842;
+            --gold-dim: rgba(245, 200, 66, 0.1);
+            --danger: #ef4444;
+            --success: #10b981;
+            --primary: #667eea;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 260px;
+            height: 100vh;
+            background: var(--card);
+            border-left: 1px solid var(--border);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s;
+        }
+
+        .sidebar-header {
+            padding: 24px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .sidebar-logo {
+            font-size: 22px;
+            font-weight: 800;
+        }
+
+        .sidebar-logo span {
+            color: var(--gold);
+        }
+
+        .sidebar-shop {
+            color: var(--muted);
+            font-size: 13px;
+            margin-top: 4px;
+        }
+
+        .sidebar-badge {
+            display: inline-block;
+            padding: 2px 10px;
+            background: var(--gold-dim);
+            color: var(--gold);
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-top: 6px;
+        }
+
+        .nav {
+            flex: 1;
+            padding: 16px 12px;
+            overflow-y: auto;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 10px;
+            color: var(--muted);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s;
+            margin-bottom: 4px;
+        }
+
+        .nav-item:hover {
+            background: var(--border);
+            color: var(--text);
+        }
+
+        .nav-item.active {
+            background: var(--gold-dim);
+            color: var(--gold);
+        }
+
+        .nav-icon {
+            font-size: 18px;
+            width: 24px;
+            text-align: center;
+        }
+
+        .sidebar-footer {
+            padding: 16px 12px;
+            border-top: 1px solid var(--border);
+        }
+
+        .logout-btn {
+            width: 100%;
+            padding: 10px;
+            background: rgba(239,68,68,0.1);
+            border: 1px solid rgba(239,68,68,0.2);
+            border-radius: 10px;
+            color: var(--danger);
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .logout-btn:hover {
+            background: rgba(239,68,68,0.2);
+        }
+
+        /* Main Content */
+        .main {
+            margin-right: 260px;
+            padding: 30px;
+            min-height: 100vh;
+        }
+
+        .hamburger {
+            display: none;
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1001;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px;
+            color: var(--text);
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 99;
+        }
+
+        .overlay.show {
+            display: block;
+        }
+
+        /* Header */
+        .header {
+            background: var(--card);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, var(--gold) 0%, #fde98a 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header p {
+            color: var(--muted);
+            font-size: 16px;
+        }
+
+        /* Actions Bar */
+        .actions-bar {
+            background: var(--card);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-family: 'Cairo', sans-serif;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--gold) 0%, #fde98a 100%);
+            color: var(--bg);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(245, 200, 66, 0.4);
+        }
+
+        .btn-secondary {
+            background: var(--border);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: #2a2a35;
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-warning {
+            background: #f59e0b;
+            color: white;
+        }
+
+        /* Groups Grid */
+        .groups-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .group-card {
+            background: var(--card);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            transition: transform 0.3s ease;
+            border: 1px solid var(--border);
+        }
+
+        .group-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--gold);
+        }
+
+        .group-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 20px;
+        }
+
+        .group-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 5px;
+        }
+
+        .group-status {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-active {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .status-inactive {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .group-info {
+            margin-bottom: 20px;
+        }
+
+        .info-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+            color: var(--muted);
+        }
+
+        .info-item i {
+            width: 20px;
+            color: var(--gold);
+        }
+
+        .group-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--card);
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+
+        .modal-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--muted);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--text);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-size: 16px;
+            background: var(--bg);
+            color: var(--text);
+            transition: border-color 0.3s ease;
+            font-family: 'Cairo', sans-serif;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--gold);
+            box-shadow: 0 0 0 3px rgba(245, 200, 66, 0.1);
+        }
+
+        .form-text {
+            font-size: 14px;
+            color: var(--muted);
+            margin-top: 5px;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 25px;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            background: var(--card);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            border: 1px solid var(--border);
+        }
+
+        .empty-state i {
+            font-size: 64px;
+            color: var(--muted);
+            margin-bottom: 20px;
+        }
+
+        .empty-state h3 {
+            color: var(--text);
+            margin-bottom: 10px;
+        }
+
+        .empty-state p {
+            color: var(--muted);
+            margin-bottom: 20px;
+        }
+
+        /* Alert */
+        .alert {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .alert-success {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .alert-danger {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--muted);
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(245, 200, 66, 0.3);
+            border-top-color: var(--gold);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Recent Problems */
+        .recent-problems {
+            background: var(--card);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            border: 1px solid var(--border);
+        }
+
+        .recent-problems h2 {
+            color: var(--text);
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+
+        .problem-item {
+            background: var(--bg);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border: 1px solid var(--border);
+        }
+
+        .problem-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .problem-customer {
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .problem-time {
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .problem-description {
+            color: var(--muted);
+            margin-bottom: 10px;
+        }
+
+        .problem-status {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-pending {
+            background: rgba(245, 200, 66, 0.1);
+            color: var(--gold);
+            border: 1px solid rgba(245, 200, 66, 0.2);
+        }
+
+        .status-resolved {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(100%);
+            }
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            .main {
+                margin-right: 0;
+                padding: 20px;
+                padding-top: 60px;
+            }
+            .hamburger {
+                display: block;
+            }
+            .groups-grid {
+                grid-template-columns: 1fr;
+            }
+            .actions-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .btn {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="hamburger" onclick="toggleSidebar()">☰</button>
+    <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo"><span>⚡</span> Zaki Bot</div>
+            <div class="sidebar-shop" id="shopName">جاري التحميل...</div>
+            <div class="sidebar-badge">VIP - بوت مخصص</div>
+        </div>
+        <nav class="nav">
+            <a href="custom-dashboard.html" class="nav-item"><span class="nav-icon">📊</span> لوحة التحكم</a>
+            <a href="custom-menus.html" class="nav-item"><span class="nav-icon">📋</span> القوائم</a>
+            <a href="custom-bot-config.html" class="nav-item"><span class="nav-icon">⚙️</span> إعدادات البوت</a>
+            <a href="custom-ai-settings.html" class="nav-item"><span class="nav-icon">🤖</span> إعدادات الذكاء</a>
+            <a href="custom-support-groups.html" class="nav-item active"><span class="nav-icon">👥</span> مجموعات الدعم</a>
+            <a href="qr.html" class="nav-item"><span class="nav-icon">📱</span> ربط واتساب</a>
+        </nav>
+        <div class="sidebar-footer">
+            <button class="logout-btn" onclick="logout()">🚪 تسجيل الخروج</button>
+        </div>
+    </aside>
+
+    <main class="main">
+        <div class="header">
+            <h1><i class="fas fa-users"></i> مجموعات الدعم الفني</h1>
+            <p>إدارة مجموعات WhatsApp لإرسال بلاغات المشاكل الفنية للعملاء</p>
+        </div>
+
+        <div class="actions-bar">
+            <button class="btn btn-primary" onclick="openAddModal()">
+                <i class="fas fa-plus"></i> إضافة مجموعة جديدة
+            </button>
+            <button class="btn btn-secondary" onclick="refreshGroups()">
+                <i class="fas fa-sync"></i> تحديث
+            </button>
+        </div>
+
+        <div id="alertContainer"></div>
+
+        <div id="loadingState" class="loading">
+            <div class="spinner"></div>
+            <p>جاري تحميل البيانات...</p>
+        </div>
+
+        <div id="groupsContainer" class="groups-grid" style="display: none;">
+            <!-- Groups will be loaded here -->
+        </div>
+
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <i class="fas fa-users-slash"></i>
+            <h3>لا توجد مجموعات دعم</h3>
+            <p>قم بإضافة مجموعة دعم جديدة لبدء إرسال بلاغات المشاكل</p>
+            <button class="btn btn-primary" onclick="openAddModal()">
+                <i class="fas fa-plus"></i> إضافة مجموعة جديدة
+            </button>
+        </div>
+
+        <!-- Recent Problems Section -->
+        <div class="recent-problems" style="display: none;" id="recentProblems">
+            <h2><i class="fas fa-exclamation-triangle"></i> المشاكل الأخيرة المبلغ عنها</h2>
+            <div id="problemsList">
+                <!-- Problems will be loaded here -->
+            </div>
+        </div>
+    </main>
+
+    <!-- Add/Edit Group Modal -->
+    <div id="groupModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalTitle">إضافة مجموعة جديدة</h2>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            
+            <form id="groupForm">
+                <input type="hidden" id="groupId">
+                
+                <div class="form-group">
+                    <label class="form-label" for="groupName">اسم المجموعة *</label>
+                    <input type="text" class="form-control" id="groupName" required>
+                    <div class="form-text">اسم وصفي للمجموعة (مثال: فريق الدعم الفني)</div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="groupLink">رابط دعوة المجموعة *</label>
+                    <input type="url" class="form-control" id="groupLink" required>
+                    <div class="form-text">رابط دعوة WhatsApp group (مثال: https://chat.whatsapp.com/ABC123)</div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="groupNumber">رقم المجموعة *</label>
+                    <input type="text" class="form-control" id="groupNumber" required>
+                    <div class="form-text">رقم المجموعة لإرسال الرسائل (مثال: 201234567890@s.g.us)</div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">
+                        <input type="checkbox" id="isActive" checked>
+                        المجموعة نشطة
+                    </label>
+                    <div class="form-text">عند إلغاء التحديد، لن يتم إرسال الرسائل إلى هذه المجموعة</div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">إلغاء</button>
+                    <button type="submit" class="btn btn-primary">حفظ</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+        let token = localStorage.getItem('token');
+        let shop = JSON.parse(localStorage.getItem('shop') || '{}');
+        let currentGroups = [];
+        let editingGroupId = null;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!token) window.location.href = 'login.html';
+            if (shop.shopType !== 'custom') window.location.href = 'dashboard.html';
+
+            document.getElementById('shopName').textContent = shop.name || '';
+            
+            loadGroups();
+            loadRecentProblems();
+            
+            // Form submission
+            document.getElementById('groupForm').addEventListener('submit', handleFormSubmit);
+        });
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.getElementById('overlay').classList.toggle('show');
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('shop');
+            fetch(`${API_BASE}/auth/logout`, { method: 'POST' });
+            window.location.href = 'login.html';
+        }
+
+        async function apiFetch(url, options = {}) {
+            const res = await fetch(url, { 
+                headers: { 
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                    ...options.headers 
+                },
+                ...options
+            });
+            if (res.status === 401) { logout(); return null; }
+            return res.json();
+        }
+
+        // Load groups from API
+        async function loadGroups() {
+            try {
+                showLoading();
+                const result = await apiFetch(`${API_BASE}/support-groups`);
+                
+                if (result && result.success) {
+                    currentGroups = result.data;
+                    renderGroups();
+                } else {
+                    showAlert('فشل في تحميل مجموعات الدعم', 'danger');
+                }
+            } catch (error) {
+                console.error('Load groups error:', error);
+                showAlert('حدث خطأ في الاتصال بالخادم', 'danger');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Load recent problems
+        async function loadRecentProblems() {
+            try {
+                // This would be implemented to show recent technical support problems
+                // For now, we'll show some sample data
+                const recentProblemsContainer = document.getElementById('recentProblems');
+                const problemsList = document.getElementById('problemsList');
+                
+                // Sample data - in real implementation, this would come from API
+                problemsList.innerHTML = `
+                    <div class="problem-item">
+                        <div class="problem-header">
+                            <span class="problem-customer">أحمد محمد</span>
+                            <span class="problem-time">منذ 5 دقائق</span>
+                        </div>
+                        <div class="problem-description">النت فاصل وعندي درس مهم</div>
+                        <span class="problem-status status-pending">قيد المعالجة</span>
+                    </div>
+                    <div class="problem-item">
+                        <div class="problem-header">
+                            <span class="problem-customer">محمد علي</span>
+                            <span class="problem-time">منذ 15 دقيقة</span>
+                        </div>
+                        <div class="problem-description">مشكلة في سرعة الإنترنت</div>
+                        <span class="problem-status status-resolved">تم الحل</span>
+                    </div>
+                `;
+                
+                recentProblemsContainer.style.display = 'block';
+            } catch (error) {
+                console.error('Load problems error:', error);
+            }
+        }
+
+        // Render groups
+        function renderGroups() {
+            const container = document.getElementById('groupsContainer');
+            const emptyState = document.getElementById('emptyState');
+            
+            if (currentGroups.length === 0) {
+                container.style.display = 'none';
+                emptyState.style.display = 'block';
+                return;
+            }
+            
+            container.style.display = 'grid';
+            emptyState.style.display = 'none';
+            
+            container.innerHTML = currentGroups.map(group => `
+                <div class="group-card">
+                    <div class="group-header">
+                        <div>
+                            <div class="group-title">${group.name}</div>
+                            <small style="color: var(--muted);">تم الإنشاء: ${new Date(group.createdAt).toLocaleDateString('ar-EG')}</small>
+                        </div>
+                        <span class="group-status ${group.isActive ? 'status-active' : 'status-inactive'}">
+                            ${group.isActive ? 'نشطة' : 'غير نشطة'}
+                        </span>
+                    </div>
+                    
+                    <div class="group-info">
+                        <div class="info-item">
+                            <i class="fas fa-link"></i>
+                            <span>رابط المجموعة متاح</span>
+                        </div>
+                        <div class="info-item">
+                            <i class="fas fa-phone"></i>
+                            <span>${group.groupNumber}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="group-actions">
+                        <button class="btn btn-warning" onclick="editGroup('${group.id}')">
+                            <i class="fas fa-edit"></i> تعديل
+                        </button>
+                        <button class="btn btn-success" onclick="testGroup('${group.id}')">
+                            <i class="fas fa-paper-plane"></i> اختبار الإرسال
+                        </button>
+                        <button class="btn btn-danger" onclick="deleteGroup('${group.id}')">
+                            <i class="fas fa-trash"></i> حذف
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Open add modal
+        function openAddModal() {
+            editingGroupId = null;
+            document.getElementById('modalTitle').textContent = 'إضافة مجموعة جديدة';
+            document.getElementById('groupForm').reset();
+            document.getElementById('isActive').checked = true;
+            document.getElementById('groupModal').classList.add('active');
+        }
+
+        // Edit group
+        function editGroup(groupId) {
+            const group = currentGroups.find(g => g.id === groupId);
+            if (!group) return;
+            
+            editingGroupId = groupId;
+            document.getElementById('modalTitle').textContent = 'تعديل المجموعة';
+            document.getElementById('groupId').value = group.id;
+            document.getElementById('groupName').value = group.name;
+            document.getElementById('groupLink').value = group.groupLink;
+            document.getElementById('groupNumber').value = group.groupNumber;
+            document.getElementById('isActive').checked = group.isActive;
+            document.getElementById('groupModal').classList.add('active');
+        }
+
+        // Close modal
+        function closeModal() {
+            document.getElementById('groupModal').classList.remove('active');
+            document.getElementById('groupForm').reset();
+            editingGroupId = null;
+        }
+
+        // Handle form submission
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+            
+            const formData = {
+                name: document.getElementById('groupName').value,
+                groupLink: document.getElementById('groupLink').value,
+                groupNumber: document.getElementById('groupNumber').value,
+                isActive: document.getElementById('isActive').checked
+            };
+            
+            try {
+                const url = editingGroupId 
+                    ? `${API_BASE}/support-groups/${editingGroupId}`
+                    : `${API_BASE}/support-groups`;
+                    
+                const method = editingGroupId ? 'PUT' : 'POST';
+                
+                const result = await apiFetch(url, {
+                    method: method,
+                    body: JSON.stringify(formData)
+                });
+                
+                if (result && result.success) {
+                    showAlert(editingGroupId ? 'تم تحديث المجموعة بنجاح' : 'تم إضافة المجموعة بنجاح', 'success');
+                    closeModal();
+                    loadGroups();
+                } else {
+                    showAlert(result?.error || 'فشل في حفظ المجموعة', 'danger');
+                }
+            } catch (error) {
+                console.error('Save group error:', error);
+                showAlert('حدث خطأ في الاتصال بالخادم', 'danger');
+            }
+        }
+
+        // Delete group
+        async function deleteGroup(groupId) {
+            if (!confirm('هل أنت متأكد من حذف هذه المجموعة؟')) return;
+            
+            try {
+                const result = await apiFetch(`${API_BASE}/support-groups/${groupId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (result && result.success) {
+                    showAlert('تم حذف المجموعة بنجاح', 'success');
+                    loadGroups();
+                } else {
+                    showAlert(result?.error || 'فشل في حذف المجموعة', 'danger');
+                }
+            } catch (error) {
+                console.error('Delete group error:', error);
+                showAlert('حدث خطأ في الاتصال بالخادم', 'danger');
+            }
+        }
+
+        // Test group sending
+        async function testGroup(groupId) {
+            const group = currentGroups.find(g => g.id === groupId);
+            if (!group) return;
+            
+            const testData = {
+                customerName: 'عميل اختباري',
+                customerPhone: '01234567890',
+                problemDescription: 'هذا بلاغ اختباري لفحص إرسال الرسائل إلى المجموعة',
+                priority: 'اختبار'
+            };
+            
+            try {
+                const result = await apiFetch(`${API_BASE}/support-groups/send-problem/${groupId}`, {
+                    method: 'POST',
+                    body: JSON.stringify(testData)
+                });
+                
+                if (result && result.success) {
+                    showAlert(`تم إرسال رسالة الاختبار إلى مجموعة: ${result.groupName}`, 'success');
+                } else {
+                    showAlert(result?.error || 'فشل في إرسال رسالة الاختبار', 'danger');
+                }
+            } catch (error) {
+                console.error('Test group error:', error);
+                showAlert('حدث خطأ في الاتصال بالخادم', 'danger');
+            }
+        }
+
+        // Refresh groups
+        function refreshGroups() {
+            loadGroups();
+            loadRecentProblems();
+        }
+
+        // Show alert
+        function showAlert(message, type) {
+            const alertContainer = document.getElementById('alertContainer');
+            const alertHtml = `
+                <div class="alert alert-${type}" style="animation: slideIn 0.3s ease">
+                    ${message}
+                </div>
+            `;
+            
+            alertContainer.innerHTML = alertHtml;
+            
+            setTimeout(() => {
+                const alert = alertContainer.querySelector('.alert');
+                if (alert) {
+                    alert.style.animation = 'slideOut 0.3s ease';
+                    setTimeout(() => alert.remove(), 300);
+                }
+            }, 5000);
+        }
+
+        // Loading states
+        function showLoading() {
+            document.getElementById('loadingState').style.display = 'block';
+            document.getElementById('groupsContainer').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'none';
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingState').style.display = 'none';
+        }
+
+        // Add animations
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(-100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(-100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

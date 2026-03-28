@@ -48,6 +48,7 @@ model Shop {
   whatsappSession   WhatsAppSession?
   customMenus       CustomMenu[]
   botConfig         BotConfig?
+  supportGroups     SupportGroup[]
 
   @@map("shops")
 }
@@ -272,4 +273,18 @@ model CustomMenuItem {
   menu        CustomMenu @relation(fields: [menuId], references: [id], onDelete: Cascade)
 
   @@map("custom_menu_items")
+}
+
+model SupportGroup {
+  id          String   @id @default(cuid())
+  shopId      String
+  name        String   // Group name for display
+  groupLink   String   @db.Text // WhatsApp group invite link
+  groupNumber String   @db.Text // Group phone number for sending messages
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  shop        Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@map("support_groups")
 }

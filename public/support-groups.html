@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مجموعات الدعم - لوحة التحكم</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 16px;
+        }
+
+        .actions-bar {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #333;
+            border: 1px solid #dee2e6;
+        }
+
+        .btn-secondary:hover {
+            background: #e9ecef;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-warning {
+            background: #ffc107;
+            color: #212529;
+        }
+
+        .groups-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .group-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .group-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .group-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 20px;
+        }
+
+        .group-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .group-status {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-active {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-inactive {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .group-info {
+            margin-bottom: 20px;
+        }
+
+        .info-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+            color: #555;
+        }
+
+        .info-item i {
+            width: 20px;
+            color: #667eea;
+        }
+
+        .group-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+
+        .modal-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-text {
+            font-size: 14px;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 25px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .empty-state i {
+            font-size: 64px;
+            color: #dee2e6;
+            margin-bottom: 20px;
+        }
+
+        .empty-state h3 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .empty-state p {
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-danger {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: white;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .groups-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .actions-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .btn {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-users"></i> مجموعات الدعم الفني</h1>
+            <p>إدارة مجموعات WhatsApp لإرسال بلاغات المشاكل الفنية</p>
+        </div>
+
+        <div class="actions-bar">
+            <button class="btn btn-primary" onclick="openAddModal()">
+                <i class="fas fa-plus"></i> إضافة مجموعة جديدة
+            </button>
+            <button class="btn btn-secondary" onclick="refreshGroups()">
+                <i class="fas fa-sync"></i> تحديث
+            </button>
+            <a href="admin.html" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> العودة للوحة التحكم
+            </a>
+        </div>
+
+        <div id="alertContainer"></div>
+
+        <div id="loadingState" class="loading">
+            <div class="spinner"></div>
+            <p>جاري تحميل البيانات...</p>
+        </div>
+
+        <div id="groupsContainer" class="groups-grid" style="display: none;">
+            <!-- Groups will be loaded here -->
+        </div>
+
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <i class="fas fa-users-slash"></i>
+            <h3>لا توجد مجموعات دعم</h3>
+            <p>قم بإضافة مجموعة دعم جديدة لبدء إرسال بلاغات المشاكل</p>
+            <button class="btn btn-primary" onclick="openAddModal()">
+                <i class="fas fa-plus"></i> إضافة مجموعة جديدة
+            </button>
+        </div>
+    </div>
+
+    <!-- Add/Edit Group Modal -->
+    <div id="groupModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalTitle">إضافة مجموعة جديدة</h2>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            
+            <form id="groupForm">
+                <input type="hidden" id="groupId">
+                
+                <div class="form-group">
+                    <label class="form-label" for="groupName">اسم المجموعة *</label>
+                    <input type="text" class="form-control" id="groupName" required>
+                    <div class="form-text">اسم وصفي للمجموعة (مثال: فريق الدعم الفني)</div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="groupLink">رابط دعوة المجموعة *</label>
+                    <input type="url" class="form-control" id="groupLink" required>
+                    <div class="form-text">رابط دعوة WhatsApp group (مثال: https://chat.whatsapp.com/ABC123)</div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="groupNumber">رقم المجموعة *</label>
+                    <input type="text" class="form-control" id="groupNumber" required>
+                    <div class="form-text">رقم المجموعة لإرسال الرسائل (مثال: 201234567890@s.g.us)</div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">
+                        <input type="checkbox" id="isActive" checked>
+                        المجموعة نشطة
+                    </label>
+                    <div class="form-text">عند إلغاء التحديد، لن يتم إرسال الرسائل إلى هذه المجموعة</div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">إلغاء</button>
+                    <button type="submit" class="btn btn-primary">حفظ</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let currentGroups = [];
+        let editingGroupId = null;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            loadGroups();
+            
+            // Form submission
+            document.getElementById('groupForm').addEventListener('submit', handleFormSubmit);
+        });
+
+        // Load groups from API
+        async function loadGroups() {
+            try {
+                showLoading();
+                const response = await fetch('/api/support-groups');
+                const result = await response.json();
+                
+                if (result.success) {
+                    currentGroups = result.data;
+                    renderGroups();
+                } else {
+                    showAlert('فشل في تحميل مجموعات الدعم', 'danger');
+                }
+            } catch (error) {
+                console.error('Load groups error:', error);
+                showAlert('حدث خطأ في الاتصال بالخادم', 'danger');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Render groups
+        function renderGroups() {
+            const container = document.getElementById('groupsContainer');
+            const emptyState = document.getElementById('emptyState');
+            
+            if (currentGroups.length === 0) {
+                container.style.display = 'none';
+                emptyState.style.display = 'block';
+                return;
+            }
+            
+            container.style.display = 'grid';
+            emptyState.style.display = 'none';
+            
+            container.innerHTML = currentGroups.map(group => `
+                <div class="group-card">
+                    <div class="group-header">
+                        <div>
+                            <div class="group-title">${group.name}</div>
+                            <small style="color: #666;">تم الإنشاء: ${new Date(group.createdAt).toLocaleDateString('ar-EG')}</small>
+                        </div>
+                        <span class="group-status ${group.isActive ? 'status-active' : 'status-inactive'}">
+                            ${group.isActive ? 'نشطة' : 'غير نشطة'}
+                        </span>
+                    </div>
+                    
+                    <div class="group-info">
+                        <div class="info-item">
+                            <i class="fas fa-link"></i>
+                            <span>رابط المجموعة متاح</span>
+                        </div>
+                        <div class="info-item">
+                            <i class="fas fa-phone"></i>
+                            <span>${group.groupNumber}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="group-actions">
+                        <button class="btn btn-warning" onclick="editGroup('${group.id}')">
+                            <i class="fas fa-edit"></i> تعديل
+                        </button>
+                        <button class="btn btn-success" onclick="testGroup('${group.id}')">
+                            <i class="fas fa-paper-plane"></i> اختبار الإرسال
+                        </button>
+                        <button class="btn btn-danger" onclick="deleteGroup('${group.id}')">
+                            <i class="fas fa-trash"></i> حذف
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Open add modal
+        function openAddModal() {
+            editingGroupId = null;
+            document.getElementById('modalTitle').textContent = 'إضافة مجموعة جديدة';
+            document.getElementById('groupForm').reset();
+            document.getElementById('isActive').checked = true;
+            document.getElementById('groupModal').classList.add('active');
+        }
+
+        // Edit group
+        function editGroup(groupId) {
+            const group = currentGroups.find(g => g.id === groupId);
+            if (!group) return;
+            
+            editingGroupId = groupId;
+            document.getElementById('modalTitle').textContent = 'تعديل المجموعة';
+            document.getElementById('groupId').value = group.id;
+            document.getElementById('groupName').value = group.name;
+            document.getElementById('groupLink').value = group.groupLink;
+            document.getElementById('groupNumber').value = group.groupNumber;
+            document.getElementById('isActive').checked = group.isActive;
+            document.getElementById('groupModal').classList.add('active');
+        }
+
+        // Close modal
+        function closeModal() {
+            document.getElementById('groupModal').classList.remove('active');
+            document.getElementById('groupForm').reset();
+            editingGroupId = null;
+        }
+
+        // Handle form submission
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+            
+            const formData = {
+                name: document.getElementById('groupName').value,
+                groupLink: document.getElementById('groupLink').value,
+                groupNumber: document.getElementById('groupNumber').value,
+                isActive: document.getElementById('isActive').checked
+            };
+            
+            try {
+                const url = editingGroupId 
+                    ? `/api/support-groups/${editingGroupId}`
+                    : '/api/support-groups';
+                    
+                const method = editingGroupId ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert(editingGroupId ? 'تم تحديث المجموعة بنجاح' : 'تم إضافة المجموعة بنجاح', 'success');
+                    closeModal();
+                    loadGroups();
+                } else {
+                    showAlert(result.error || 'فشل في حفظ المجموعة', 'danger');
+                }
+            } catch (error) {
+                console.error('Save group error:', error);
+                showAlert('حدث خطأ في الاتصال بالخادم', 'danger');
+            }
+        }
+
+        // Delete group
+        async function deleteGroup(groupId) {
+            if (!confirm('هل أنت متأكد من حذف هذه المجموعة؟')) return;
+            
+            try {
+                const response = await fetch(`/api/support-groups/${groupId}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('تم حذف المجموعة بنجاح', 'success');
+                    loadGroups();
+                } else {
+                    showAlert(result.error || 'فشل في حذف المجموعة', 'danger');
+                }
+            } catch (error) {
+                console.error('Delete group error:', error);
+                showAlert('حدث خطأ في الاتصال بالخادم', 'danger');
+            }
+        }
+
+        // Test group sending
+        async function testGroup(groupId) {
+            const group = currentGroups.find(g => g.id === groupId);
+            if (!group) return;
+            
+            const testData = {
+                customerName: 'عميل اختباري',
+                customerPhone: '01234567890',
+                problemDescription: 'هذا بلاغ اختباري لفحص إرسال الرسائل إلى المجموعة',
+                priority: 'اختبار'
+            };
+            
+            try {
+                const response = await fetch(`/api/support-groups/send-problem/${groupId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(testData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert(`تم إرسال رسالة الاختبار إلى مجموعة: ${result.groupName}`, 'success');
+                } else {
+                    showAlert(result.error || 'فشل في إرسال رسالة الاختبار', 'danger');
+                }
+            } catch (error) {
+                console.error('Test group error:', error);
+                showAlert('حدث خطأ في الاتصال بالخادم', 'danger');
+            }
+        }
+
+        // Refresh groups
+        function refreshGroups() {
+            loadGroups();
+        }
+
+        // Show alert
+        function showAlert(message, type) {
+            const alertContainer = document.getElementById('alertContainer');
+            const alertHtml = `
+                <div class="alert alert-${type}" style="animation: slideIn 0.3s ease">
+                    ${message}
+                </div>
+            `;
+            
+            alertContainer.innerHTML = alertHtml;
+            
+            setTimeout(() => {
+                const alert = alertContainer.querySelector('.alert');
+                if (alert) {
+                    alert.style.animation = 'slideOut 0.3s ease';
+                    setTimeout(() => alert.remove(), 300);
+                }
+            }, 5000);
+        }
+
+        // Loading states
+        function showLoading() {
+            document.getElementById('loadingState').style.display = 'block';
+            document.getElementById('groupsContainer').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'none';
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingState').style.display = 'none';
+        }
+
+        // Add animations
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(-100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(-100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

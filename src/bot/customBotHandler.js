@@ -176,10 +176,15 @@ async function handleMessage(sock, msg, shop) {
 
   try {
     const rawText = msg.message?.conversation ||
-                    msg.message?.extendedTextMessage?.text ||
-                    msg.message?.imageMessage?.caption ||
-                    msg.message?.videoMessage?.caption || '';
-    const text = normalizeNumbers(rawText).trim();
+                   msg.message?.extendedTextMessage?.text ||
+                   msg.message?.imageMessage?.caption ||
+                   '';
+    let text = rawText.trim();
+
+    console.log(`[DEBUG] Received message: "${text}" from ${customerPhone} for shop ${shop.name}`);
+
+    if (!text) return;
+    text = normalizeNumbers(rawText).trim();
 
     if (!text) {
       await safeSend(sock, from, 'عذراً، أرسل رسالة نصية من فضلك 📝');
@@ -189,6 +194,7 @@ async function handleMessage(sock, msg, shop) {
     console.log(`📩 [Custom] ${shop.name} - ${customerPhone}: "${text}"`);
 
     const { config, menus } = await loadBotData(shop.id);
+    console.log(`[DEBUG] Loaded config: ${!!config}, menus count: ${menus?.length || 0}`);
     if (!config) {
       await safeSend(sock, from, 'عذراً، البوت غير مُعد بعد. يرجى التواصل مع الإدارة.');
       return;
@@ -196,6 +202,8 @@ async function handleMessage(sock, msg, shop) {
 
     const state = await getState(shop.id, customerPhone);
     const mainMenu = config.mainMenuId ? menus.find(m => m.id === config.mainMenuId) : menus[0];
+    console.log(`[DEBUG] Current state:`, state);
+    console.log(`[DEBUG] Main menu:`, mainMenu ? { id: mainMenu.id, name: mainMenu.name } : null);
 
     // Track activity
     await redis.set(keys.lastActive(shop.id, customerPhone), Date.now().toString(), { ex: TTL });

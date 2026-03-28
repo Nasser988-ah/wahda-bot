@@ -6,15 +6,17 @@ const { getPrisma } = require('../../services/databaseService');
 // Get all support groups for a shop
 router.get('/', authenticateToken, async (req, res) => {
   try {
+    console.log('[DEBUG] Getting support groups for shop:', req.shop?.id);
     const prisma = getPrisma();
     const groups = await prisma.supportGroup.findMany({
       where: { shopId: req.shop.id },
       orderBy: { createdAt: 'desc' }
     });
     
+    console.log('[DEBUG] Found groups:', groups.length);
     res.json({ success: true, data: groups });
   } catch (error) {
-    console.error('Get support groups error:', error);
+    console.error('[ERROR] Get support groups error:', error);
     res.status(500).json({ success: false, error: 'فشل في جلب مجموعات الدعم' });
   }
 });

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>مجموعات الدعم - دلتا واي ماكس</title>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Using inline icons instead of Font Awesome to avoid CSP issues -->
     <style>
         :root {
             --bg: #0f0f13;
@@ -616,16 +616,16 @@
 
     <main class="main">
         <div class="header">
-            <h1><i class="fas fa-users"></i> مجموعات الدعم الفني</h1>
+            <h1>👥 مجموعات الدعم الفني</h1>
             <p>إدارة مجموعات WhatsApp لإرسال بلاغات المشاكل الفنية للعملاء</p>
         </div>
 
         <div class="actions-bar">
             <button class="btn btn-primary" onclick="openAddModal()">
-                <i class="fas fa-plus"></i> إضافة مجموعة جديدة
+                ➕ إضافة مجموعة جديدة
             </button>
             <button class="btn btn-secondary" onclick="refreshGroups()">
-                <i class="fas fa-sync"></i> تحديث
+                🔄 تحديث
             </button>
         </div>
 
@@ -641,17 +641,17 @@
         </div>
 
         <div id="emptyState" class="empty-state" style="display: none;">
-            <i class="fas fa-users-slash"></i>
+            👥
             <h3>لا توجد مجموعات دعم</h3>
             <p>قم بإضافة مجموعة دعم جديدة لبدء إرسال بلاغات المشاكل</p>
             <button class="btn btn-primary" onclick="openAddModal()">
-                <i class="fas fa-plus"></i> إضافة مجموعة جديدة
+                ➕ إضافة مجموعة جديدة
             </button>
         </div>
 
         <!-- Recent Problems Section -->
         <div class="recent-problems" style="display: none;" id="recentProblems">
-            <h2><i class="fas fa-exclamation-triangle"></i> المشاكل الأخيرة المبلغ عنها</h2>
+            <h2>⚠️ المشاكل الأخيرة المبلغ عنها</h2>
             <div id="problemsList">
                 <!-- Problems will be loaded here -->
             </div>
@@ -831,24 +831,24 @@
                     
                     <div class="group-info">
                         <div class="info-item">
-                            <i class="fas fa-link"></i>
+                            �
                             <span>رابط المجموعة متاح</span>
                         </div>
                         <div class="info-item">
-                            <i class="fas fa-phone"></i>
+                            📞
                             <span>${group.groupNumber}</span>
                         </div>
                     </div>
                     
                     <div class="group-actions">
                         <button class="btn btn-warning" onclick="editGroup('${group.id}')">
-                            <i class="fas fa-edit"></i> تعديل
+                            ✏️ تعديل
                         </button>
                         <button class="btn btn-success" onclick="testGroup('${group.id}')">
-                            <i class="fas fa-paper-plane"></i> اختبار الإرسال
+                            📤 اختبار الإرسال
                         </button>
                         <button class="btn btn-danger" onclick="deleteGroup('${group.id}')">
-                            <i class="fas fa-trash"></i> حذف
+                            🗑️ حذف
                         </button>
                     </div>
                 </div>

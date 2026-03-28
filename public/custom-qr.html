@@ -305,6 +305,7 @@
 
                 if (response.ok) {
                     const data = await response.json();
+                    console.log('[DEBUG] Status check response:', data);
                     
                     if (data.status === 'expired') {
                         updateQRDisplay(data);
@@ -314,11 +315,19 @@
                     const isConnected = data.connected || false;
                     updateConnectionStatus(isConnected);
                     
-                    if (!isConnected && !data.qrGenerated) {
+                    // If connected, show success
+                    if (isConnected) {
+                        return;
+                    }
+                    
+                    // If not connected, check for QR data in multiple possible fields
+                    const qrData = data.qr || data.qrCode || data.qrData;
+                    if (qrData) {
+                        console.log('[DEBUG] Found QR data, displaying...');
+                        displayQR(qrData);
+                    } else {
+                        console.log('[DEBUG] No QR data found, generating new QR...');
                         await generateQR();
-                    } else if (data.qr && !isConnected) {
-                        // Display existing QR
-                        displayQR(data.qr);
                     }
                 } else {
                     console.error('Status check failed:', response.status);
@@ -328,6 +337,7 @@
             } catch (error) {
                 console.error('Error checking connection status:', error);
                 updateConnectionStatus(false);
+                await generateQR();
             }
         }
 

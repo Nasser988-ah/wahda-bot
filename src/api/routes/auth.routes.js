@@ -150,6 +150,8 @@ router.post("/login", async (req, res) => {
         whatsappNumber: true,
         subscriptionStatus: true,
         subscriptionEnd: true,
+        shopType: true,
+        botType: true,
         createdAt: true
       }
     });

@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة التحكم - البوت المخصص</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #0f0f13; --card: #1a1a22; --card-hover: #22222e;
+            --border: rgba(255,255,255,0.08); --gold: #f5c842; --gold-dim: rgba(245,200,66,0.15);
+            --text: #fff; --muted: #8a8a9a; --danger: #ef4444; --success: #22c55e;
+            --accent: #8b5cf6; --glass: rgba(255,255,255,0.03);
+        }
+        body { font-family: 'Cairo', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+        /* Sidebar */
+        .sidebar { position: fixed; top: 0; right: 0; width: 260px; height: 100vh; background: var(--card); border-left: 1px solid var(--border); z-index: 100; display: flex; flex-direction: column; transition: transform 0.3s; }
+        .sidebar-header { padding: 24px 20px; border-bottom: 1px solid var(--border); }
+        .sidebar-logo { font-size: 22px; font-weight: 800; }
+        .sidebar-logo span { color: var(--gold); }
+        .sidebar-shop { color: var(--muted); font-size: 13px; margin-top: 4px; }
+        .sidebar-badge { display: inline-block; padding: 2px 10px; background: var(--gold-dim); color: var(--gold); border-radius: 20px; font-size: 11px; font-weight: 600; margin-top: 6px; }
+
+        .nav { flex: 1; padding: 16px 12px; overflow-y: auto; }
+        .nav-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 10px; color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 600; transition: all 0.2s; margin-bottom: 4px; }
+        .nav-item:hover { background: var(--glass); color: var(--text); }
+        .nav-item.active { background: var(--gold-dim); color: var(--gold); }
+        .nav-icon { font-size: 18px; width: 24px; text-align: center; }
+
+        .sidebar-footer { padding: 16px 12px; border-top: 1px solid var(--border); }
+        .logout-btn { width: 100%; padding: 10px; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); border-radius: 10px; color: var(--danger); font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .logout-btn:hover { background: rgba(239,68,68,0.2); }
+
+        /* Main */
+        .main { margin-right: 260px; padding: 28px; }
+        .page-title { font-size: 24px; font-weight: 800; margin-bottom: 24px; }
+        .page-title span { color: var(--gold); }
+
+        /* Stats */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 28px; }
+        .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
+        .stat-label { color: var(--muted); font-size: 13px; margin-bottom: 8px; }
+        .stat-value { font-size: 28px; font-weight: 800; color: var(--gold); }
+        .stat-sub { color: var(--muted); font-size: 12px; margin-top: 4px; }
+
+        /* Quick Actions */
+        .actions-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 28px; }
+        .action-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 24px; text-decoration: none; color: var(--text); transition: all 0.3s; cursor: pointer; display: block; }
+        .action-card:hover { border-color: var(--gold); transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.3); }
+        .action-icon { font-size: 32px; margin-bottom: 12px; }
+        .action-title { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+        .action-desc { color: var(--muted); font-size: 13px; line-height: 1.5; }
+
+        /* Recent Orders */
+        .section-title { font-size: 18px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+        .orders-table { width: 100%; border-collapse: collapse; }
+        .orders-table th { text-align: right; padding: 10px 14px; color: var(--muted); font-size: 12px; border-bottom: 1px solid var(--border); }
+        .orders-table td { padding: 12px 14px; border-bottom: 1px solid var(--border); font-size: 14px; }
+        .status-badge { padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .status-PENDING { background: var(--gold-dim); color: var(--gold); }
+        .status-CONFIRMED { background: rgba(34,197,94,0.15); color: var(--success); }
+        .status-CANCELLED { background: rgba(239,68,68,0.15); color: var(--danger); }
+        .status-DELIVERED { background: rgba(139,92,246,0.15); color: var(--accent); }
+        .empty-state { text-align: center; padding: 40px; color: var(--muted); }
+
+        /* Mobile */
+        .hamburger { display: none; position: fixed; top: 16px; right: 16px; z-index: 200; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; font-size: 20px; cursor: pointer; color: var(--text); }
+        .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 90; }
+        .overlay.show { display: block; }
+
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(100%); }
+            .sidebar.open { transform: translateX(0); }
+            .main { margin-right: 0; padding: 20px; padding-top: 60px; }
+            .hamburger { display: block; }
+            .stats-grid { grid-template-columns: 1fr 1fr; }
+            .actions-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <button class="hamburger" onclick="toggleSidebar()">☰</button>
+    <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo"><span>⚡</span> Zaki Bot</div>
+            <div class="sidebar-shop" id="shopName">جاري التحميل...</div>
+            <div class="sidebar-badge">VIP - بوت مخصص</div>
+        </div>
+        <nav class="nav">
+            <a href="custom-dashboard.html" class="nav-item active"><span class="nav-icon">📊</span> لوحة التحكم</a>
+            <a href="custom-bot-config.html" class="nav-item"><span class="nav-icon">💬</span> إعدادات الردود</a>
+            <a href="custom-menus.html" class="nav-item"><span class="nav-icon">📋</span> إدارة القوائم</a>
+            <a href="custom-ai-settings.html" class="nav-item"><span class="nav-icon">🤖</span> إعدادات الذكاء</a>
+            <a href="qr.html" class="nav-item"><span class="nav-icon">📱</span> ربط واتساب</a>
+        </nav>
+        <div class="sidebar-footer">
+            <button class="logout-btn" onclick="logout()">🚪 تسجيل الخروج</button>
+        </div>
+    </aside>
+
+    <main class="main">
+        <h1 class="page-title">مرحباً، <span id="ownerName">...</span></h1>
+
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-card"><div class="stat-label">إجمالي الطلبات</div><div class="stat-value" id="totalOrders">-</div></div>
+            <div class="stat-card"><div class="stat-label">طلبات معلقة</div><div class="stat-value" id="pendingOrders">-</div></div>
+            <div class="stat-card"><div class="stat-label">طلبات مؤكدة</div><div class="stat-value" id="confirmedOrders">-</div></div>
+            <div class="stat-card"><div class="stat-label">الإيرادات</div><div class="stat-value" id="revenue">-</div><div class="stat-sub">جنيه مصري</div></div>
+        </div>
+
+        <div class="actions-grid">
+            <a href="custom-bot-config.html" class="action-card">
+                <div class="action-icon">💬</div>
+                <div class="action-title">إعدادات الردود</div>
+                <div class="action-desc">تعديل رسائل الترحيب والتأكيد وعدم الفهم</div>
+            </a>
+            <a href="custom-menus.html" class="action-card">
+                <div class="action-icon">📋</div>
+                <div class="action-title">إدارة القوائم</div>
+                <div class="action-desc">إنشاء وتعديل قوائم البوت وعناصرها</div>
+            </a>
+            <a href="custom-ai-settings.html" class="action-card">
+                <div class="action-icon">🤖</div>
+                <div class="action-title">إعدادات الذكاء</div>
+                <div class="action-desc">ضبط سلوك الذكاء الاصطناعي واختباره</div>
+            </a>
+            <a href="qr.html" class="action-card">
+                <div class="action-icon">📱</div>
+                <div class="action-title">ربط واتساب</div>
+                <div class="action-desc">ربط رقم الواتساب الخاص بك بالبوت</div>
+            </a>
+        </div>
+
+        <div class="section-title">📦 آخر الطلبات</div>
+        <div id="ordersContent">
+            <div class="empty-state">جاري التحميل...</div>
+        </div>
+    </main>
+
+    <script>
+        const API_BASE = window.location.origin + '/api';
+        const token = localStorage.getItem('token');
+        const shop = JSON.parse(localStorage.getItem('shop') || '{}');
+
+        if (!token) { window.location.href = 'login.html'; }
+        if (shop.shopType !== 'custom') { window.location.href = 'dashboard.html'; }
+
+        document.getElementById('shopName').textContent = shop.name || '';
+        document.getElementById('ownerName').textContent = shop.ownerName || shop.name || '';
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.getElementById('overlay').classList.toggle('show');
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('shop');
+            fetch(`${API_BASE}/auth/logout`, { method: 'POST' });
+            window.location.href = 'login.html';
+        }
+
+        async function apiFetch(url) {
+            const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+            if (res.status === 401) { logout(); return null; }
+            return res.json();
+        }
+
+        async function loadStats() {
+            try {
+                const data = await apiFetch(`${API_BASE}/shop/stats`);
+                if (!data) return;
+                document.getElementById('totalOrders').textContent = data.totalOrders || 0;
+                document.getElementById('pendingOrders').textContent = data.pendingOrders || 0;
+                document.getElementById('confirmedOrders').textContent = data.confirmedOrders || 0;
+                document.getElementById('revenue').textContent = (data.totalRevenue || 0).toLocaleString('ar-EG');
+            } catch (e) { console.error('Stats error:', e); }
+        }
+
+        async function loadOrders() {
+            try {
+                const data = await apiFetch(`${API_BASE}/orders/recent/list`);
+                if (!data) return;
+                const orders = data.orders || [];
+                if (orders.length === 0) {
+                    document.getElementById('ordersContent').innerHTML = '<div class="empty-state">لا توجد طلبات بعد</div>';
+                    return;
+                }
+                const statusMap = { PENDING: 'معلق', CONFIRMED: 'مؤكد', CANCELLED: 'ملغي', DELIVERED: 'تم التوصيل' };
+                let html = '<table class="orders-table"><thead><tr><th>العميل</th><th>الهاتف</th><th>المبلغ</th><th>الحالة</th><th>التاريخ</th></tr></thead><tbody>';
+                orders.forEach(o => {
+                    const date = new Date(o.createdAt).toLocaleDateString('ar-EG');
+                    html += `<tr>
+                        <td>${o.customerName || '-'}</td>
+                        <td style="direction:ltr">${o.customerPhone || '-'}</td>
+                        <td>${o.totalPrice} ج.م</td>
+                        <td><span class="status-badge status-${o.status}">${statusMap[o.status] || o.status}</span></td>
+                        <td>${date}</td>
+                    </tr>`;
+                });
+                html += '</tbody></table>';
+                document.getElementById('ordersContent').innerHTML = html;
+            } catch (e) {
+                document.getElementById('ordersContent').innerHTML = '<div class="empty-state">فشل تحميل الطلبات</div>';
+            }
+        }
+
+        loadStats();
+        loadOrders();
+    </script>
+</body>
+</html>

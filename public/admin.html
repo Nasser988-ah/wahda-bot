@@ -513,6 +513,9 @@
         <a class="nav-item" data-section="activity" onclick="showSection('activity')">
             🔔 النشاطات
         </a>
+        <a class="nav-item" data-section="custom-requests" onclick="showSection('custom-requests')">
+            ⚡ طلبات VIP
+        </a>
     </nav>
 
     <!-- Main Content -->
@@ -671,6 +674,62 @@
                 </div>
             </div>
         </section>
+
+        <!-- Custom Bot Requests Section -->
+        <section id="custom-requests-section" class="hidden">
+            <div class="section">
+                <div class="section-header">
+                    <h2>⚡ طلبات البوت المخصص (VIP)</h2>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>الشركة</th>
+                                <th>المجال</th>
+                                <th>الهاتف</th>
+                                <th>الرسالة</th>
+                                <th>الحالة</th>
+                                <th>التاريخ</th>
+                                <th>إجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="customRequestsTable">
+                            <tr><td colspan="7" class="loading">جاري التحميل...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Approve Modal -->
+            <div class="modal-overlay" id="approveRequestModal">
+                <div class="modal">
+                    <div class="modal-header">
+                        <h3>✅ قبول الطلب</h3>
+                        <button class="modal-close" onclick="closeModal('approveRequestModal')">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="approveReqId">
+                        <div class="form-group">
+                            <label>نوع البوت</label>
+                            <select id="approveBotType">
+                                <option value="isp">بوت شركات الإنترنت</option>
+                            </select>
+                        </div>
+                        <div id="approveResultBox" style="display:none;margin-top:15px;padding:12px;background:#d4edda;border:1px solid #c3e6cb;border-radius:8px;">
+                            <div style="color:#155724;font-weight:bold;">✅ تم إنشاء الحساب!</div>
+                            <div style="margin-top:8px;color:#155724;">رقم الدخول: <strong id="approveResultPhone" style="font-size:16px;direction:ltr;"></strong></div>
+                            <div style="margin-top:4px;color:#155724;">كلمة المرور: <strong id="approveResultPwd" style="font-size:18px;direction:ltr;"></strong></div>
+                            <a id="approveWhatsAppLink" href="#" target="_blank" style="display:inline-block;margin-top:10px;padding:8px 16px;background:#25d366;color:#fff;border-radius:8px;text-decoration:none;font-weight:bold;font-size:14px;">📲 إرسال عبر واتساب</a>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn" onclick="closeModal('approveRequestModal')">إغلاق</button>
+                        <button class="btn btn-view" id="confirmApproveBtn" onclick="confirmApproveRequest()">تأكيد القبول</button>
+                    </div>
+                </div>
+            </div>
+        </section>
     </main>
 
     <!-- Shop Details Modal -->
@@ -794,6 +853,7 @@
             if (section === 'shops') loadShops();
             if (section === 'orders') loadOrders();
             if (section === 'activity') loadActivity();
+            if (section === 'custom-requests') loadCustomRequests();
         }
 
         // Load statistics
@@ -1248,6 +1308,102 @@
                 alert('فشل إرسال الإعلان');
             }
         }
+
+        // ═══════ Custom Bot Requests ═══════
+        async function loadCustomRequests() {
+            try {
+                const response = await fetch(`${API_URL}/custom-bot/requests`, {
+                    headers: getAuthHeaders()
+                });
+                if (!response.ok) {
+                    if (response.status === 401) { logout(); return; }
+                    throw new Error('Failed to load');
+                }
+                const data = await response.json();
+                renderCustomRequests(data.requests || []);
+            } catch (error) {
+                console.error('Error loading custom requests:', error);
+                document.getElementById('customRequestsTable').innerHTML = '<tr><td colspan="7" class="empty-state">فشل تحميل الطلبات</td></tr>';
+            }
+        }
+
+        function renderCustomRequests(requests) {
+            const tbody = document.getElementById('customRequestsTable');
+            if (requests.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><div class="empty-state-icon">📭</div>لا توجد طلبات</td></tr>';
+                return;
+            }
+            const statusMap = { pending: 'معلق', approved: 'مقبول', rejected: 'مرفوض' };
+            const badgeMap = { pending: 'badge-trial', approved: 'badge-active', rejected: 'badge-expired' };
+            tbody.innerHTML = requests.map(r => {
+                const date = new Date(r.createdAt).toLocaleDateString('ar-EG');
+                const msg = r.message.length > 40 ? r.message.slice(0, 40) + '...' : r.message;
+                const actions = r.status === 'pending'
+                    ? `<button class="btn btn-view" onclick="openApproveReq('${r.id}')" style="font-size:12px;padding:4px 10px;">✅ قبول</button>
+                       <button class="btn" onclick="rejectRequest('${r.id}')" style="font-size:12px;padding:4px 10px;background:#dc3545;color:#fff;">❌ رفض</button>`
+                    : '-';
+                return `<tr>
+                    <td><strong>${esc(r.companyName)}</strong></td>
+                    <td>${esc(r.industry)}</td>
+                    <td style="direction:ltr">${esc(r.phone)}</td>
+                    <td title="${esc(r.message)}">${esc(msg)}</td>
+                    <td><span class="badge ${badgeMap[r.status]}">${statusMap[r.status]}</span></td>
+                    <td>${date}</td>
+                    <td>${actions}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        function openApproveReq(id) {
+            document.getElementById('approveReqId').value = id;
+            document.getElementById('approveResultBox').style.display = 'none';
+            document.getElementById('confirmApproveBtn').disabled = false;
+            document.getElementById('confirmApproveBtn').textContent = 'تأكيد القبول';
+            document.getElementById('approveRequestModal').classList.add('show');
+        }
+
+        async function confirmApproveRequest() {
+            const id = document.getElementById('approveReqId').value;
+            const botType = document.getElementById('approveBotType').value;
+            const btn = document.getElementById('confirmApproveBtn');
+            btn.disabled = true; btn.textContent = 'جاري...';
+            try {
+                const response = await fetch(`${API_URL}/custom-bot/requests/${id}/approve`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ botType })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    const phone = data.shop?.phone || '';
+                    const pwd = data.tempPassword || '';
+                    document.getElementById('approveResultPhone').textContent = phone;
+                    document.getElementById('approveResultPwd').textContent = pwd;
+                    const msg = encodeURIComponent(`مرحباً! تم قبول طلبك في وصلة بوت ⚡\n\nبيانات الدخول:\nرقم الهاتف: ${phone}\nكلمة المرور: ${pwd}\n\nرابط الدخول: ${window.location.origin}/login.html\n\nيرجى تغيير كلمة المرور بعد الدخول.`);
+                    document.getElementById('approveWhatsAppLink').href = `https://wa.me/${phone}?text=${msg}`;
+                    document.getElementById('approveResultBox').style.display = 'block';
+                    loadCustomRequests();
+                } else {
+                    alert(data.error || 'فشل');
+                }
+            } catch { alert('خطأ في الاتصال'); }
+            btn.disabled = false; btn.textContent = 'تأكيد القبول';
+        }
+
+        async function rejectRequest(id) {
+            if (!confirm('هل تريد رفض هذا الطلب؟')) return;
+            try {
+                const response = await fetch(`${API_URL}/custom-bot/requests/${id}/reject`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ note: '' })
+                });
+                if (response.ok) { loadCustomRequests(); }
+                else { const d = await response.json(); alert(d.error || 'فشل'); }
+            } catch { alert('خطأ في الاتصال'); }
+        }
+
+        function esc(s){if(!s)return '';const d=document.createElement('div');d.textContent=s;return d.innerHTML}
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {

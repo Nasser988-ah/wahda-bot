@@ -8,6 +8,7 @@ const redis = require("../db/redis");
 const { HfInference } = require("@huggingface/inference");
 const Groq = require("groq-sdk");
 const { useDBAuthState } = require("../services/dbAuthState");
+const customBotHandler = require("./customBotHandler");
 
 const HF_TOKEN = process.env.HUGGINGFACE_TOKEN;
 const hf = HF_TOKEN ? new HfInference(HF_TOKEN) : null;
@@ -463,10 +464,12 @@ class BotManager {
             const timeoutPromise = new Promise((_, reject) => 
               setTimeout(() => reject(new Error('Message handling timeout')), 30000)
             );
-            await Promise.race([
-              this.handleMessage(sock, msg, shop),
-              timeoutPromise
-            ]);
+            // Route: custom shops use customBotHandler, traditional uses existing handler
+            const freshShopCheck = await getShopCached(shopId);
+            const handler = (freshShopCheck?.shopType === 'custom')
+              ? customBotHandler.handleMessage(sock, msg, freshShopCheck)
+              : this.handleMessage(sock, msg, shop);
+            await Promise.race([handler, timeoutPromise]);
           } catch (err) {
             console.error(`❌ Message handling error for ${shopId}:`, err.message);
           }

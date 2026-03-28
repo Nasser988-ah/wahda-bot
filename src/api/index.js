@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
-const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
+const databaseService = require("../services/databaseService");
+function getPrisma() { return databaseService.getClient(); }
 
 // Import middleware
 const { requireDatabase } = require("./middleware/database.middleware");
@@ -12,12 +12,13 @@ const shopRoutes = require("./routes/shop.routes");
 const productRoutes = require("./routes/product.routes");
 const orderRoutes = require("./routes/order.routes");
 const adminRoutes = require("./routes/admin.routes");
+const customBotRoutes = require("./routes/customBot.routes");
 
 // PUBLIC STORE API - No authentication required
 // This must be before auth middleware
 router.get("/store/:shopId", async (req, res) => {
   try {
-    const shop = await prisma.shop.findUnique({
+    const shop = await getPrisma().shop.findUnique({
       where: { id: req.params.shopId },
       select: {
         id: true,
@@ -71,5 +72,8 @@ router.use("/admin", requireDatabase, adminRoutes);
 router.use("/shop", requireDatabase, shopRoutes);
 router.use("/products", requireDatabase, productRoutes);
 router.use("/orders", requireDatabase, orderRoutes);
+
+// Custom bot routes (public request + admin + client)
+router.use("/custom-bot", requireDatabase, customBotRoutes);
 
 module.exports = router;

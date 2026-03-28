@@ -429,6 +429,155 @@
                 transform: scale(0.98);
             }
         }
+
+        /* Bot Type Selection */
+        .bot-type-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .bot-type-card {
+            background: var(--glass);
+            border: 2px solid var(--border);
+            border-radius: 16px;
+            padding: 24px 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .bot-type-card:hover {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.05);
+            transform: translateY(-2px);
+        }
+
+        .bot-type-card.selected {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.1);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+        }
+
+        .bot-type-icon {
+            font-size: 40px;
+            margin-bottom: 12px;
+        }
+
+        .bot-type-title {
+            color: var(--text);
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .bot-type-desc {
+            color: var(--text-muted);
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .bot-type-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .badge-available {
+            background: rgba(34, 197, 94, 0.15);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        .badge-vip {
+            background: rgba(245, 200, 66, 0.15);
+            color: #f5c842;
+            border: 1px solid rgba(245, 200, 66, 0.3);
+        }
+
+        .step-indicator {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+
+        .step-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--border);
+            transition: all 0.3s;
+        }
+
+        .step-dot.active {
+            background: var(--primary);
+            width: 24px;
+            border-radius: 4px;
+        }
+
+        .hidden { display: none !important; }
+
+        .back-btn {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 10px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 14px;
+            margin-bottom: 16px;
+            transition: all 0.3s;
+        }
+
+        .back-btn:hover {
+            border-color: var(--primary);
+            color: var(--text);
+        }
+
+        textarea {
+            width: 100%;
+            padding: 14px;
+            background: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text);
+            font-size: 14px;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 80px;
+            transition: all 0.3s ease;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.08);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+        }
+
+        .custom-request-note {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 13px;
+            margin-top: 16px;
+            padding: 12px;
+            background: rgba(245, 200, 66, 0.05);
+            border: 1px solid rgba(245, 200, 66, 0.15);
+            border-radius: 10px;
+        }
+
+        @media (max-width: 480px) {
+            .bot-type-grid {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
@@ -452,7 +601,12 @@
             <div class="logo-container">
                 <div class="logo">⚡</div>
                 <h1><span class="brand-highlight">Zaki</span> Bot</h1>
-                <p class="subtitle">إنشاء حساب جديد لمتجرك</p>
+                <p class="subtitle" id="pageSubtitle">اختر نوع البوت المناسب لك</p>
+            </div>
+
+            <div class="step-indicator">
+                <div class="step-dot active" id="stepDot1"></div>
+                <div class="step-dot" id="stepDot2"></div>
             </div>
 
             <div class="alert alert-error" id="error">
@@ -464,63 +618,128 @@
                 <span id="successText"></span>
             </div>
 
-            <form id="registerForm">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="name">اسم المتجر *</label>
-                        <div class="input-wrapper">
-                            <input type="text" id="name" name="name" placeholder="متجري" required>
-                            <span class="input-icon">🏪</span>
-                        </div>
+            <!-- STEP 1: Bot Type Selection -->
+            <div id="step1">
+                <div class="bot-type-grid">
+                    <div class="bot-type-card" onclick="selectBotType('traditional')">
+                        <div class="bot-type-icon">🤖</div>
+                        <div class="bot-type-badge badge-available">متاح فوراً</div>
+                        <div class="bot-type-title">البوت التقليدي</div>
+                        <div class="bot-type-desc">مثالي للمتاجر والمطاعم والمحلات</div>
                     </div>
-
-                    <div class="form-group">
-                        <label for="ownerName">اسم المالك *</label>
-                        <div class="input-wrapper">
-                            <input type="text" id="ownerName" name="ownerName" placeholder="اسمك" required>
-                            <span class="input-icon">👤</span>
-                        </div>
+                    <div class="bot-type-card" onclick="selectBotType('custom')">
+                        <div class="bot-type-icon">⚡</div>
+                        <div class="bot-type-badge badge-vip">VIP — بموافقة مسبقة</div>
+                        <div class="bot-type-title">البوت المخصص</div>
+                        <div class="bot-type-desc">بوت مصمم خصيصاً لنشاطك التجاري بتحكم كامل في كل تفاصيله</div>
                     </div>
                 </div>
+            </div>
 
-                <div class="form-row">
+            <!-- STEP 2a: Traditional Registration Form -->
+            <div id="step2traditional" class="hidden">
+                <button class="back-btn" onclick="goBackToStep1()">→ رجوع</button>
+
+                <form id="registerForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="name">اسم المتجر *</label>
+                            <div class="input-wrapper">
+                                <input type="text" id="name" name="name" placeholder="متجري" required>
+                                <span class="input-icon">🏪</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="ownerName">اسم المالك *</label>
+                            <div class="input-wrapper">
+                                <input type="text" id="ownerName" name="ownerName" placeholder="اسمك" required>
+                                <span class="input-icon">👤</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="phone">رقم الهاتف *</label>
+                            <div class="input-wrapper">
+                                <input type="tel" id="phone" name="phone" placeholder="201234567890" required>
+                                <span class="input-icon">📱</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="whatsappNumber">رقم الواتساب *</label>
+                            <div class="input-wrapper">
+                                <input type="tel" id="whatsappNumber" name="whatsappNumber" placeholder="201234567890" required>
+                                <span class="input-icon">💬</span>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="form-group">
-                        <label for="phone">رقم الهاتف *</label>
+                        <label for="password">كلمة المرور *</label>
                         <div class="input-wrapper">
-                            <input type="tel" id="phone" name="phone" placeholder="201234567890" required>
+                            <input type="password" id="password" name="password" placeholder="••••••••" required>
+                            <span class="input-icon">🔒</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="confirmPassword">تأكيد كلمة المرور *</label>
+                        <div class="input-wrapper">
+                            <input type="password" id="confirmPassword" name="confirmPassword" placeholder="••••••••" required>
+                            <span class="input-icon">🔐</span>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn" id="registerBtn">
+                        <span>إنشاء حساب جديد</span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- STEP 2b: Custom Bot Request Form -->
+            <div id="step2custom" class="hidden">
+                <button class="back-btn" onclick="goBackToStep1()">→ رجوع</button>
+
+                <form id="customRequestForm">
+                    <div class="form-group">
+                        <label for="crCompany">اسم المتجر أو الشركة *</label>
+                        <div class="input-wrapper">
+                            <input type="text" id="crCompany" placeholder="اسم شركتك" required>
+                            <span class="input-icon">🏢</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="crIndustry">مجال العمل *</label>
+                        <div class="input-wrapper">
+                            <input type="text" id="crIndustry" placeholder="مثال: شركة إنترنت، عقارات، سياحة..." required>
+                            <span class="input-icon">💼</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="crPhone">رقم التواصل *</label>
+                        <div class="input-wrapper">
+                            <input type="tel" id="crPhone" placeholder="201234567890" required>
                             <span class="input-icon">📱</span>
                         </div>
                     </div>
 
                     <div class="form-group">
-                        <label for="whatsappNumber">رقم الواتساب *</label>
-                        <div class="input-wrapper">
-                            <input type="tel" id="whatsappNumber" name="whatsappNumber" placeholder="201234567890" required>
-                            <span class="input-icon">💬</span>
-                        </div>
+                        <label for="crMessage">ما الذي تحتاجه؟ *</label>
+                        <textarea id="crMessage" placeholder="صف لنا باختصار ما تريد أن يفعله البوت..." required></textarea>
                     </div>
-                </div>
 
-                <div class="form-group">
-                    <label for="password">كلمة المرور *</label>
-                    <div class="input-wrapper">
-                        <input type="password" id="password" name="password" placeholder="••••••••" required>
-                        <span class="input-icon">🔒</span>
-                    </div>
-                </div>
+                    <button type="submit" class="btn" id="customRequestBtn">
+                        <span>أرسل الطلب</span>
+                    </button>
+                </form>
 
-                <div class="form-group">
-                    <label for="confirmPassword">تأكيد كلمة المرور *</label>
-                    <div class="input-wrapper">
-                        <input type="password" id="confirmPassword" name="confirmPassword" placeholder="••••••••" required>
-                        <span class="input-icon">🔐</span>
-                    </div>
+                <div class="custom-request-note">
+                    ⏳ سيتم التواصل معك خلال 24 ساعة لمناقشة التفاصيل
                 </div>
-
-                <button type="submit" class="btn" id="registerBtn">
-                    <span>إنشاء حساب جديد</span>
-                </button>
-            </form>
+            </div>
 
             <div class="login-section">
                 <p>لديك حساب بالفعل؟</p>
@@ -533,10 +752,38 @@
 
     <script>
         const API_BASE = window.location.origin + '/api';
-        
+
+        // ═══════ Step Navigation ═══════
+        function selectBotType(type) {
+            document.getElementById('step1').classList.add('hidden');
+            document.getElementById('stepDot1').classList.remove('active');
+            document.getElementById('stepDot2').classList.add('active');
+            hideError(); hideSuccess();
+
+            if (type === 'traditional') {
+                document.getElementById('step2traditional').classList.remove('hidden');
+                document.getElementById('step2custom').classList.add('hidden');
+                document.getElementById('pageSubtitle').textContent = 'إنشاء حساب جديد لمتجرك';
+            } else {
+                document.getElementById('step2custom').classList.remove('hidden');
+                document.getElementById('step2traditional').classList.add('hidden');
+                document.getElementById('pageSubtitle').textContent = 'طلب بوت مخصص VIP';
+            }
+        }
+
+        function goBackToStep1() {
+            document.getElementById('step1').classList.remove('hidden');
+            document.getElementById('step2traditional').classList.add('hidden');
+            document.getElementById('step2custom').classList.add('hidden');
+            document.getElementById('stepDot1').classList.add('active');
+            document.getElementById('stepDot2').classList.remove('active');
+            document.getElementById('pageSubtitle').textContent = 'اختر نوع البوت المناسب لك';
+            hideError(); hideSuccess();
+        }
+
+        // ═══════ Traditional Registration ═══════
         document.getElementById('registerForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
             const formData = {
                 name: document.getElementById('name').value,
                 ownerName: document.getElementById('ownerName').value,
@@ -545,124 +792,110 @@
                 password: document.getElementById('password').value,
                 confirmPassword: document.getElementById('confirmPassword').value
             };
-            
             const registerBtn = document.getElementById('registerBtn');
-            const errorDiv = document.getElementById('error');
-            const successDiv = document.getElementById('success');
-            
-            // Validation
-            if (formData.password !== formData.confirmPassword) {
-                showError('كلمتا المرور غير متطابقتين');
-                return;
-            }
-            
-            if (!formData.phone.startsWith('20') || formData.phone.length !== 12) {
-                showError('رقم الهاتف يجب أن يبدأ بـ 20 ويكون 12 رقم');
-                return;
-            }
-            
-            if (!formData.whatsappNumber.startsWith('20') || formData.whatsappNumber.length !== 12) {
-                showError('رقم الواتساب يجب أن يبدأ بـ 20 ويكون 12 رقم');
-                return;
-            }
-            
-            if (formData.password.length < 6) {
-                showError('كلمة المرور يجب أن تكون 6 أحرف على الأقل');
-                return;
-            }
-            
-            // Show loading
+
+            if (formData.password !== formData.confirmPassword) { showError('كلمتا المرور غير متطابقتين'); return; }
+            if (!formData.phone.startsWith('20') || formData.phone.length !== 12) { showError('رقم الهاتف يجب أن يبدأ بـ 20 ويكون 12 رقم'); return; }
+            if (!formData.whatsappNumber.startsWith('20') || formData.whatsappNumber.length !== 12) { showError('رقم الواتساب يجب أن يبدأ بـ 20 ويكون 12 رقم'); return; }
+            if (formData.password.length < 6) { showError('كلمة المرور يجب أن تكون 6 أحرف على الأقل'); return; }
+
             registerBtn.disabled = true;
             registerBtn.innerHTML = '<div class="loading"></div><span>جاري إنشاء الحساب...</span>';
-            hideError();
-            hideSuccess();
-            
+            hideError(); hideSuccess();
+
             try {
                 const response = await fetch(`${API_BASE}/auth/register`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        name: formData.name,
-                        ownerName: formData.ownerName,
-                        phone: formData.phone,
-                        whatsappNumber: formData.whatsappNumber,
+                        name: formData.name, ownerName: formData.ownerName,
+                        phone: formData.phone, whatsappNumber: formData.whatsappNumber,
                         password: formData.password
                     })
                 });
-                
                 const data = await response.json();
-                
                 if (response.ok) {
-                    // Save token and shop info
                     localStorage.setItem('token', data.token);
                     localStorage.setItem('shop', JSON.stringify(data.shop));
-                    
-                    // New accounts are pending payment - redirect to payment page
                     window.location.href = 'payment-required.html';
                 } else {
-                    if (data.details && Array.isArray(data.details) && data.details.length > 0) {
-                        const errorMessages = data.details.map(err => err.message).join(', ');
-                        showError(errorMessages);
-                    } else if (data.details) {
-                        showError(data.details);
-                    } else {
-                        showError(data.error || 'فشل إنشاء الحساب');
-                    }
+                    const msg = data.details ? (Array.isArray(data.details) ? data.details.map(e => e.message).join(', ') : data.details) : (data.error || 'فشل إنشاء الحساب');
+                    showError(msg);
                 }
             } catch (error) {
-                console.error('Registration error:', error);
                 showError('حدث خطأ في الاتصال. يرجى المحاولة مرة أخرى');
             } finally {
                 registerBtn.disabled = false;
                 registerBtn.innerHTML = '<span>إنشاء حساب جديد</span>';
             }
         });
-        
+
+        // ═══════ Custom Bot Request ═══════
+        document.getElementById('customRequestForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('customRequestBtn');
+            const data = {
+                companyName: document.getElementById('crCompany').value.trim(),
+                industry: document.getElementById('crIndustry').value.trim(),
+                phone: document.getElementById('crPhone').value.trim(),
+                message: document.getElementById('crMessage').value.trim(),
+            };
+
+            if (!data.companyName || !data.industry || !data.phone || !data.message) {
+                showError('يرجى ملء جميع الحقول'); return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<div class="loading"></div><span>جاري الإرسال...</span>';
+            hideError(); hideSuccess();
+
+            try {
+                const response = await fetch(`${API_BASE}/custom-bot/request`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                if (response.ok) {
+                    showSuccess(result.message || 'تم إرسال طلبك بنجاح!');
+                    document.getElementById('customRequestForm').reset();
+                } else {
+                    showError(result.error || 'فشل في إرسال الطلب');
+                }
+            } catch (error) {
+                showError('حدث خطأ في الاتصال');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span>أرسل الطلب</span>';
+            }
+        });
+
+        // ═══════ Helpers ═══════
         function showError(message) {
-            const errorDiv = document.getElementById('error');
-            const errorText = document.getElementById('errorText');
-            errorText.textContent = message;
-            errorDiv.classList.add('show');
-            hideSuccess();
+            const el = document.getElementById('error');
+            document.getElementById('errorText').textContent = message;
+            el.classList.add('show'); hideSuccess();
             setTimeout(hideError, 5000);
         }
-        
-        function hideError() {
-            document.getElementById('error').classList.remove('show');
-        }
-        
+        function hideError() { document.getElementById('error').classList.remove('show'); }
         function showSuccess(message) {
-            const successDiv = document.getElementById('success');
-            const successText = document.getElementById('successText');
-            successText.textContent = message;
-            successDiv.classList.add('show');
-            hideError();
+            const el = document.getElementById('success');
+            document.getElementById('successText').textContent = message;
+            el.classList.add('show'); hideError();
         }
-        
-        function hideSuccess() {
-            document.getElementById('success').classList.remove('show');
-        }
-        
-        // Check if already logged in (validate token first to avoid redirect loop)
+        function hideSuccess() { document.getElementById('success').classList.remove('show'); }
+
+        // Check if already logged in
         window.addEventListener('load', async () => {
             const token = localStorage.getItem('token');
             if (token) {
                 try {
-                    const res = await fetch(`${API_BASE}/shop/me`, {
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    });
+                    const res = await fetch(`${API_BASE}/shop/me`, { headers: { 'Authorization': `Bearer ${token}` } });
                     if (res.ok) {
-                        window.location.href = 'dashboard.html';
-                    } else {
-                        localStorage.removeItem('token');
-                        localStorage.removeItem('shop');
-                    }
-                } catch {
-                    localStorage.removeItem('token');
-                    localStorage.removeItem('shop');
-                }
+                        const shop = JSON.parse(localStorage.getItem('shop') || '{}');
+                        window.location.href = shop.shopType === 'custom' ? 'custom-dashboard.html' : 'dashboard.html';
+                    } else { localStorage.removeItem('token'); localStorage.removeItem('shop'); }
+                } catch { localStorage.removeItem('token'); localStorage.removeItem('shop'); }
             }
         });
     </script>

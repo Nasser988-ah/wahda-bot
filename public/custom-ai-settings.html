@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إعدادات الذكاء الاصطناعي - البوت المخصص</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #0f0f13; --card: #1a1a22; --border: rgba(255,255,255,0.08);
+            --gold: #f5c842; --gold-dim: rgba(245,200,66,0.15);
+            --text: #fff; --muted: #8a8a9a; --danger: #ef4444; --success: #22c55e;
+        }
+        body { font-family: 'Cairo', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+        .sidebar { position: fixed; top: 0; right: 0; width: 260px; height: 100vh; background: var(--card); border-left: 1px solid var(--border); z-index: 100; display: flex; flex-direction: column; transition: transform 0.3s; }
+        .sidebar-header { padding: 24px 20px; border-bottom: 1px solid var(--border); }
+        .sidebar-logo { font-size: 22px; font-weight: 800; }
+        .sidebar-logo span { color: var(--gold); }
+        .sidebar-shop { color: var(--muted); font-size: 13px; margin-top: 4px; }
+        .sidebar-badge { display: inline-block; padding: 2px 10px; background: var(--gold-dim); color: var(--gold); border-radius: 20px; font-size: 11px; font-weight: 600; margin-top: 6px; }
+        .nav { flex: 1; padding: 16px 12px; overflow-y: auto; }
+        .nav-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 10px; color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 600; transition: all 0.2s; margin-bottom: 4px; }
+        .nav-item:hover { background: rgba(255,255,255,0.03); color: var(--text); }
+        .nav-item.active { background: var(--gold-dim); color: var(--gold); }
+        .nav-icon { font-size: 18px; width: 24px; text-align: center; }
+        .sidebar-footer { padding: 16px 12px; border-top: 1px solid var(--border); }
+        .logout-btn { width: 100%; padding: 10px; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); border-radius: 10px; color: var(--danger); font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+
+        .main { margin-right: 260px; padding: 28px; max-width: 900px; }
+        .page-title { font-size: 24px; font-weight: 800; margin-bottom: 8px; }
+        .page-desc { color: var(--muted); font-size: 14px; margin-bottom: 28px; }
+
+        .config-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 24px; margin-bottom: 20px; }
+        .config-label { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+        .config-help { color: var(--muted); font-size: 12px; margin-bottom: 12px; line-height: 1.5; }
+
+        .slider-row { display: flex; align-items: center; gap: 16px; margin-top: 8px; }
+        .slider-row input[type="range"] { flex: 1; accent-color: var(--gold); height: 6px; }
+        .slider-value { color: var(--gold); font-weight: 700; min-width: 80px; text-align: center; font-size: 14px; }
+        .slider-labels { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+        .provider-badge { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; background: rgba(139,92,246,0.1); border: 1px solid rgba(139,92,246,0.2); border-radius: 10px; font-size: 14px; color: #a78bfa; font-weight: 600; }
+
+        .tags-input { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px; background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 10px; min-height: 48px; align-items: center; }
+        .tag { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; background: var(--gold-dim); color: var(--gold); border-radius: 20px; font-size: 13px; font-weight: 600; }
+        .tag-remove { cursor: pointer; opacity: 0.7; font-size: 14px; }
+        .tag-remove:hover { opacity: 1; }
+        .tags-input input { flex: 1; background: none; border: none; color: var(--text); font-family: inherit; font-size: 14px; min-width: 120px; outline: none; }
+
+        /* WhatsApp-style Chat */
+        .chat-section { background: var(--card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; margin-bottom: 20px; }
+        .chat-header { background: #075e54; padding: 14px 20px; display: flex; align-items: center; gap: 12px; }
+        .chat-avatar { width: 40px; height: 40px; border-radius: 50%; background: #25d366; display: flex; align-items: center; justify-content: center; font-size: 20px; color: #fff; font-weight: 700; }
+        .chat-header-info { flex: 1; }
+        .chat-header-name { font-size: 15px; font-weight: 700; color: #fff; }
+        .chat-header-status { font-size: 12px; color: rgba(255,255,255,0.6); }
+        .chat-actions { display: flex; gap: 8px; align-items: center; }
+        .chat-memory { background: none; border: none; color: rgba(255,255,255,0.5); font-size: 13px; cursor: pointer; font-family: inherit; }
+        .chat-memory:hover { color: #fff; }
+        .chat-clear { background: none; border: none; color: rgba(255,255,255,0.5); font-size: 13px; cursor: pointer; font-family: inherit; }
+        .chat-clear:hover { color: #fff; }
+        .memory-indicator { display: inline-block; width: 8px; height: 8px; background: #25d366; border-radius: 50%; margin-left: 4px; }
+
+        .chat-body { height: 400px; overflow-y: auto; padding: 16px; background: #0b141a url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"); display: flex; flex-direction: column; gap: 6px; }
+        .chat-body::-webkit-scrollbar { width: 5px; }
+        .chat-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+
+        .msg { max-width: 80%; padding: 8px 12px; border-radius: 8px; font-size: 14px; line-height: 1.6; position: relative; word-wrap: break-word; white-space: pre-wrap; }
+        .msg-user { align-self: flex-start; background: #005c4b; color: #fff; border-top-left-radius: 0; }
+        .msg-bot { align-self: flex-end; background: #1f2c33; color: #e9edef; border-top-right-radius: 0; }
+        .msg-time { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 2px; text-align: left; }
+        .msg-bot .msg-time { text-align: right; }
+        .msg-typing { align-self: flex-end; background: #1f2c33; color: rgba(255,255,255,0.5); border-top-right-radius: 0; font-style: italic; }
+        .typing-dots { display: inline-flex; gap: 4px; }
+        .typing-dots span { width: 7px; height: 7px; background: rgba(255,255,255,0.4); border-radius: 50%; animation: dotBounce 1.4s infinite ease-in-out; }
+        .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes dotBounce { 0%,80%,100%{transform:scale(0.6)} 40%{transform:scale(1)} }
+
+        .chat-empty { text-align: center; color: var(--muted); padding: 60px 20px; }
+        .chat-empty-icon { font-size: 48px; margin-bottom: 12px; }
+
+        .chat-input-bar { display: flex; gap: 10px; padding: 12px 16px; background: #1f2c33; border-top: 1px solid rgba(255,255,255,0.06); }
+        .chat-input { flex: 1; padding: 10px 16px; background: #2a3942; border: none; border-radius: 24px; color: #e9edef; font-family: inherit; font-size: 14px; outline: none; }
+        .chat-input::placeholder { color: rgba(255,255,255,0.3); }
+        .chat-send { width: 44px; height: 44px; border-radius: 50%; background: #00a884; border: none; color: #fff; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; }
+        .chat-send:hover { background: #06cf9c; }
+        .chat-send:disabled { background: #2a3942; cursor: not-allowed; }
+
+        .save-bar { position: sticky; bottom: 0; background: var(--bg); border-top: 1px solid var(--border); padding: 16px 0; display: flex; justify-content: space-between; align-items: center; }
+        .save-btn { padding: 12px 32px; background: var(--gold); color: #000; border: none; border-radius: 10px; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
+        .save-btn:disabled { opacity: 0.5; }
+        .save-status { color: var(--success); font-size: 14px; font-weight: 600; opacity: 0; transition: opacity 0.3s; }
+        .save-status.show { opacity: 1; }
+
+        .hamburger { display: none; position: fixed; top: 16px; right: 16px; z-index: 200; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; font-size: 20px; cursor: pointer; color: var(--text); }
+        .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 90; }
+        .overlay.show { display: block; }
+
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(100%); }
+            .sidebar.open { transform: translateX(0); }
+            .main { margin-right: 0; padding: 20px; padding-top: 60px; }
+            .hamburger { display: block; }
+            .test-input-row { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <button class="hamburger" onclick="toggleSidebar()">☰</button>
+    <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo"><span>⚡</span> Zaki Bot</div>
+            <div class="sidebar-shop" id="shopName"></div>
+            <div class="sidebar-badge">VIP - بوت مخصص</div>
+        </div>
+        <nav class="nav">
+            <a href="custom-dashboard.html" class="nav-item"><span class="nav-icon">📊</span> لوحة التحكم</a>
+            <a href="custom-bot-config.html" class="nav-item"><span class="nav-icon">💬</span> إعدادات الردود</a>
+            <a href="custom-menus.html" class="nav-item"><span class="nav-icon">📋</span> إدارة القوائم</a>
+            <a href="custom-ai-settings.html" class="nav-item active"><span class="nav-icon">🤖</span> إعدادات الذكاء</a>
+            <a href="qr.html" class="nav-item"><span class="nav-icon">📱</span> ربط واتساب</a>
+        </nav>
+        <div class="sidebar-footer">
+            <button class="logout-btn" onclick="logout()">🚪 تسجيل الخروج</button>
+        </div>
+    </aside>
+
+    <main class="main">
+        <h1 class="page-title">🤖 إعدادات الذكاء الاصطناعي</h1>
+        <p class="page-desc">ضبط سلوك الذكاء الاصطناعي واختبار ردوده قبل التفعيل</p>
+
+        <div class="config-card">
+            <div class="config-label">مزود الذكاء الاصطناعي</div>
+            <div class="config-help">يتم تحديده تلقائياً بناءً على نوع البوت</div>
+            <div class="provider-badge" id="providerBadge">Google Gemini 1.5 Flash</div>
+        </div>
+
+        <div class="config-card">
+            <div class="config-label">مستوى الإبداع</div>
+            <div class="config-help">ارتفاع الإبداع يعني ردود أكثر تنوعاً لكن أقل دقة</div>
+            <div class="slider-row">
+                <input type="range" id="temperature" min="0" max="100" step="5" value="70">
+                <div class="slider-value" id="tempText">متوازن</div>
+            </div>
+            <div class="slider-labels">
+                <span>محافظ</span>
+                <span>متوازن</span>
+                <span>إبداعي</span>
+            </div>
+        </div>
+
+        <div class="config-card">
+            <div class="config-label">طول الرد المفضل</div>
+            <div class="config-help">عدد الكلمات التقريبي في كل رد</div>
+            <div class="slider-row">
+                <input type="range" id="maxTokens" min="100" max="600" step="50" value="300">
+                <div class="slider-value" id="tokensText">متوسط</div>
+            </div>
+            <div class="slider-labels">
+                <span>قصير</span>
+                <span>متوسط</span>
+                <span>مفصّل</span>
+            </div>
+        </div>
+
+        <div class="config-card">
+            <div class="config-label">مواضيع يركز عليها الذكاء</div>
+            <div class="config-help">اكتب موضوع واضغط Enter لإضافته</div>
+            <div class="tags-input" id="focusTagsContainer">
+                <input type="text" id="focusTagInput" placeholder="مثال: باقات إنترنت..." onkeydown="handleTagInput(event, 'focus')">
+            </div>
+        </div>
+
+        <div class="config-card">
+            <div class="config-label">مواضيع يتجنبها الذكاء</div>
+            <div class="config-help">مواضيع لا تريد أن يتحدث عنها البوت</div>
+            <div class="tags-input" id="avoidTagsContainer">
+                <input type="text" id="avoidTagInput" placeholder="مثال: سياسة، منافسين..." onkeydown="handleTagInput(event, 'avoid')">
+            </div>
+        </div>
+
+        <!-- WhatsApp-style Chat Test -->
+        <div class="chat-section">
+            <div class="chat-header">
+                <div class="chat-avatar">🤖</div>
+                <div class="chat-header-info">
+                    <div class="chat-header-name" id="chatBotName">بوت الذكاء الاصطناعي</div>
+                    <div class="chat-header-status" id="chatStatus">متصل الآن</div>
+                </div>
+                <div class="chat-actions">
+                    <button class="chat-memory" onclick="showMemory()" id="memoryBtn">🧠 ذاكرة</button>
+                    <button class="chat-clear" onclick="clearChat()">🗑️ مسح</button>
+                    <button class="chat-clear" onclick="clearMemory()">🔄 مسح الذاكرة</button>
+                </div>
+            </div>
+            <div class="chat-body" id="chatBody">
+                <div class="chat-empty">
+                    <div class="chat-empty-icon">💬</div>
+                    <div>ابدأ محادثة تجريبية مع البوت</div>
+                    <div style="font-size:12px;margin-top:6px">اكتب رسالة كأنك عميل حقيقي</div>
+                </div>
+            </div>
+            <div class="chat-input-bar">
+                <input type="text" class="chat-input" id="chatInput" placeholder="اكتب رسالة..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}" autocomplete="off">
+                <button class="chat-send" id="chatSendBtn" onclick="sendChat()">➤</button>
+            </div>
+        </div>
+
+        <div class="save-bar">
+            <button class="save-btn" id="saveBtn" onclick="saveSettings()">💾 حفظ الإعدادات</button>
+            <span class="save-status" id="saveStatus">✅ تم الحفظ</span>
+        </div>
+    </main>
+
+    <script>
+        const API_BASE = window.location.origin + '/api';
+        const token = localStorage.getItem('token');
+        const shop = JSON.parse(localStorage.getItem('shop') || '{}');
+        if (!token) { window.location.href = 'login.html'; }
+        if (shop.shopType !== 'custom') { window.location.href = 'dashboard.html'; }
+        document.getElementById('shopName').textContent = shop.name || '';
+        document.getElementById('chatBotName').textContent = (shop.name || 'بوت') + ' - AI';
+
+        let focusTags = [];
+        let avoidTags = [];
+
+        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('show'); }
+        function logout() { localStorage.removeItem('token'); localStorage.removeItem('shop'); fetch(`${API_BASE}/auth/logout`, { method: 'POST' }); window.location.href = 'login.html'; }
+
+        // Temperature slider
+        const tempSlider = document.getElementById('temperature');
+        tempSlider.addEventListener('input', () => {
+            const v = parseInt(tempSlider.value);
+            const label = v <= 30 ? 'محافظ' : v <= 70 ? 'متوازن' : 'إبداعي';
+            document.getElementById('tempText').textContent = label;
+        });
+
+        // Max tokens slider
+        const tokensSlider = document.getElementById('maxTokens');
+        tokensSlider.addEventListener('input', () => {
+            const v = parseInt(tokensSlider.value);
+            const label = v <= 200 ? 'قصير' : v <= 400 ? 'متوسط' : 'مفصّل';
+            document.getElementById('tokensText').textContent = label;
+        });
+
+        // Tags
+        function handleTagInput(event, type) {
+            if (event.key !== 'Enter') return;
+            event.preventDefault();
+            const input = event.target;
+            const val = input.value.trim();
+            if (!val) return;
+            if (type === 'focus') { focusTags.push(val); renderTags('focus'); }
+            else { avoidTags.push(val); renderTags('avoid'); }
+            input.value = '';
+        }
+
+        function renderTags(type) {
+            const tags = type === 'focus' ? focusTags : avoidTags;
+            const container = document.getElementById(type === 'focus' ? 'focusTagsContainer' : 'avoidTagsContainer');
+            const inputId = type === 'focus' ? 'focusTagInput' : 'avoidTagInput';
+            const tagsHtml = tags.map((t, i) => `<span class="tag">${esc(t)}<span class="tag-remove" onclick="removeTag('${type}',${i})">✕</span></span>`).join('');
+            container.innerHTML = tagsHtml + `<input type="text" id="${inputId}" placeholder="اكتب واضغط Enter..." onkeydown="handleTagInput(event, '${type}')">`;
+        }
+
+        function removeTag(type, index) {
+            if (type === 'focus') { focusTags.splice(index, 1); renderTags('focus'); }
+            else { avoidTags.splice(index, 1); renderTags('avoid'); }
+        }
+
+        async function loadConfig() {
+            try {
+                const res = await fetch(`${API_BASE}/custom-bot/config`, { headers: { 'Authorization': `Bearer ${token}` } });
+                if (!res.ok) return;
+                const config = await res.json();
+
+                document.getElementById('temperature').value = Math.round((config.aiTemperature || 0.7) * 100);
+                tempSlider.dispatchEvent(new Event('input'));
+                document.getElementById('maxTokens').value = config.aiMaxTokens || 300;
+                tokensSlider.dispatchEvent(new Event('input'));
+
+                const provider = config.aiProvider === 'gemini' ? 'Google Gemini 1.5 Flash' : 'Groq AI';
+                document.getElementById('providerBadge').textContent = provider;
+
+                // Parse tags from AI system prompt if stored there
+                const prompt = config.aiSystemPrompt || '';
+                const focusMatch = prompt.match(/مواضيع التركيز: (.+)/);
+                const avoidMatch = prompt.match(/مواضيع التجنب: (.+)/);
+                if (focusMatch) { focusTags = focusMatch[1].split('،').map(s => s.trim()).filter(Boolean); renderTags('focus'); }
+                if (avoidMatch) { avoidTags = avoidMatch[1].split('،').map(s => s.trim()).filter(Boolean); renderTags('avoid'); }
+            } catch (e) { console.error('Load config error:', e); }
+        }
+
+        async function saveSettings() {
+            const btn = document.getElementById('saveBtn');
+            btn.disabled = true; btn.textContent = 'جاري الحفظ...';
+
+            const temp = parseInt(document.getElementById('temperature').value) / 100;
+            const maxT = parseInt(document.getElementById('maxTokens').value);
+
+            try {
+                const res = await fetch(`${API_BASE}/custom-bot/ai-settings`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ aiTemperature: temp, aiMaxTokens: maxT })
+                });
+                if (res.ok) {
+                    const status = document.getElementById('saveStatus');
+                    status.classList.add('show');
+                    setTimeout(() => status.classList.remove('show'), 3000);
+                } else { alert('فشل في الحفظ'); }
+            } catch { alert('خطأ في الاتصال'); }
+            btn.disabled = false; btn.textContent = '💾 حفظ الإعدادات';
+        }
+
+        // ═══════ WhatsApp Chat ═══════
+        const chatBody = document.getElementById('chatBody');
+        const chatInput = document.getElementById('chatInput');
+        const chatSendBtn = document.getElementById('chatSendBtn');
+        let chatHistory = [];
+        let isSending = false;
+
+        function getTimeStr() {
+            return new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function addMessage(text, type) {
+            // Remove empty state if present
+            const empty = chatBody.querySelector('.chat-empty');
+            if (empty) empty.remove();
+
+            const div = document.createElement('div');
+            div.className = `msg msg-${type}`;
+            div.innerHTML = `${esc(text)}<div class="msg-time">${getTimeStr()}</div>`;
+            chatBody.appendChild(div);
+            chatBody.scrollTop = chatBody.scrollHeight;
+            return div;
+        }
+
+        function showTyping() {
+            const div = document.createElement('div');
+            div.className = 'msg msg-typing';
+            div.id = 'typingIndicator';
+            div.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
+            chatBody.appendChild(div);
+            chatBody.scrollTop = chatBody.scrollHeight;
+        }
+
+        function removeTyping() {
+            const el = document.getElementById('typingIndicator');
+            if (el) el.remove();
+        }
+
+        async function sendChat() {
+            const msg = chatInput.value.trim();
+            if (!msg || isSending) return;
+
+            isSending = true;
+            chatSendBtn.disabled = true;
+            chatInput.value = '';
+
+            // Add user message
+            addMessage(msg, 'user');
+            chatHistory.push({ role: 'user', text: msg });
+
+            // Show typing
+            showTyping();
+
+            try {
+                const res = await fetch(`${API_BASE}/custom-bot/ai-test`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ message: msg })
+                });
+                const data = await res.json();
+                removeTyping();
+
+                const reply = data.response || data.error || 'لا يوجد رد';
+                addMessage(reply, 'bot');
+                chatHistory.push({ role: 'bot', text: reply });
+            } catch {
+                removeTyping();
+                addMessage('خطأ في الاتصال بالخادم', 'bot');
+            }
+
+            isSending = false;
+            chatSendBtn.disabled = false;
+            chatInput.focus();
+            updateMemoryIndicator();
+        }
+
+        function clearChat() {
+            chatHistory = [];
+            chatBody.innerHTML = `<div class="chat-empty">
+                <div class="chat-empty-icon">💬</div>
+                <div>ابدأ محادثة تجريبية مع البوت</div>
+                <div style="font-size:12px;margin-top:6px">اكتب رسالة كأنك عميل حقيقي</div>
+            </div>`;
+        }
+
+        async function showMemory() {
+            try {
+                const res = await fetch(`${API_BASE}/custom-bot/ai-test/memory`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                const memory = data.memory;
+                
+                let memoryText = '🧠 **ذاكرة البوت الحالية:**\n\n';
+                if (memory.phone) {
+                    memoryText += `📱 **رقم العميل:** ${memory.phone}\n`;
+                } else {
+                    memoryText += `📱 **رقم العميل:** لم يتم حفظه بعد\n`;
+                }
+                
+                if (memory.selectedProducts.length > 0) {
+                    memoryText += '\n🛒 **المنتجات المختارة:**\n';
+                    memory.selectedProducts.forEach(p => {
+                        memoryText += `- ${p.label} (${p.price ? p.price + ' ج.م' : 'لا يوجد سعر'})\n`;
+                    });
+                } else {
+                    memoryText += '\n🛒 **المنتجات المختارة:** لا يوجد\n';
+                }
+                
+                if (memory.lastUpdated) {
+                    const date = new Date(memory.lastUpdated);
+                    memoryText += `\n⏰ **آخر تحديث:** ${date.toLocaleString('ar-EG')}`;
+                }
+                
+                addMessage(memoryText, 'bot');
+            } catch (e) {
+                addMessage('❌ فشل في جلب الذاكرة', 'bot');
+            }
+        }
+
+        async function clearMemory() {
+            try {
+                const res = await fetch(`${API_BASE}/custom-bot/ai-test/clear-memory`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                addMessage('🔄 تم مسح ذاكرة البوت بنجاح', 'bot');
+                updateMemoryIndicator();
+            } catch (e) {
+                addMessage('❌ فشل في مسح الذاكرة', 'bot');
+            }
+        }
+
+        async function updateMemoryIndicator() {
+            try {
+                const res = await fetch(`${API_BASE}/custom-bot/ai-test/memory`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                const memory = data.memory;
+                const btn = document.getElementById('memoryBtn');
+                
+                if (memory.phone || memory.selectedProducts.length > 0) {
+                    btn.innerHTML = '🧠 ذاكرة <span class="memory-indicator"></span>';
+                } else {
+                    btn.innerHTML = '🧠 ذاكرة';
+                }
+            } catch (e) {
+                // Ignore
+            }
+        }
+
+        function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+        loadConfig();
+        updateMemoryIndicator();
+    </script>
+</body>
+</html>

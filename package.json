@@ -22,6 +22,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@huggingface/inference": "^4.13.15",
     "@prisma/client": "^5.22.0",
     "@supabase/supabase-js": "^2.99.1",

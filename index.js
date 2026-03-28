@@ -105,7 +105,11 @@ const protectedPages = [
   '/dashboard.html',
   '/products.html',
   '/qr.html',
-  '/settings.html'
+  '/settings.html',
+  '/custom-dashboard.html',
+  '/custom-bot-config.html',
+  '/custom-menus.html',
+  '/custom-ai-settings.html'
 ];
 protectedPages.forEach(page => {
   app.get(page, pageAuth, (req, res) => {

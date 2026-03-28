@@ -39,6 +39,8 @@ const authenticateToken = async (req, res, next) => {
         whatsappNumber: true,
         subscriptionStatus: true,
         subscriptionEnd: true,
+        shopType: true,
+        botType: true,
         createdAt: true
       }
     });
@@ -117,6 +119,8 @@ const authenticateTokenWithPending = async (req, res, next) => {
         whatsappNumber: true,
         subscriptionStatus: true,
         subscriptionEnd: true,
+        shopType: true,
+        botType: true,
         createdAt: true
       }
     });

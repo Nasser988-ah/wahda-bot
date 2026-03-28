@@ -209,6 +209,8 @@ router.get("/me", authenticateTokenWithPending, async (req, res) => {
         whatsappNumber: true,
         subscriptionStatus: true,
         subscriptionEnd: true,
+        shopType: true,
+        botType: true,
         createdAt: true,
         updatedAt: true,
         _count: {

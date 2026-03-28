@@ -292,6 +292,10 @@
                 <div class="stat-label">الحسابات النشطة</div>
                 <div class="stat-value" id="activeCount">-</div>
             </div>
+            <div class="stat-card" style="cursor:pointer;border:1px solid rgba(245,200,66,0.2)" onclick="window.location.href='custom-requests.html'">
+                <div class="stat-label">⚡ طلبات البوت المخصص</div>
+                <div class="stat-value" id="customRequestsCount" style="color:#f5c842">-</div>
+            </div>
         </div>
 
         <div class="section">
@@ -349,6 +353,15 @@
                     document.getElementById('pendingCount').textContent = 
                         (stats.shops.total || 0) - (stats.shops.active || 0) - (stats.shops.expired || 0);
                     document.getElementById('activeCount').textContent = stats.shops.active || 0;
+                }
+
+                // Load custom bot requests count
+                const crRes = await fetch(`${API_BASE_URL}/api/custom-bot/requests?status=pending`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` }
+                });
+                if (crRes.ok) {
+                    const crData = await crRes.json();
+                    document.getElementById('customRequestsCount').textContent = (crData.requests || []).length;
                 }
             } catch (error) {
                 console.error('Stats error:', error);

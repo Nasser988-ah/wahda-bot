@@ -25,6 +25,11 @@ model Shop {
   // Wholesale Mode
   isWholesale       Boolean             @default(false)
 
+  // Bot Type
+  shopType          String              @default("traditional") // "traditional" | "custom"
+  botType           String?             // null | "isp" | future types
+  password          String?             // hashed password for custom bot clients
+
   // Store Customization
   logoUrl           String?             // Store logo URL
   primaryColor      String?             @default("#f5c842") // Gold theme default
@@ -41,6 +46,8 @@ model Shop {
   sessions          BotSession[]
   messages          Message[]
   whatsappSession   WhatsAppSession?
+  customMenus       CustomMenu[]
+  botConfig         BotConfig?
 
   @@map("shops")
 }
@@ -197,4 +204,71 @@ model WhatsAppSession {
   shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
 
   @@map("whatsapp_sessions")
+}
+
+// ═══════ Custom Bot System ═══════
+
+model CustomBotRequest {
+  id          String   @id @default(cuid())
+  companyName String
+  industry    String
+  phone       String
+  message     String   @db.Text
+  status      String   @default("pending") // pending | approved | rejected
+  botType     String?  // null until approved, then "isp" etc.
+  adminNote   String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("custom_bot_requests")
+}
+
+model BotConfig {
+  id                  String  @id @default(cuid())
+  shopId              String  @unique
+  welcomeMessage      String  @db.Text
+  unknownMessage      String  @db.Text
+  orderConfirmMessage String  @db.Text
+  aiSystemPrompt      String  @db.Text
+  aiProvider          String  @default("groq") // "groq" | "gemini"
+  aiModel             String  @default("gemini-1.5-flash")
+  aiTemperature       Float   @default(0.7)
+  aiMaxTokens         Int     @default(300)
+  mainMenuId          String?
+  formalityLevel      Int     @default(1) // 0=casual, 1=balanced, 2=formal
+  shop                Shop    @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@map("bot_configs")
+}
+
+model CustomMenu {
+  id          String           @id @default(cuid())
+  shopId      String
+  name        String
+  description String?
+  order       Int              @default(0)
+  isActive    Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  shop        Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  items       CustomMenuItem[]
+
+  @@map("custom_menus")
+}
+
+model CustomMenuItem {
+  id          String     @id @default(cuid())
+  menuId      String
+  number      Int
+  label       String
+  price       Float?
+  description String?
+  action      String     // "confirm_order" | "go_to_menu" | "ai_response" | "custom_message"
+  actionValue String?    @db.Text // menu id to go to, or custom message text
+  aiPrompt    String?    @db.Text // custom AI instruction for this item
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  menu        CustomMenu @relation(fields: [menuId], references: [id], onDelete: Cascade)
+
+  @@map("custom_menu_items")
 }

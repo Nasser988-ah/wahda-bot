@@ -522,9 +522,12 @@
                     
                     showSuccess('تم تسجيل الدخول بنجاح! جاري التحويل...');
                     
-                    // Redirect to dashboard
+                    // Redirect based on shop type
+                    const redirectUrl = data.shop.shopType === 'custom' 
+                        ? 'custom-dashboard.html' 
+                        : 'dashboard.html';
                     setTimeout(() => {
-                        window.location.href = 'dashboard.html';
+                        window.location.href = redirectUrl;
                     }, 1500);
                 } else if (response.status === 402 && data.paymentRequired) {
                     // Payment required - save token and redirect to payment page
@@ -577,7 +580,8 @@
                         headers: { 'Authorization': `Bearer ${token}` }
                     });
                     if (res.ok) {
-                        window.location.href = 'dashboard.html';
+                        const shop = JSON.parse(localStorage.getItem('shop') || '{}');
+                        window.location.href = shop.shopType === 'custom' ? 'custom-dashboard.html' : 'dashboard.html';
                     } else {
                         localStorage.removeItem('token');
                         localStorage.removeItem('shop');

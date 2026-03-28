@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>طلبات البوت المخصص - Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #0f0f13; --card: #1a1a22; --border: rgba(255,255,255,0.08);
+            --gold: #f5c842; --gold-dim: rgba(245,200,66,0.15);
+            --text: #fff; --muted: #8a8a9a; --danger: #ef4444; --success: #22c55e;
+            --accent: #8b5cf6;
+        }
+        body { font-family: 'Cairo', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+        .header { background: var(--card); border-bottom: 1px solid var(--border); padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; }
+        .header h1 { font-size: 20px; font-weight: 700; }
+        .header h1 span { color: var(--gold); }
+        .back-link { color: var(--gold); text-decoration: none; font-size: 14px; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+        .filters { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        .filter-btn { padding: 8px 18px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; font-family: inherit; font-size: 13px; transition: all 0.2s; }
+        .filter-btn.active { background: var(--gold-dim); color: var(--gold); border-color: var(--gold); }
+
+        .requests-table { width: 100%; border-collapse: collapse; }
+        .requests-table th { text-align: right; padding: 12px 16px; color: var(--muted); font-size: 12px; font-weight: 600; text-transform: uppercase; border-bottom: 1px solid var(--border); }
+        .requests-table td { padding: 14px 16px; border-bottom: 1px solid var(--border); font-size: 14px; vertical-align: middle; }
+        .requests-table tr:hover { background: rgba(255,255,255,0.02); }
+
+        .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; display: inline-block; }
+        .status-pending { background: rgba(245,200,66,0.15); color: var(--gold); }
+        .status-approved { background: rgba(34,197,94,0.15); color: var(--success); }
+        .status-rejected { background: rgba(239,68,68,0.15); color: var(--danger); }
+
+        .action-btn { padding: 6px 14px; border-radius: 8px; border: none; cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 600; transition: all 0.2s; margin-left: 6px; }
+        .btn-approve { background: rgba(34,197,94,0.15); color: var(--success); border: 1px solid rgba(34,197,94,0.3); }
+        .btn-approve:hover { background: rgba(34,197,94,0.25); }
+        .btn-reject { background: rgba(239,68,68,0.15); color: var(--danger); border: 1px solid rgba(239,68,68,0.3); }
+        .btn-reject:hover { background: rgba(239,68,68,0.25); }
+
+        .empty { text-align: center; padding: 60px 20px; color: var(--muted); }
+        .empty-icon { font-size: 48px; margin-bottom: 12px; }
+        .loading { text-align: center; padding: 40px; color: var(--muted); }
+
+        /* Modal */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center; }
+        .modal-overlay.show { display: flex; }
+        .modal { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 28px; width: 90%; max-width: 440px; }
+        .modal h3 { margin-bottom: 20px; font-size: 18px; }
+        .modal label { display: block; color: var(--muted); font-size: 13px; margin-bottom: 8px; }
+        .modal select, .modal textarea { width: 100%; padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-family: inherit; font-size: 14px; margin-bottom: 16px; }
+        .modal select option { background: var(--card); }
+        .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+        .modal-btn { padding: 10px 24px; border-radius: 10px; border: none; cursor: pointer; font-family: inherit; font-weight: 600; font-size: 14px; }
+        .modal-btn-primary { background: var(--gold); color: #000; }
+        .modal-btn-cancel { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+
+        .result-box { margin-top: 16px; padding: 14px; background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.2); border-radius: 10px; font-size: 13px; display: none; }
+        .result-box.show { display: block; }
+        .result-box .pwd { color: var(--gold); font-weight: 700; font-size: 16px; direction: ltr; }
+
+        /* Mobile cards */
+        .mobile-cards { display: none; }
+        .m-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+        .m-card-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; }
+        .m-card-label { color: var(--muted); font-size: 12px; }
+        .m-card-msg { color: var(--muted); font-size: 13px; margin: 8px 0; line-height: 1.5; }
+        .m-card-actions { display: flex; gap: 8px; margin-top: 12px; }
+
+        @media (max-width: 768px) {
+            .requests-table { display: none; }
+            .mobile-cards { display: block; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1><span>⚡</span> طلبات البوت المخصص</h1>
+        <a href="admin.html" class="back-link">← لوحة الإدارة</a>
+    </div>
+
+    <div class="container">
+        <div class="filters">
+            <button class="filter-btn active" onclick="filterRequests('all')">الكل</button>
+            <button class="filter-btn" onclick="filterRequests('pending')">معلق</button>
+            <button class="filter-btn" onclick="filterRequests('approved')">مقبول</button>
+            <button class="filter-btn" onclick="filterRequests('rejected')">مرفوض</button>
+        </div>
+
+        <div id="content">
+            <div class="loading">جاري التحميل...</div>
+        </div>
+    </div>
+
+    <!-- Approve Modal -->
+    <div class="modal-overlay" id="approveModal">
+        <div class="modal">
+            <h3>قبول الطلب</h3>
+            <input type="hidden" id="approveRequestId">
+            <div>
+                <label>نوع البوت</label>
+                <select id="botTypeSelect">
+                    <option value="isp">بوت شركات الإنترنت</option>
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn modal-btn-cancel" onclick="closeApproveModal()">إلغاء</button>
+                <button class="modal-btn modal-btn-primary" id="confirmApproveBtn" onclick="confirmApprove()">تأكيد القبول</button>
+            </div>
+            <div class="result-box" id="approveResult">
+                <div>✅ تم إنشاء الحساب بنجاح!</div>
+                <div style="margin-top:8px">كلمة المرور المؤقتة: <span class="pwd" id="tempPwd"></span></div>
+                <div style="margin-top:4px;color:var(--muted)">أرسل هذه البيانات للعميل ليتمكن من تسجيل الدخول</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reject Modal -->
+    <div class="modal-overlay" id="rejectModal">
+        <div class="modal">
+            <h3>رفض الطلب</h3>
+            <input type="hidden" id="rejectRequestId">
+            <div>
+                <label>ملاحظة (اختياري)</label>
+                <textarea id="rejectNote" rows="3" placeholder="سبب الرفض..."></textarea>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn modal-btn-cancel" onclick="closeRejectModal()">إلغاء</button>
+                <button class="modal-btn btn-reject" onclick="confirmReject()">تأكيد الرفض</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin + '/api';
+        let allRequests = [];
+        let adminToken = localStorage.getItem('adminToken');
+
+        if (!adminToken) { window.location.href = 'admin-login.html'; }
+
+        async function adminFetch(url, opts = {}) {
+            return fetch(url, { ...opts, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}`, ...opts.headers } });
+        }
+
+        async function loadRequests() {
+            try {
+                const res = await adminFetch(`${API_BASE}/custom-bot/requests`);
+                if (res.status === 401) { window.location.href = 'admin-login.html'; return; }
+                const data = await res.json();
+                allRequests = data.requests || [];
+                renderRequests(allRequests);
+            } catch (e) {
+                document.getElementById('content').innerHTML = '<div class="empty"><div class="empty-icon">❌</div><div>فشل في تحميل الطلبات</div></div>';
+            }
+        }
+
+        function filterRequests(status) {
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            const filtered = status === 'all' ? allRequests : allRequests.filter(r => r.status === status);
+            renderRequests(filtered);
+        }
+
+        function renderRequests(requests) {
+            const el = document.getElementById('content');
+            if (requests.length === 0) {
+                el.innerHTML = '<div class="empty"><div class="empty-icon">📭</div><div>لا توجد طلبات</div></div>';
+                return;
+            }
+
+            const statusBadge = (s) => `<span class="status-badge status-${s}">${s === 'pending' ? 'معلق' : s === 'approved' ? 'مقبول' : 'مرفوض'}</span>`;
+            const actions = (r) => r.status === 'pending' ? `<button class="action-btn btn-approve" onclick="openApproveModal('${r.id}')">قبول</button><button class="action-btn btn-reject" onclick="openRejectModal('${r.id}')">رفض</button>` : '-';
+
+            // Desktop table
+            let table = `<table class="requests-table"><thead><tr><th>الشركة</th><th>المجال</th><th>الهاتف</th><th>الرسالة</th><th>التاريخ</th><th>الحالة</th><th>إجراءات</th></tr></thead><tbody>`;
+            requests.forEach(r => {
+                const date = new Date(r.createdAt).toLocaleDateString('ar-EG');
+                const msg = r.message.length > 50 ? r.message.slice(0, 50) + '...' : r.message;
+                table += `<tr><td>${esc(r.companyName)}</td><td>${esc(r.industry)}</td><td style="direction:ltr">${esc(r.phone)}</td><td title="${esc(r.message)}">${esc(msg)}</td><td>${date}</td><td>${statusBadge(r.status)}</td><td>${actions(r)}</td></tr>`;
+            });
+            table += '</tbody></table>';
+
+            // Mobile cards
+            let cards = '<div class="mobile-cards">';
+            requests.forEach(r => {
+                const date = new Date(r.createdAt).toLocaleDateString('ar-EG');
+                cards += `<div class="m-card">
+                    <div class="m-card-row"><strong>${esc(r.companyName)}</strong>${statusBadge(r.status)}</div>
+                    <div class="m-card-row"><span class="m-card-label">${esc(r.industry)}</span><span style="direction:ltr">${esc(r.phone)}</span></div>
+                    <div class="m-card-msg">${esc(r.message)}</div>
+                    <div class="m-card-row"><span class="m-card-label">${date}</span></div>
+                    ${r.status === 'pending' ? `<div class="m-card-actions"><button class="action-btn btn-approve" onclick="openApproveModal('${r.id}')">قبول</button><button class="action-btn btn-reject" onclick="openRejectModal('${r.id}')">رفض</button></div>` : ''}
+                </div>`;
+            });
+            cards += '</div>';
+
+            el.innerHTML = table + cards;
+        }
+
+        function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+        // Approve
+        function openApproveModal(id) {
+            document.getElementById('approveRequestId').value = id;
+            document.getElementById('approveResult').classList.remove('show');
+            document.getElementById('confirmApproveBtn').disabled = false;
+            document.getElementById('approveModal').classList.add('show');
+        }
+        function closeApproveModal() { document.getElementById('approveModal').classList.remove('show'); }
+
+        async function confirmApprove() {
+            const id = document.getElementById('approveRequestId').value;
+            const botType = document.getElementById('botTypeSelect').value;
+            const btn = document.getElementById('confirmApproveBtn');
+            btn.disabled = true; btn.textContent = 'جاري...';
+
+            try {
+                const res = await adminFetch(`${API_BASE}/custom-bot/requests/${id}/approve`, {
+                    method: 'POST', body: JSON.stringify({ botType })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    document.getElementById('tempPwd').textContent = data.tempPassword;
+                    document.getElementById('approveResult').classList.add('show');
+                    await loadRequests();
+                } else {
+                    alert(data.error || 'فشل');
+                }
+            } catch { alert('خطأ في الاتصال'); }
+            btn.disabled = false; btn.textContent = 'تأكيد القبول';
+        }
+
+        // Reject
+        function openRejectModal(id) {
+            document.getElementById('rejectRequestId').value = id;
+            document.getElementById('rejectNote').value = '';
+            document.getElementById('rejectModal').classList.add('show');
+        }
+        function closeRejectModal() { document.getElementById('rejectModal').classList.remove('show'); }
+
+        async function confirmReject() {
+            const id = document.getElementById('rejectRequestId').value;
+            const note = document.getElementById('rejectNote').value;
+
+            try {
+                const res = await adminFetch(`${API_BASE}/custom-bot/requests/${id}/reject`, {
+                    method: 'POST', body: JSON.stringify({ note })
+                });
+                if (res.ok) { closeRejectModal(); await loadRequests(); }
+                else { const d = await res.json(); alert(d.error || 'فشل'); }
+            } catch { alert('خطأ في الاتصال'); }
+        }
+
+        loadRequests();
+    </script>
+</body>
+</html>

@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدارة القوائم - البوت المخصص</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #0f0f13; --card: #1a1a22; --border: rgba(255,255,255,0.08);
+            --gold: #f5c842; --gold-dim: rgba(245,200,66,0.15);
+            --text: #fff; --muted: #8a8a9a; --danger: #ef4444; --success: #22c55e;
+        }
+        body { font-family: 'Cairo', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+        .sidebar { position: fixed; top: 0; right: 0; width: 260px; height: 100vh; background: var(--card); border-left: 1px solid var(--border); z-index: 100; display: flex; flex-direction: column; transition: transform 0.3s; }
+        .sidebar-header { padding: 24px 20px; border-bottom: 1px solid var(--border); }
+        .sidebar-logo { font-size: 22px; font-weight: 800; }
+        .sidebar-logo span { color: var(--gold); }
+        .sidebar-shop { color: var(--muted); font-size: 13px; margin-top: 4px; }
+        .sidebar-badge { display: inline-block; padding: 2px 10px; background: var(--gold-dim); color: var(--gold); border-radius: 20px; font-size: 11px; font-weight: 600; margin-top: 6px; }
+        .nav { flex: 1; padding: 16px 12px; overflow-y: auto; }
+        .nav-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 10px; color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 600; transition: all 0.2s; margin-bottom: 4px; }
+        .nav-item:hover { background: rgba(255,255,255,0.03); color: var(--text); }
+        .nav-item.active { background: var(--gold-dim); color: var(--gold); }
+        .nav-icon { font-size: 18px; width: 24px; text-align: center; }
+        .sidebar-footer { padding: 16px 12px; border-top: 1px solid var(--border); }
+        .logout-btn { width: 100%; padding: 10px; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); border-radius: 10px; color: var(--danger); font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+
+        .main { margin-right: 260px; padding: 28px; }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+        .page-title { font-size: 24px; font-weight: 800; }
+        .add-menu-btn { padding: 10px 24px; background: var(--gold); color: #000; border: none; border-radius: 10px; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+        .add-menu-btn:hover { opacity: 0.9; }
+        .page-desc { color: var(--muted); font-size: 14px; margin-bottom: 24px; }
+
+        .menu-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; margin-bottom: 20px; overflow: hidden; }
+        .menu-header { padding: 18px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 10px; }
+        .menu-name-input { background: transparent; border: none; color: var(--text); font-size: 16px; font-weight: 700; font-family: inherit; padding: 4px 0; border-bottom: 1px dashed var(--border); min-width: 150px; }
+        .menu-name-input:focus { outline: none; border-bottom-color: var(--gold); }
+        .menu-actions { display: flex; gap: 8px; align-items: center; }
+        .menu-badge { padding: 3px 12px; background: var(--gold-dim); color: var(--gold); border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .small-btn { padding: 6px 14px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-family: inherit; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+        .small-btn:hover { border-color: var(--gold); color: var(--gold); }
+        .small-btn.danger:hover { border-color: var(--danger); color: var(--danger); }
+        .small-btn.main-btn { background: var(--gold-dim); color: var(--gold); border-color: var(--gold); }
+
+        .items-list { padding: 16px 20px; }
+        .item-row { display: grid; grid-template-columns: 50px 1fr 100px 1fr 160px 40px; gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+        .item-row:last-child { border-bottom: none; }
+        .item-num { background: var(--gold-dim); color: var(--gold); width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; }
+        .item-input { background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; color: var(--text); font-family: inherit; font-size: 13px; width: 100%; }
+        .item-input:focus { outline: none; border-color: var(--gold); }
+        .item-select { background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 8px; padding: 8px; color: var(--text); font-family: inherit; font-size: 13px; }
+        .item-select option { background: var(--card); }
+        .delete-item-btn { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 16px; padding: 4px; opacity: 0.6; transition: opacity 0.2s; }
+        .delete-item-btn:hover { opacity: 1; }
+
+        .add-item-btn { padding: 8px 18px; background: transparent; border: 1px dashed var(--border); border-radius: 8px; color: var(--muted); font-family: inherit; font-size: 13px; cursor: pointer; margin: 12px 20px 16px; transition: all 0.2s; display: block; }
+        .add-item-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+        .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
+        .empty-icon { font-size: 48px; margin-bottom: 12px; }
+
+        /* Action value fields */
+        .action-extra { margin-top: 6px; }
+        .action-extra textarea { width: 100%; padding: 8px; background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: inherit; font-size: 12px; resize: vertical; min-height: 50px; }
+        .action-extra select { width: 100%; padding: 8px; background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: inherit; font-size: 12px; }
+        .action-extra option { background: var(--card); }
+
+        .hamburger { display: none; position: fixed; top: 16px; right: 16px; z-index: 200; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; font-size: 20px; cursor: pointer; color: var(--text); }
+        .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 90; }
+        .overlay.show { display: block; }
+
+        .save-all-bar { position: sticky; bottom: 0; background: var(--bg); border-top: 1px solid var(--border); padding: 14px 0; display: flex; justify-content: space-between; align-items: center; }
+        .save-all-btn { padding: 12px 32px; background: var(--gold); color: #000; border: none; border-radius: 10px; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
+        .save-status { color: var(--success); font-size: 14px; font-weight: 600; opacity: 0; transition: opacity 0.3s; }
+        .save-status.show { opacity: 1; }
+
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(100%); }
+            .sidebar.open { transform: translateX(0); }
+            .main { margin-right: 0; padding: 16px; padding-top: 60px; }
+            .hamburger { display: block; }
+            .item-row { grid-template-columns: 40px 1fr; gap: 8px; }
+            .item-row > *:nth-child(n+3) { grid-column: 1 / -1; }
+        }
+    </style>
+</head>
+<body>
+    <button class="hamburger" onclick="toggleSidebar()">☰</button>
+    <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo"><span>⚡</span> Zaki Bot</div>
+            <div class="sidebar-shop" id="shopName"></div>
+            <div class="sidebar-badge">VIP - بوت مخصص</div>
+        </div>
+        <nav class="nav">
+            <a href="custom-dashboard.html" class="nav-item"><span class="nav-icon">📊</span> لوحة التحكم</a>
+            <a href="custom-bot-config.html" class="nav-item"><span class="nav-icon">💬</span> إعدادات الردود</a>
+            <a href="custom-menus.html" class="nav-item active"><span class="nav-icon">📋</span> إدارة القوائم</a>
+            <a href="custom-ai-settings.html" class="nav-item"><span class="nav-icon">🤖</span> إعدادات الذكاء</a>
+            <a href="qr.html" class="nav-item"><span class="nav-icon">📱</span> ربط واتساب</a>
+        </nav>
+        <div class="sidebar-footer">
+            <button class="logout-btn" onclick="logout()">🚪 تسجيل الخروج</button>
+        </div>
+    </aside>
+
+    <main class="main">
+        <div class="page-header">
+            <h1 class="page-title">📋 إدارة القوائم</h1>
+            <button class="add-menu-btn" onclick="createMenu()">+ قائمة جديدة</button>
+        </div>
+        <p class="page-desc">أنشئ قوائم مع عناصر مرقمة (1-20) لكل قائمة. العميل يرسل الرقم ليختار.</p>
+
+        <div id="menusContainer">
+            <div class="empty-state" id="emptyState">
+                <div class="empty-icon">📋</div>
+                <div>لا توجد قوائم بعد</div>
+                <div style="margin-top:8px;font-size:13px">اضغط "قائمة جديدة" للبدء</div>
+            </div>
+        </div>
+
+        <div class="save-all-bar" id="saveBar" style="display:none">
+            <button class="save-all-btn" onclick="saveAll()">💾 حفظ جميع التغييرات</button>
+            <span class="save-status" id="saveStatus">✅ تم الحفظ</span>
+        </div>
+    </main>
+
+    <script>
+        const API_BASE = window.location.origin + '/api';
+        const token = localStorage.getItem('token');
+        const shop = JSON.parse(localStorage.getItem('shop') || '{}');
+        if (!token) { window.location.href = 'login.html'; }
+        if (shop.shopType !== 'custom') { window.location.href = 'dashboard.html'; }
+        document.getElementById('shopName').textContent = shop.name || '';
+
+        let menus = [];
+        let mainMenuId = null;
+
+        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('show'); }
+        function logout() { localStorage.removeItem('token'); localStorage.removeItem('shop'); fetch(`${API_BASE}/auth/logout`, { method: 'POST' }); window.location.href = 'login.html'; }
+
+        async function apiFetch(url, opts = {}) {
+            return fetch(url, { ...opts, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, ...opts.headers } });
+        }
+
+        async function loadMenus() {
+            try {
+                const [menusRes, configRes] = await Promise.all([
+                    apiFetch(`${API_BASE}/custom-bot/menus`),
+                    apiFetch(`${API_BASE}/custom-bot/config`)
+                ]);
+                if (menusRes.status === 401) { window.location.href = 'login.html'; return; }
+                const menusData = await menusRes.json();
+                menus = menusData.menus || [];
+                if (configRes.ok) {
+                    const config = await configRes.json();
+                    mainMenuId = config.mainMenuId;
+                }
+                renderMenus();
+            } catch (e) { console.error('Load menus error:', e); }
+        }
+
+        function renderMenus() {
+            const container = document.getElementById('menusContainer');
+            const saveBar = document.getElementById('saveBar');
+
+            if (menus.length === 0) {
+                container.innerHTML = '<div id="emptyState" class="empty-state"><div class="empty-icon">📋</div><h3>لا توجد قوائم بعد</h3><p>أنشئ قائمتك الأولى لبدء تخصيص البوت</p></div>';
+                if (saveBar) saveBar.style.display = 'none';
+                return;
+            }
+            if (saveBar) saveBar.style.display = 'flex';
+
+            container.innerHTML = menus.map((menu, mi) => {
+                const isMain = menu.id === mainMenuId;
+                const items = menu.items || [];
+                return `<div class="menu-card" data-menu-id="${menu.id}">
+                    <div class="menu-header">
+                        <div style="display:flex;align-items:center;gap:10px">
+                            <input class="menu-name-input" value="${esc(menu.name)}" data-field="name" data-menu="${mi}">
+                            ${isMain ? '<span class="menu-badge">القائمة الرئيسية</span>' : ''}
+                        </div>
+                        <div class="menu-actions">
+                            ${!isMain ? `<button class="small-btn main-btn" onclick="setMainMenu('${menu.id}')">تعيين كرئيسية</button>` : ''}
+                            <button class="small-btn danger" onclick="deleteMenu('${menu.id}')">حذف</button>
+                        </div>
+                    </div>
+                    <div class="items-list">
+                        ${items.map((item, ii) => renderItemRow(mi, ii, item)).join('')}
+                    </div>
+                    <button class="add-item-btn" onclick="addItem(${mi})">+ إضافة عنصر</button>
+                </div>`;
+            }).join('');
+        }
+
+        function renderItemRow(mi, ii, item) {
+            const actionOptions = [
+                ['custom_message', 'رسالة مخصصة'],
+                ['go_to_menu', 'انتقل لقائمة'],
+                ['confirm_order', 'أكد الطلب'],
+                ['ai_response', 'رد بالـ AI'],
+            ];
+            let extraHtml = '';
+            if (item.action === 'custom_message') {
+                extraHtml = `<div class="action-extra"><textarea placeholder="نص الرسالة..." data-menu="${mi}" data-item="${ii}" data-field="actionValue">${esc(item.actionValue || '')}</textarea></div>`;
+            } else if (item.action === 'go_to_menu') {
+                const opts = menus.map(m => `<option value="${m.id}" ${m.id === item.actionValue ? 'selected' : ''}>${esc(m.name)}</option>`).join('');
+                extraHtml = `<div class="action-extra"><select data-menu="${mi}" data-item="${ii}" data-field="actionValue">${opts}</select></div>`;
+            } else if (item.action === 'ai_response') {
+                extraHtml = `<div class="action-extra"><textarea placeholder="تعليمات AI لهذا العنصر..." data-menu="${mi}" data-item="${ii}" data-field="aiPrompt">${esc(item.aiPrompt || '')}</textarea></div>`;
+            }
+            return `<div class="item-row">
+                <div class="item-num">${item.number}</div>
+                <input class="item-input" value="${esc(item.label)}" placeholder="اسم العنصر" data-menu="${mi}" data-item="${ii}" data-field="label">
+                <input class="item-input" type="number" value="${item.price || ''}" placeholder="السعر" data-menu="${mi}" data-item="${ii}" data-field="price" style="max-width:100px">
+                <select class="item-select" data-menu="${mi}" data-item="${ii}" data-field="action" onchange="onActionChange(${mi},${ii},this.value)">
+                    ${actionOptions.map(([v,l]) => `<option value="${v}" ${item.action === v ? 'selected' : ''}>${l}</option>`).join('')}
+                </select>
+                <div id="extra-${mi}-${ii}">${extraHtml}</div>
+                <button class="delete-item-btn" onclick="deleteItem(${mi},${ii})" title="حذف">✕</button>
+            </div>`;
+        }
+
+        function onActionChange(mi, ii, newAction) {
+            menus[mi].items[ii].action = newAction;
+            menus[mi].items[ii].actionValue = '';
+            menus[mi].items[ii].aiPrompt = '';
+            renderMenus();
+        }
+
+        function addItem(mi) {
+            const items = menus[mi].items || [];
+            if (items.length >= 20) { alert('الحد الأقصى 20 عنصر'); return; }
+            menus[mi].items.push({
+                id: null, number: items.length + 1, label: '', price: null,
+                action: 'custom_message', actionValue: '', aiPrompt: ''
+            });
+            renderMenus();
+        }
+
+        function deleteItem(mi, ii) {
+            menus[mi].items.splice(ii, 1);
+            menus[mi].items.forEach((item, i) => item.number = i + 1);
+            renderMenus();
+        }
+
+        async function createMenu() {
+            if (menus.length >= 10) { alert('الحد الأقصى 10 قوائم'); return; }
+            try {
+                const res = await apiFetch(`${API_BASE}/custom-bot/menus`, {
+                    method: 'POST', body: JSON.stringify({ name: 'قائمة جديدة' })
+                });
+                if (res.ok) { await loadMenus(); }
+                else { const d = await res.json(); alert(d.error || 'فشل'); }
+            } catch { alert('خطأ في الاتصال'); }
+        }
+
+        async function deleteMenu(id) {
+            if (!confirm('حذف هذه القائمة وجميع عناصرها؟')) return;
+            try {
+                await apiFetch(`${API_BASE}/custom-bot/menus/${id}`, { method: 'DELETE' });
+                await loadMenus();
+            } catch { alert('خطأ'); }
+        }
+
+        async function setMainMenu(id) {
+            try {
+                await apiFetch(`${API_BASE}/custom-bot/menus/${id}/set-main`, { method: 'PUT' });
+                mainMenuId = id;
+                renderMenus();
+            } catch { alert('خطأ'); }
+        }
+
+        function collectFormData() {
+            // Read all input values from DOM into menus array
+            document.querySelectorAll('[data-field="name"][data-menu]').forEach(el => {
+                const mi = parseInt(el.dataset.menu);
+                menus[mi].name = el.value;
+            });
+            document.querySelectorAll('[data-field][data-item]').forEach(el => {
+                const mi = parseInt(el.dataset.menu);
+                const ii = parseInt(el.dataset.item);
+                const field = el.dataset.field;
+                if (!menus[mi] || !menus[mi].items[ii]) return;
+                if (field === 'price') {
+                    menus[mi].items[ii][field] = el.value ? parseFloat(el.value) : null;
+                } else {
+                    menus[mi].items[ii][field] = el.value;
+                }
+            });
+        }
+
+        async function saveAll() {
+            collectFormData();
+            const btn = document.querySelector('.save-all-btn');
+            btn.disabled = true; btn.textContent = 'جاري الحفظ...';
+
+            try {
+                for (const menu of menus) {
+                    // Update menu name
+                    await apiFetch(`${API_BASE}/custom-bot/menus/${menu.id}`, {
+                        method: 'PUT', body: JSON.stringify({ name: menu.name })
+                    });
+
+                    // Save items: delete removed, create new, update existing
+                    for (const item of menu.items) {
+                        const itemData = {
+                            number: item.number, label: item.label, price: item.price,
+                            action: item.action, actionValue: item.actionValue || null,
+                            aiPrompt: item.aiPrompt || null
+                        };
+                        if (item.id) {
+                            await apiFetch(`${API_BASE}/custom-bot/menu-items/${item.id}`, {
+                                method: 'PUT', body: JSON.stringify(itemData)
+                            });
+                        } else {
+                            const res = await apiFetch(`${API_BASE}/custom-bot/menus/${menu.id}/items`, {
+                                method: 'POST', body: JSON.stringify(itemData)
+                            });
+                            if (res.ok) { const d = await res.json(); item.id = d.item.id; }
+                        }
+                    }
+                }
+
+                const status = document.getElementById('saveStatus');
+                status.classList.add('show');
+                setTimeout(() => status.classList.remove('show'), 3000);
+                await loadMenus();
+            } catch (e) { alert('خطأ في الحفظ'); console.error(e); }
+            btn.disabled = false; btn.textContent = '💾 حفظ جميع التغييرات';
+        }
+
+        function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+        loadMenus();
+    </script>
+</body>
+</html>

@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إعدادات الردود - البوت المخصص</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #0f0f13; --card: #1a1a22; --border: rgba(255,255,255,0.08);
+            --gold: #f5c842; --gold-dim: rgba(245,200,66,0.15);
+            --text: #fff; --muted: #8a8a9a; --danger: #ef4444; --success: #22c55e;
+        }
+        body { font-family: 'Cairo', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+        .sidebar { position: fixed; top: 0; right: 0; width: 260px; height: 100vh; background: var(--card); border-left: 1px solid var(--border); z-index: 100; display: flex; flex-direction: column; transition: transform 0.3s; }
+        .sidebar-header { padding: 24px 20px; border-bottom: 1px solid var(--border); }
+        .sidebar-logo { font-size: 22px; font-weight: 800; }
+        .sidebar-logo span { color: var(--gold); }
+        .sidebar-shop { color: var(--muted); font-size: 13px; margin-top: 4px; }
+        .sidebar-badge { display: inline-block; padding: 2px 10px; background: var(--gold-dim); color: var(--gold); border-radius: 20px; font-size: 11px; font-weight: 600; margin-top: 6px; }
+        .nav { flex: 1; padding: 16px 12px; overflow-y: auto; }
+        .nav-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 10px; color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 600; transition: all 0.2s; margin-bottom: 4px; }
+        .nav-item:hover { background: rgba(255,255,255,0.03); color: var(--text); }
+        .nav-item.active { background: var(--gold-dim); color: var(--gold); }
+        .nav-icon { font-size: 18px; width: 24px; text-align: center; }
+        .sidebar-footer { padding: 16px 12px; border-top: 1px solid var(--border); }
+        .logout-btn { width: 100%; padding: 10px; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); border-radius: 10px; color: var(--danger); font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+
+        .main { margin-right: 260px; padding: 28px; max-width: 900px; }
+        .page-title { font-size: 24px; font-weight: 800; margin-bottom: 8px; }
+        .page-desc { color: var(--muted); font-size: 14px; margin-bottom: 28px; }
+
+        .config-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 24px; margin-bottom: 20px; }
+        .config-label { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+        .config-help { color: var(--muted); font-size: 12px; margin-bottom: 12px; line-height: 1.5; }
+        textarea, input[type="text"] { width: 100%; padding: 14px; background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-family: inherit; font-size: 14px; resize: vertical; transition: border-color 0.2s; }
+        textarea:focus, input[type="text"]:focus { outline: none; border-color: var(--gold); }
+        textarea { min-height: 100px; }
+
+        .formality-slider { display: flex; align-items: center; gap: 16px; margin-top: 8px; }
+        .formality-slider input[type="range"] { flex: 1; accent-color: var(--gold); height: 6px; }
+        .formality-labels { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-top: 4px; }
+        .formality-value { color: var(--gold); font-weight: 700; min-width: 60px; text-align: center; }
+
+        .save-bar { position: sticky; bottom: 0; background: var(--bg); border-top: 1px solid var(--border); padding: 16px 0; display: flex; justify-content: space-between; align-items: center; }
+        .save-btn { padding: 12px 32px; background: var(--gold); color: #000; border: none; border-radius: 10px; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+        .save-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        .save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .save-status { color: var(--success); font-size: 14px; font-weight: 600; opacity: 0; transition: opacity 0.3s; }
+        .save-status.show { opacity: 1; }
+
+        /* Preview */
+        .preview-box { background: #075e54; border-radius: 12px; padding: 16px; margin-top: 12px; max-width: 320px; }
+        .preview-bubble { background: #dcf8c6; color: #000; padding: 10px 14px; border-radius: 10px 10px 0 10px; font-size: 14px; line-height: 1.6; white-space: pre-wrap; direction: rtl; font-family: inherit; }
+        .preview-label { color: rgba(255,255,255,0.5); font-size: 11px; margin-bottom: 8px; }
+
+        .hamburger { display: none; position: fixed; top: 16px; right: 16px; z-index: 200; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; font-size: 20px; cursor: pointer; color: var(--text); }
+        .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 90; }
+        .overlay.show { display: block; }
+
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(100%); }
+            .sidebar.open { transform: translateX(0); }
+            .main { margin-right: 0; padding: 20px; padding-top: 60px; }
+            .hamburger { display: block; }
+        }
+    </style>
+</head>
+<body>
+    <button class="hamburger" onclick="toggleSidebar()">☰</button>
+    <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo"><span>⚡</span> Zaki Bot</div>
+            <div class="sidebar-shop" id="shopName"></div>
+            <div class="sidebar-badge">VIP - بوت مخصص</div>
+        </div>
+        <nav class="nav">
+            <a href="custom-dashboard.html" class="nav-item"><span class="nav-icon">📊</span> لوحة التحكم</a>
+            <a href="custom-bot-config.html" class="nav-item active"><span class="nav-icon">💬</span> إعدادات الردود</a>
+            <a href="custom-menus.html" class="nav-item"><span class="nav-icon">📋</span> إدارة القوائم</a>
+            <a href="custom-ai-settings.html" class="nav-item"><span class="nav-icon">🤖</span> إعدادات الذكاء</a>
+            <a href="qr.html" class="nav-item"><span class="nav-icon">📱</span> ربط واتساب</a>
+        </nav>
+        <div class="sidebar-footer">
+            <button class="logout-btn" onclick="logout()">🚪 تسجيل الخروج</button>
+        </div>
+    </aside>
+
+    <main class="main">
+        <h1 class="page-title">💬 إعدادات الردود</h1>
+        <p class="page-desc">خصّص رسائل البوت التي يراها عملاؤك</p>
+
+        <div class="config-card">
+            <div class="config-label">رسالة الترحيب</div>
+            <div class="config-help">تظهر للعملاء الجدد عند أول رسالة</div>
+            <textarea id="welcomeMessage" rows="4" placeholder="مرحباً بك في شركتنا! اختر من القائمة..."></textarea>
+            <div class="preview-box">
+                <div class="preview-label">معاينة واتساب</div>
+                <div class="preview-bubble" id="welcomePreview">مرحباً...</div>
+            </div>
+        </div>
+
+        <div class="config-card">
+            <div class="config-label">رسالة عدم الفهم</div>
+            <div class="config-help">تظهر عندما لا يفهم البوت رسالة العميل</div>
+            <textarea id="unknownMessage" rows="3" placeholder="عذراً، لم أفهم طلبك..."></textarea>
+        </div>
+
+        <div class="config-card">
+            <div class="config-label">رسالة تأكيد الطلب</div>
+            <div class="config-help">تظهر بعد إتمام الطلب بنجاح</div>
+            <textarea id="orderConfirmMessage" rows="3" placeholder="تم تأكيد طلبك بنجاح!"></textarea>
+        </div>
+
+        <div class="config-card">
+            <div class="config-label">النص التعريفي للذكاء الاصطناعي</div>
+            <div class="config-help">هذه التعليمات توجّه سلوك الذكاء الاصطناعي عند الرد على العملاء. كن محدداً وواضحاً.</div>
+            <textarea id="aiSystemPrompt" rows="6" placeholder="أنت موظف خدمة عملاء محترف في شركتنا..."></textarea>
+        </div>
+
+        <div class="config-card">
+            <div class="config-label">مستوى الرسمية</div>
+            <div class="config-help">اختر مستوى رسمية ردود البوت</div>
+            <div class="formality-slider">
+                <input type="range" id="formalityLevel" min="0" max="2" step="1" value="1">
+                <div class="formality-value" id="formalityText">متوازن</div>
+            </div>
+            <div class="formality-labels">
+                <span>عامي</span>
+                <span>متوازن</span>
+                <span>رسمي</span>
+            </div>
+        </div>
+
+        <div class="save-bar">
+            <button class="save-btn" id="saveBtn" onclick="saveConfig()">💾 حفظ التغييرات</button>
+            <span class="save-status" id="saveStatus">✅ تم الحفظ</span>
+        </div>
+    </main>
+
+    <script>
+        const API_BASE = window.location.origin + '/api';
+        const token = localStorage.getItem('token');
+        const shop = JSON.parse(localStorage.getItem('shop') || '{}');
+        if (!token) { window.location.href = 'login.html'; }
+        if (shop.shopType !== 'custom') { window.location.href = 'dashboard.html'; }
+        document.getElementById('shopName').textContent = shop.name || '';
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.getElementById('overlay').classList.toggle('show');
+        }
+        function logout() {
+            localStorage.removeItem('token'); localStorage.removeItem('shop');
+            fetch(`${API_BASE}/auth/logout`, { method: 'POST' });
+            window.location.href = 'login.html';
+        }
+
+        const formalityNames = ['عامي', 'متوازن', 'رسمي'];
+        document.getElementById('formalityLevel').addEventListener('input', (e) => {
+            document.getElementById('formalityText').textContent = formalityNames[e.target.value];
+        });
+
+        // Live preview
+        document.getElementById('welcomeMessage').addEventListener('input', (e) => {
+            document.getElementById('welcomePreview').textContent = e.target.value || 'مرحباً...';
+        });
+
+        async function loadConfig() {
+            try {
+                const res = await fetch(`${API_BASE}/custom-bot/config`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.status === 401) { window.location.href = 'login.html'; return; }
+                if (!res.ok) return;
+                const config = await res.json();
+
+                document.getElementById('welcomeMessage').value = config.welcomeMessage || '';
+                document.getElementById('unknownMessage').value = config.unknownMessage || '';
+                document.getElementById('orderConfirmMessage').value = config.orderConfirmMessage || '';
+                document.getElementById('aiSystemPrompt').value = config.aiSystemPrompt || '';
+                document.getElementById('formalityLevel').value = config.formalityLevel ?? 1;
+                document.getElementById('formalityText').textContent = formalityNames[config.formalityLevel ?? 1];
+                document.getElementById('welcomePreview').textContent = config.welcomeMessage || 'مرحباً...';
+            } catch (e) { console.error('Load config error:', e); }
+        }
+
+        async function saveConfig() {
+            const btn = document.getElementById('saveBtn');
+            btn.disabled = true; btn.textContent = 'جاري الحفظ...';
+
+            try {
+                const res = await fetch(`${API_BASE}/custom-bot/config`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({
+                        welcomeMessage: document.getElementById('welcomeMessage').value,
+                        unknownMessage: document.getElementById('unknownMessage').value,
+                        orderConfirmMessage: document.getElementById('orderConfirmMessage').value,
+                        aiSystemPrompt: document.getElementById('aiSystemPrompt').value,
+                        formalityLevel: document.getElementById('formalityLevel').value,
+                    })
+                });
+                if (res.ok) {
+                    const status = document.getElementById('saveStatus');
+                    status.classList.add('show');
+                    setTimeout(() => status.classList.remove('show'), 3000);
+                } else {
+                    alert('فشل في الحفظ');
+                }
+            } catch (e) { alert('خطأ في الاتصال'); }
+            btn.disabled = false; btn.textContent = '💾 حفظ التغييرات';
+        }
+
+        loadConfig();
+    </script>
+</body>
+</html>

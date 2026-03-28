@@ -1,12 +1,15 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const databaseService = require('./databaseService');
 const { initAuthCreds, BufferJSON } = require('@whiskeysockets/baileys');
+
+function getPrisma() {
+  return databaseService.getClient();
+}
 
 async function useDBAuthState(shopId) {
   
   async function readSession() {
     try {
-      const session = await prisma.whatsAppSession.findUnique({
+      const session = await getPrisma().whatsAppSession.findUnique({
         where: { shopId }
       });
       if (!session) return null;
@@ -22,7 +25,7 @@ async function useDBAuthState(shopId) {
   
   async function writeSession(creds, keys) {
     try {
-      await prisma.whatsAppSession.upsert({
+      await getPrisma().whatsAppSession.upsert({
         where: { shopId },
         update: {
           creds: JSON.stringify(creds, BufferJSON.replacer),
@@ -44,7 +47,7 @@ async function useDBAuthState(shopId) {
   
   async function deleteSession() {
     try {
-      await prisma.whatsAppSession.deleteMany({ where: { shopId } });
+      await getPrisma().whatsAppSession.deleteMany({ where: { shopId } });
     } catch (err) {
       console.error(`Error deleting session for ${shopId}:`, err);
     }

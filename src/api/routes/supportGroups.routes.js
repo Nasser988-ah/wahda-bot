@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { authenticateToken, requireShopOwner } = require('../middleware/auth.middleware');
-const { getPrisma } = require('../services/databaseService');
+const { getPrisma } = require('../../services/databaseService');
 
 // Get all support groups for a shop
 router.get('/', authenticateToken, async (req, res) => {

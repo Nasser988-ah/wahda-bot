@@ -527,7 +527,6 @@ async function executeAction(sock, from, shop, config, menus, state, item, custo
 // Send problem data to support groups
 async function sendProblemToSupportGroups(shop, customerPhone, problemType, customerCode) {
   try {
-    const { getPrisma } = require('../services/databaseService');
     const prisma = getPrisma();
     
     // Get active support groups for this shop

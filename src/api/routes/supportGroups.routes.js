@@ -171,12 +171,11 @@ router.post('/send-problem/:groupId', authenticateToken, async (req, res) => {
         });
       }
 
-      // Check if socket is connected
-      const isConnected = sock.user && (sock.ws?.readyState === 'open' || sock.state === 'open');
+      // Simple connection check - if socket has user, it's connected
+      const isConnected = !!sock.user;
       console.log('[DEBUG] Socket connection status:', isConnected);
       console.log('[DEBUG] Socket user:', !!sock.user);
-      console.log('[DEBUG] Socket state:', sock.state);
-      console.log('[DEBUG] Socket ws readyState:', sock.ws?.readyState);
+      console.log('[DEBUG] Socket keys:', Object.keys(sock));
       
       if (!isConnected) {
         console.log('[ERROR] WhatsApp socket exists but not connected');
@@ -185,6 +184,14 @@ router.post('/send-problem/:groupId', authenticateToken, async (req, res) => {
           error: 'خدمة WhatsApp غير متصلة حالياً. يرجى الانتظار حتى يتم الاتصال.' 
         });
       }
+
+      // Debug group info
+      console.log(`[DEBUG] Group info:`, {
+        id: group.id,
+        name: group.name,
+        groupNumber: group.groupNumber,
+        isActive: group.isActive
+      });
 
       // Validate group number format
       const groupJid = group.groupNumber.trim();
@@ -226,7 +233,7 @@ router.post('/send-problem/:groupId', authenticateToken, async (req, res) => {
 router.get('/whatsapp-status', authenticateToken, async (req, res) => {
   try {
     const sock = global.whatsappSocket;
-    const isConnected = sock && sock.user && (sock.ws?.readyState === 'open' || sock.state === 'open');
+    const isConnected = sock && !!sock.user;
     
     res.json({ 
       success: true, 

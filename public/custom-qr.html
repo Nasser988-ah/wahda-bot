@@ -387,9 +387,16 @@
                 
                 if (response.ok) {
                     const data = await response.json();
+                    console.log('[DEBUG] QR API response:', data);
+                    
                     if (data.qr) {
                         displayQR(data.qr);
+                    } else if (data.qrCode) {
+                        displayQR(data.qrCode);
+                    } else if (data.qrData) {
+                        displayQR(data.qrData);
                     } else {
+                        console.log('[DEBUG] No QR found in response, polling...');
                         // Wait for QR to be generated
                         setTimeout(() => pollForQR(), 3000);
                     }
@@ -425,8 +432,14 @@
                 const response = await apiFetch(`${API_BASE}/shop/qr?shopId=${shop.id}`);
                 if (response.ok) {
                     const data = await response.json();
+                    console.log('[DEBUG] QR poll response:', data);
+                    
                     if (data.qr) {
                         displayQR(data.qr);
+                    } else if (data.qrCode) {
+                        displayQR(data.qrCode);
+                    } else if (data.qrData) {
+                        displayQR(data.qrData);
                     } else {
                         setTimeout(() => pollForQR(), 3000);
                     }

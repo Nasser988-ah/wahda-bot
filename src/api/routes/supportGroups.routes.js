@@ -1,13 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const { authenticateToken } = require('../middleware/auth.middleware');
-const { getPrisma } = require('../../services/databaseService');
+const databaseService = require('../../services/databaseService');
 
 // Get all support groups for a shop
 router.get('/', authenticateToken, async (req, res) => {
   try {
     console.log('[DEBUG] Getting support groups for shop:', req.shop?.id);
-    const prisma = getPrisma();
+    const prisma = databaseService.getClient();
     const groups = await prisma.supportGroup.findMany({
       where: { shopId: req.shop.id },
       orderBy: { createdAt: 'desc' }
@@ -33,7 +33,7 @@ router.post('/', authenticateToken, async (req, res) => {
       });
     }
 
-    const prisma = getPrisma();
+    const prisma = databaseService.getClient();
     const group = await prisma.supportGroup.create({
       data: {
         shopId: req.shop.id,
@@ -56,7 +56,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { name, groupLink, groupNumber, isActive } = req.body;
 
-    const prisma = getPrisma();
+    const prisma = databaseService.getClient();
     
     // Verify group belongs to this shop
     const existingGroup = await prisma.supportGroup.findFirst({
@@ -92,7 +92,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
 
-    const prisma = getPrisma();
+    const prisma = databaseService.getClient();
     
     // Verify group belongs to this shop
     const existingGroup = await prisma.supportGroup.findFirst({
@@ -130,7 +130,7 @@ router.post('/send-problem/:groupId', authenticateToken, async (req, res) => {
       });
     }
 
-    const prisma = getPrisma();
+    const prisma = databaseService.getClient();
     
     // Get group details
     const group = await prisma.supportGroup.findFirst({

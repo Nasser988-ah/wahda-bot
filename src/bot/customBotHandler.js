@@ -294,10 +294,14 @@ async function handleMessage(sock, msg, shop) {
     if (state.step === 'in_menu' && state.currentMenuId) {
       const currentMenu = menus.find(m => m.id === state.currentMenuId);
       if (!currentMenu) {
+        console.log(`[DEBUG] Menu not found: ${state.currentMenuId}, available menus:`, menus.map(m => ({ id: m.id, name: m.name })));
         await setState(shop.id, customerPhone, { currentMenuId: null, step: 'idle', data: {} });
         await safeSend(sock, from, config.unknownMessage);
         return;
       }
+      
+      console.log(`[DEBUG] Current menu: ${currentMenu.name}, items:`, currentMenu.items.map(i => ({ number: i.number, label: i.label, action: i.action })));
+      console.log(`[DEBUG] User input: "${text}"`);
 
       // Try number selection
       const num = parseInt(text);

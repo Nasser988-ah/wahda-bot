@@ -200,6 +200,11 @@ async function handleMessage(sock, msg, shop) {
       return;
     }
 
+    // Initialize custom Groq API key if available
+    if (config.customGroqApiKey) {
+      geminiService.initializeCustom(shop.id, config.customGroqApiKey);
+    }
+
     const state = await getState(shop.id, customerPhone);
     const mainMenu = config.mainMenuId ? menus.find(m => m.id === config.mainMenuId) : menus[0];
     console.log(`[DEBUG] Current state:`, state);
@@ -345,6 +350,7 @@ async function handleMessage(sock, msg, shop) {
         config.aiSystemPrompt,
         text,
         {
+          shopId: shop.id,
           shopName: shop.name,
           currentMenu: currentMenu.name,
           menuItems: menuItemsList,
@@ -426,6 +432,7 @@ async function executeAction(sock, from, shop, config, menus, state, item, custo
         prompt,
         `العميل اختار: ${item.label}`,
         {
+          shopId: shop.id,
           shopName: shop.name,
           itemContext: `${item.label} - ${item.description || ''}`,
           sessionHistory: historyText,

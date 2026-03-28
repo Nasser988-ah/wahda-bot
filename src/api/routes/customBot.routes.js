@@ -294,6 +294,11 @@ router.post('/ai-test', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'لم يتم إعداد البوت بعد' });
     }
 
+    // Initialize custom Groq API key if available
+    if (config.customGroqApiKey) {
+      geminiService.initializeCustom(req.shop.id, config.customGroqApiKey);
+    }
+
     // Build menu context so AI knows the full bot setup
     let menuContext = '';
     if (menus.length > 0) {
@@ -392,7 +397,7 @@ router.post('/ai-test', authenticateToken, async (req, res) => {
     const response = await geminiService.getResponse(
       fullSystemPrompt,
       message,
-      { shopName: req.shop.name, itemContext, memory },
+      { shopId: req.shop.id, shopName: req.shop.name, itemContext, memory },
       { temperature: config.aiTemperature, maxTokens: config.aiMaxTokens, model: config.aiModel }
     );
 

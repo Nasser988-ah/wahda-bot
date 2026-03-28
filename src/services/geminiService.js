@@ -3,6 +3,7 @@ const Groq = require('groq-sdk');
 class AIService {
   constructor() {
     this.groq = null;
+    this.customGroq = new Map(); // Store custom Groq instances per shop
     this.initialized = false;
   }
 
@@ -18,11 +19,26 @@ class AIService {
     return false;
   }
 
+  initializeCustom(shopId, apiKey) {
+    if (apiKey) {
+      this.customGroq.set(shopId, new Groq({ apiKey }));
+      console.log(`✅ Custom AI service initialized for shop ${shopId}`);
+      return true;
+    }
+    return false;
+  }
+
   async getResponse(systemPrompt, customerMessage, context = {}, options = {}) {
-    if (!this.initialized) {
+    let groqClient = this.groq;
+    
+    // Use custom API key if shopId is provided
+    if (context.shopId && this.customGroq.has(context.shopId)) {
+      groqClient = this.customGroq.get(context.shopId);
+    } else if (!this.initialized) {
       this.initialize();
     }
-    if (!this.groq) {
+    
+    if (!groqClient) {
       return 'عذراً، خدمة الذكاء الاصطناعي غير متاحة حالياً.';
     }
 
@@ -40,12 +56,12 @@ class AIService {
     const fullSystemPrompt = contextStr ? `${systemPrompt}\n\n${contextStr}` : systemPrompt;
 
     try {
-      const chatCompletion = await this.groq.chat.completions.create({
+      const chatCompletion = await groqClient.chat.completions.create({
         messages: [
           { role: 'system', content: fullSystemPrompt },
           { role: 'user', content: customerMessage },
         ],
-        model: 'llama-3.3-70b-versatile',
+        model: options.model || 'llama-3.1-8b-instant',
         temperature,
         max_tokens: maxTokens,
         top_p: 0.9,

@@ -234,6 +234,7 @@ model BotConfig {
   aiModel             String  @default("gemini-1.5-flash")
   aiTemperature       Float   @default(0.7)
   aiMaxTokens         Int     @default(300)
+  customGroqApiKey    String? // Custom Groq API key for this shop
   mainMenuId          String?
   formalityLevel      Int     @default(1) // 0=casual, 1=balanced, 2=formal
   shop                Shop    @relation(fields: [shopId], references: [id], onDelete: Cascade)

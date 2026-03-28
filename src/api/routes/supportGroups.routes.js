@@ -172,8 +172,11 @@ router.post('/send-problem/:groupId', authenticateToken, async (req, res) => {
       }
 
       // Check if socket is connected
-      const isConnected = sock.user !== undefined && sock.ws !== undefined && sock.ws.readyState === 'open';
+      const isConnected = sock.user && (sock.ws?.readyState === 'open' || sock.state === 'open');
       console.log('[DEBUG] Socket connection status:', isConnected);
+      console.log('[DEBUG] Socket user:', !!sock.user);
+      console.log('[DEBUG] Socket state:', sock.state);
+      console.log('[DEBUG] Socket ws readyState:', sock.ws?.readyState);
       
       if (!isConnected) {
         console.log('[ERROR] WhatsApp socket exists but not connected');
@@ -183,8 +186,21 @@ router.post('/send-problem/:groupId', authenticateToken, async (req, res) => {
         });
       }
 
-      await sock.sendMessage(group.groupNumber, { text: problemMessage });
-      console.log(`[SUCCESS] Sent problem to support group: ${group.name} (${group.groupNumber})`);
+      // Validate group number format
+      const groupJid = group.groupNumber.trim();
+      console.log(`[DEBUG] Sending to group JID: ${groupJid}`);
+      
+      // Check if it's a valid WhatsApp group JID format
+      if (!groupJid.includes('@g.us') && !groupJid.includes('@s.whatsapp.net')) {
+        console.log(`[ERROR] Invalid group format: ${groupJid}. Expected format: 1234567890@g.us or 1234567890-1234567890@g.us`);
+        return res.status(400).json({ 
+          success: false, 
+          error: `تنسيق رقم المجموعة غير صحيح: ${groupJid}. يرجى استخدام التنسيق الصحيح: 1234567890@g.us` 
+        });
+      }
+
+      await sock.sendMessage(groupJid, { text: problemMessage });
+      console.log(`[SUCCESS] Sent problem to support group: ${group.name} (${groupJid})`);
       
     } catch (error) {
       console.error(`[ERROR] Failed to send to group ${group.name}:`, error);
@@ -210,7 +226,7 @@ router.post('/send-problem/:groupId', authenticateToken, async (req, res) => {
 router.get('/whatsapp-status', authenticateToken, async (req, res) => {
   try {
     const sock = global.whatsappSocket;
-    const isConnected = sock && sock.user !== undefined && sock.ws !== undefined && sock.ws.readyState === 'open';
+    const isConnected = sock && sock.user && (sock.ws?.readyState === 'open' || sock.state === 'open');
     
     res.json({ 
       success: true, 

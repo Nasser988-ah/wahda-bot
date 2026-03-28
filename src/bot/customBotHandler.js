@@ -104,7 +104,7 @@ async function getState(shopId, phone) {
 }
 
 async function setState(shopId, phone, state) {
-  await redis.setex(keys.state(shopId, phone), TTL, JSON.stringify(state));
+  await redis.set(keys.state(shopId, phone), JSON.stringify(state), { ex: TTL });
 }
 
 // Menu stack for back navigation
@@ -112,7 +112,7 @@ async function pushMenu(shopId, phone, menuId) {
   const raw = await redis.get(keys.menuStack(shopId, phone));
   const stack = raw ? JSON.parse(raw) : [];
   stack.push(menuId);
-  await redis.setex(keys.menuStack(shopId, phone), TTL, JSON.stringify(stack));
+  await redis.set(keys.menuStack(shopId, phone), JSON.stringify(stack), { ex: TTL });
 }
 
 async function popMenu(shopId, phone) {
@@ -120,7 +120,7 @@ async function popMenu(shopId, phone) {
   const stack = raw ? JSON.parse(raw) : [];
   stack.pop(); // remove current
   const prev = stack.length > 0 ? stack[stack.length - 1] : null;
-  await redis.setex(keys.menuStack(shopId, phone), TTL, JSON.stringify(stack));
+  await redis.set(keys.menuStack(shopId, phone), JSON.stringify(stack), { ex: TTL });
   return prev;
 }
 
@@ -130,7 +130,7 @@ async function addHistory(shopId, phone, role, text) {
   const history = raw ? JSON.parse(raw) : [];
   history.push({ role, text: text.slice(0, 200) });
   if (history.length > 10) history.shift();
-  await redis.setex(keys.history(shopId, phone), TTL, JSON.stringify(history));
+  await redis.set(keys.history(shopId, phone), JSON.stringify(history), { ex: TTL });
 }
 
 async function getHistory(shopId, phone) {
@@ -168,7 +168,7 @@ async function handleMessage(sock, msg, shop) {
     const mainMenu = config.mainMenuId ? menus.find(m => m.id === config.mainMenuId) : menus[0];
 
     // Track activity
-    await redis.setex(keys.lastActive(shop.id, customerPhone), TTL, Date.now().toString());
+    await redis.set(keys.lastActive(shop.id, customerPhone), Date.now().toString(), { ex: TTL });
     await addHistory(shop.id, customerPhone, 'customer', text);
 
     // ── Navigation commands ──

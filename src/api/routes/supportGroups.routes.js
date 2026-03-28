@@ -161,20 +161,37 @@ router.post('/send-problem/:groupId', authenticateToken, async (req, res) => {
     // Send to WhatsApp group
     try {
       const sock = global.whatsappSocket;
+      console.log('[DEBUG] Global socket check:', !!sock);
+      
       if (!sock) {
-        console.log('[ERROR] WhatsApp socket not available');
+        console.log('[ERROR] WhatsApp socket not available. Global socket is null/undefined');
         return res.status(503).json({ 
           success: false, 
-          error: 'خدمة WhatsApp غير متاحة حالياً' 
+          error: 'خدمة WhatsApp غير متاحة حالياً. يرجى التأكد من اتصال البوت.' 
+        });
+      }
+
+      // Check if socket is connected
+      const isConnected = sock.user !== undefined && sock.ws !== undefined && sock.ws.readyState === 'open';
+      console.log('[DEBUG] Socket connection status:', isConnected);
+      
+      if (!isConnected) {
+        console.log('[ERROR] WhatsApp socket exists but not connected');
+        return res.status(503).json({ 
+          success: false, 
+          error: 'خدمة WhatsApp غير متصلة حالياً. يرجى الانتظار حتى يتم الاتصال.' 
         });
       }
 
       await sock.sendMessage(group.groupNumber, { text: problemMessage });
-      console.log(`[SUCCESS] Sent problem to support group: ${group.name}`);
+      console.log(`[SUCCESS] Sent problem to support group: ${group.name} (${group.groupNumber})`);
       
     } catch (error) {
       console.error(`[ERROR] Failed to send to group ${group.name}:`, error);
-      // Don't fail the whole request if one group fails
+      return res.status(500).json({ 
+        success: false, 
+        error: `فشل في إرسال الرسالة: ${error.message}` 
+      });
     }
 
     res.json({ 
@@ -186,6 +203,28 @@ router.post('/send-problem/:groupId', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Send problem to group error:', error);
     res.status(500).json({ success: false, error: 'فشل في إرسال المشكلة إلى مجموعة الدعم' });
+  }
+});
+
+// Check WhatsApp connection status
+router.get('/whatsapp-status', authenticateToken, async (req, res) => {
+  try {
+    const sock = global.whatsappSocket;
+    const isConnected = sock && sock.user !== undefined && sock.ws !== undefined && sock.ws.readyState === 'open';
+    
+    res.json({ 
+      success: true, 
+      connected: isConnected,
+      socketExists: !!sock,
+      status: isConnected ? 'متصل' : 'غير متصل',
+      message: isConnected ? 'WhatsApp جاهز لإرسال الرسائل' : 'WhatsApp غير متصل حالياً'
+    });
+  } catch (error) {
+    console.error('WhatsApp status check error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'فشل في فحص حالة WhatsApp' 
+    });
   }
 });
 

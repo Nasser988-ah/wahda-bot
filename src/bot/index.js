@@ -49,6 +49,7 @@ const sock = makeWASocket({
     } else if (connection === "open") {
       console.log("📱 WhatsApp connected successfully!");
       global.whatsappSocket = sock;
+      console.log("[DEBUG] WhatsApp socket stored globally");
     }
   });
 

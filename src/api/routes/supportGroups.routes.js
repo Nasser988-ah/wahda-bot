@@ -251,4 +251,68 @@ router.get('/whatsapp-status', authenticateToken, async (req, res) => {
   }
 });
 
+// List all WhatsApp groups the bot is in
+router.get('/list-groups', authenticateToken, async (req, res) => {
+  try {
+    const sock = global.whatsappSocket;
+    if (!sock || !sock.user) {
+      return res.status(503).json({ 
+        success: false, 
+        error: 'WhatsApp غير متصل حالياً' 
+      });
+    }
+
+    // Get all chats
+    const chats = await sock.fetchStatus('status@broadcast');
+    
+    // Try to get group chats (this might not work directly, but let's try)
+    const groups = [];
+    
+    // This is a workaround - we'll use the group metadata function to test if groups exist
+    console.log('[DEBUG] Testing group JID formats...');
+    
+    // Test some common group formats
+    const testFormats = [
+      '1128511900@g.us', // Current (probably wrong)
+      '1128511900-1128511900@g.us', // Try with dash
+      '201128511900@g.us', // Try with country code
+      '201128511900-201128511900@g.us', // Try with country code and dash
+    ];
+    
+    for (const jid of testFormats) {
+      try {
+        const metadata = await sock.groupMetadata(jid);
+        groups.push({
+          jid: jid,
+          subject: metadata.subject,
+          valid: true
+        });
+        console.log(`[SUCCESS] Found group: ${jid} - ${metadata.subject}`);
+      } catch (error) {
+        console.log(`[FAILED] ${jid}: ${error.message}`);
+      }
+    }
+
+    res.json({ 
+      success: true, 
+      message: 'تم اختبار تنسيقات المجموعات المختلفة',
+      testedFormats: testFormats,
+      foundGroups: groups,
+      instructions: [
+        'استخدم WhatsApp Web للحصول على معرف المجموعة الصحيح',
+        '1. اذهب إلى المجموعة في WhatsApp Web',
+        '2. انقر على اسم المجموعة',
+        '3. انسخ الرقم من عنوان URL',
+        '4. أضف @g.us في النهاية'
+      ]
+    });
+  } catch (error) {
+    console.error('List groups error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'فشل في جلب قائمة المجموعات' 
+    });
+  }
+});
+
 module.exports = router;

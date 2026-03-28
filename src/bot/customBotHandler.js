@@ -243,6 +243,18 @@ async function handleMessage(sock, msg, shop) {
       }
     }
 
+    // Check for technical issues (even if not in menu)
+    const technicalKeywords = ['نت فاصل', 'النت مقطوع', 'انترنت شغالش', 'خدمة مقطوعة', 'مشكلة في النت', 'الدعم الفني'];
+    const isTechnicalIssue = technicalKeywords.some(keyword => normalized.includes(normalizeArabic(keyword)));
+    
+    if (isTechnicalIssue) {
+      // Find technical support menu item
+      const techSupportItem = mainMenu?.items?.find(item => item.number === 5);
+      if (techSupportItem) {
+        return await executeAction(sock, from, shop, config, menus, state, techSupportItem, customerPhone);
+      }
+    }
+
     // Main menu / start / greeting
     if (isMainMenu || state.step === 'idle') {
       if (mainMenu) {
@@ -271,6 +283,18 @@ async function handleMessage(sock, msg, shop) {
 
     if (state.step === 'collect_phone') {
       state.data.customerPhone = text;
+      
+      // Handle technical support completion - no address needed
+      if (state.data.isTechSupport) {
+        await setState(shop.id, customerPhone, { currentMenuId: null, step: 'idle', data: {} });
+        await redis.del(keys.menuStack(shop.id, customerPhone));
+        const confirmMsg = 'تم التواصل مع القسم المختص وهيتواصل مع حضرتك في أقرب وقت 🌹';
+        await safeSend(sock, from, confirmMsg);
+        await addHistory(shop.id, customerPhone, 'bot', confirmMsg);
+        return;
+      }
+      
+      // Regular order flow
       state.step = 'collect_address';
       await setState(shop.id, customerPhone, state);
       await safeSend(sock, from, '📍 أرسل عنوانك:');
@@ -279,7 +303,18 @@ async function handleMessage(sock, msg, shop) {
 
     if (state.step === 'collect_address') {
       state.data.address = text;
-      // Save order
+      
+      // Handle technical support completion
+      if (state.data.isTechSupport) {
+        await setState(shop.id, customerPhone, { currentMenuId: null, step: 'idle', data: {} });
+        await redis.del(keys.menuStack(shop.id, customerPhone));
+        const confirmMsg = 'تم التواصل مع القسم المختص وهيتواصل مع حضرتك في أقرب وقت 🌹';
+        await safeSend(sock, from, confirmMsg);
+        await addHistory(shop.id, customerPhone, 'bot', confirmMsg);
+        return;
+      }
+      
+      // Save regular order
       try {
         const prisma = getPrisma();
         await prisma.order.create({
@@ -415,6 +450,37 @@ async function executeAction(sock, from, shop, config, menus, state, item, custo
     }
 
     case 'confirm_order': {
+      // If item has custom AI prompt, use it for technical support flow
+      if (item.aiPrompt && item.label.includes('الدعم الفني')) {
+        const history = await getHistory(shop.id, customerPhone);
+        const historyText = history.map(h => `${h.role === 'customer' ? 'العميل' : 'البوت'}: ${h.text}`).join('\n');
+        
+        const aiResponse = await geminiService.getResponse(
+          item.aiPrompt,
+          text,
+          {
+            shopId: shop.id,
+            shopName: shop.name,
+            itemContext: `${item.label} - ${item.description || ''}`,
+            sessionHistory: historyText,
+          },
+          {
+            temperature: config.aiTemperature,
+            maxTokens: config.aiMaxTokens,
+            model: config.aiModel,
+          }
+        );
+        await safeSend(sock, from, aiResponse);
+        await addHistory(shop.id, customerPhone, 'bot', aiResponse);
+        
+        // Start collection for technical support - collect customer code directly
+        state.step = 'collect_phone';
+        state.data = { orderNotes: item.label, isTechSupport: true };
+        await setState(shop.id, customerPhone, state);
+        break;
+      }
+      
+      // Regular order flow
       state.step = 'collect_name';
       state.data = { orderNotes: item.label };
       await setState(shop.id, customerPhone, state);

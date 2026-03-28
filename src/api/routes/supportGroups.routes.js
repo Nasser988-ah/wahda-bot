@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { authenticateToken, requireShopOwner } = require('../middleware/auth.middleware');
+const { authenticateToken } = require('../middleware/auth.middleware');
 const { getPrisma } = require('../../services/databaseService');
 
 // Get all support groups for a shop
@@ -20,7 +20,7 @@ router.get('/', authenticateToken, async (req, res) => {
 });
 
 // Create new support group
-router.post('/', authenticateToken, requireShopOwner, async (req, res) => {
+router.post('/', authenticateToken, async (req, res) => {
   try {
     const { name, groupLink, groupNumber } = req.body;
     
@@ -49,7 +49,7 @@ router.post('/', authenticateToken, requireShopOwner, async (req, res) => {
 });
 
 // Update support group
-router.put('/:id', authenticateToken, requireShopOwner, async (req, res) => {
+router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const { name, groupLink, groupNumber, isActive } = req.body;
@@ -86,7 +86,7 @@ router.put('/:id', authenticateToken, requireShopOwner, async (req, res) => {
 });
 
 // Delete support group
-router.delete('/:id', authenticateToken, requireShopOwner, async (req, res) => {
+router.delete('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
 

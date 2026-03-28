@@ -321,7 +321,8 @@
                     }
                     
                     // If not connected, check for QR data in multiple possible fields
-                    const qrData = data.qr || data.qrCode || data.qrData;
+                    const qrData = data.qr || data.qrCode || data.qrData || data.qrBase64 || data.base64 || data.qrImage || data.image;
+                    console.log('[DEBUG] Checking for QR data, keys:', Object.keys(data));
                     if (qrData) {
                         console.log('[DEBUG] Found QR data, displaying...');
                         displayQR(qrData);
@@ -398,13 +399,14 @@
                 if (response.ok) {
                     const data = await response.json();
                     console.log('[DEBUG] QR API response:', data);
+                    console.log('[DEBUG] Response keys:', Object.keys(data));
                     
-                    if (data.qr) {
-                        displayQR(data.qr);
-                    } else if (data.qrCode) {
-                        displayQR(data.qrCode);
-                    } else if (data.qrData) {
-                        displayQR(data.qrData);
+                    // Check for QR data in multiple possible fields
+                    const qrData = data.qr || data.qrCode || data.qrData || data.qrBase64 || data.base64 || data.qrImage || data.image;
+                    
+                    if (qrData) {
+                        console.log('[DEBUG] Found QR data in field, displaying...');
+                        displayQR(qrData);
                     } else {
                         console.log('[DEBUG] No QR found in response, polling...');
                         // Wait for QR to be generated
@@ -443,13 +445,13 @@
                 if (response.ok) {
                     const data = await response.json();
                     console.log('[DEBUG] QR poll response:', data);
+                    console.log('[DEBUG] Poll response keys:', Object.keys(data));
                     
-                    if (data.qr) {
-                        displayQR(data.qr);
-                    } else if (data.qrCode) {
-                        displayQR(data.qrCode);
-                    } else if (data.qrData) {
-                        displayQR(data.qrData);
+                    // Check for QR data in multiple possible fields
+                    const qrData = data.qr || data.qrCode || data.qrData || data.qrBase64 || data.base64 || data.qrImage || data.image;
+                    
+                    if (qrData) {
+                        displayQR(qrData);
                     } else {
                         setTimeout(() => pollForQR(), 3000);
                     }

@@ -262,29 +262,56 @@ router.get('/list-groups', authenticateToken, async (req, res) => {
       });
     }
 
-    // Get all chats
-    const chats = await sock.fetchStatus('status@broadcast');
+    console.log('[DEBUG] Bot user ID:', sock.user.id);
     
-    // Try to get group chats (this might not work directly, but let's try)
-    const groups = [];
+    // Method 1: Try to get chats list
+    try {
+      // Use the chat store to get all chats
+      const store = sock.chats;
+      if (store) {
+        const allChats = store;
+        const groups = allChats
+          .filter(chat => chat.id.includes('@g.us'))
+          .map(chat => ({
+            jid: chat.id,
+            name: chat.name || chat.id,
+            unreadCount: chat.unreadCount || 0
+          }));
+        
+        console.log(`[DEBUG] Found ${groups.length} groups in chat store:`, groups);
+        
+        if (groups.length > 0) {
+          return res.json({
+            success: true,
+            method: 'chat_store',
+            groups: groups,
+            message: `تم العثور على ${groups.length} مجموعة`
+          });
+        }
+      }
+    } catch (error) {
+      console.log('[DEBUG] Chat store method failed:', error.message);
+    }
     
-    // This is a workaround - we'll use the group metadata function to test if groups exist
-    console.log('[DEBUG] Testing group JID formats...');
-    
-    // Test some common group formats
+    // Method 2: Test common formats with your phone number
+    const baseNumber = '201128511900'; // Egypt country code + your number
     const testFormats = [
-      '1128511900@g.us', // Current (probably wrong)
-      '1128511900-1128511900@g.us', // Try with dash
-      '201128511900@g.us', // Try with country code
-      '201128511900-201128511900@g.us', // Try with country code and dash
+      `${baseNumber}@g.us`,
+      `${baseNumber}-${baseNumber}@g.us`,
+      `1128511900@g.us`,
+      `1128511900-1128511900@g.us`,
     ];
+    
+    console.log('[DEBUG] Testing group JID formats...');
+    const foundGroups = [];
     
     for (const jid of testFormats) {
       try {
         const metadata = await sock.groupMetadata(jid);
-        groups.push({
+        foundGroups.push({
           jid: jid,
           subject: metadata.subject,
+          desc: metadata.desc,
           valid: true
         });
         console.log(`[SUCCESS] Found group: ${jid} - ${metadata.subject}`);
@@ -295,15 +322,16 @@ router.get('/list-groups', authenticateToken, async (req, res) => {
 
     res.json({ 
       success: true, 
-      message: 'تم اختبار تنسيقات المجموعات المختلفة',
+      method: 'test_formats',
       testedFormats: testFormats,
-      foundGroups: groups,
+      foundGroups: foundGroups,
+      botUserId: sock.user.id,
       instructions: [
-        'استخدم WhatsApp Web للحصول على معرف المجموعة الصحيح',
-        '1. اذهب إلى المجموعة في WhatsApp Web',
-        '2. انقر على اسم المجموعة',
-        '3. انسخ الرقم من عنوان URL',
-        '4. أضف @g.us في النهاية'
+        'إذا لم يتم العثور على مجموعات:',
+        '1. تأكد من أن البوت عضو في المجموعة',
+        '2. أضف رقم البوت إلى المجموعة يدوياً',
+        '3. جرب الأرقام الموجودة أعلاه',
+        '4. استخدم WhatsApp Web للحصول على المعرف الصحيح'
       ]
     });
   } catch (error) {

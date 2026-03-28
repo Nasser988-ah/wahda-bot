@@ -99,7 +99,11 @@ function formatMenu(menu, welcomePrefix = '') {
 // Get or init customer state
 async function getState(shopId, phone) {
   const raw = await redis.get(keys.state(shopId, phone));
-  if (raw) return JSON.parse(raw);
+  if (raw && typeof raw === 'string') {
+    return JSON.parse(raw);
+  } else if (raw && typeof raw === 'object') {
+    return raw;
+  }
   return { currentMenuId: null, step: 'idle', data: {} };
 }
 
@@ -110,14 +114,28 @@ async function setState(shopId, phone, state) {
 // Menu stack for back navigation
 async function pushMenu(shopId, phone, menuId) {
   const raw = await redis.get(keys.menuStack(shopId, phone));
-  const stack = raw ? JSON.parse(raw) : [];
+  let stack;
+  if (raw && typeof raw === 'string') {
+    stack = JSON.parse(raw);
+  } else if (raw && typeof raw === 'object') {
+    stack = raw;
+  } else {
+    stack = [];
+  }
   stack.push(menuId);
   await redis.set(keys.menuStack(shopId, phone), JSON.stringify(stack), { ex: TTL });
 }
 
 async function popMenu(shopId, phone) {
   const raw = await redis.get(keys.menuStack(shopId, phone));
-  const stack = raw ? JSON.parse(raw) : [];
+  let stack;
+  if (raw && typeof raw === 'string') {
+    stack = JSON.parse(raw);
+  } else if (raw && typeof raw === 'object') {
+    stack = raw;
+  } else {
+    stack = [];
+  }
   stack.pop(); // remove current
   const prev = stack.length > 0 ? stack[stack.length - 1] : null;
   await redis.set(keys.menuStack(shopId, phone), JSON.stringify(stack), { ex: TTL });
@@ -127,7 +145,14 @@ async function popMenu(shopId, phone) {
 // Add to conversation history for AI context
 async function addHistory(shopId, phone, role, text) {
   const raw = await redis.get(keys.history(shopId, phone));
-  const history = raw ? JSON.parse(raw) : [];
+  let history;
+  if (raw && typeof raw === 'string') {
+    history = JSON.parse(raw);
+  } else if (raw && typeof raw === 'object') {
+    history = raw;
+  } else {
+    history = [];
+  }
   history.push({ role, text: text.slice(0, 200) });
   if (history.length > 10) history.shift();
   await redis.set(keys.history(shopId, phone), JSON.stringify(history), { ex: TTL });
@@ -135,7 +160,12 @@ async function addHistory(shopId, phone, role, text) {
 
 async function getHistory(shopId, phone) {
   const raw = await redis.get(keys.history(shopId, phone));
-  return raw ? JSON.parse(raw) : [];
+  if (raw && typeof raw === 'string') {
+    return JSON.parse(raw);
+  } else if (raw && typeof raw === 'object') {
+    return raw;
+  }
+  return [];
 }
 
 // ═══════ Main Message Handler ═══════

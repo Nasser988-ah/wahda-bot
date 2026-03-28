@@ -561,14 +561,14 @@ async function sendProblemToSupportGroups(shop, customerPhone, problemType, cust
     // Send to each support group
     for (const group of supportGroups) {
       try {
-        // Here you would integrate with WhatsApp to send to the group
-        // For now, we'll just log it (you can implement the actual WhatsApp sending later)
-        console.log(`[DEBUG] Sending to support group: ${group.name} (${group.groupNumber})`);
-        console.log(`[DEBUG] Message: ${problemMessage}`);
-        
-        // TODO: Implement actual WhatsApp group message sending
-        // const botManager = require('../bot/botManager');
-        // await botManager.sendMessageToGroup(group.groupNumber, problemMessage);
+        const sock = global.whatsappSocket;
+        if (!sock) {
+          console.log(`[ERROR] WhatsApp socket not available for group ${group.name}`);
+          continue;
+        }
+
+        await sock.sendMessage(group.groupNumber, { text: problemMessage });
+        console.log(`[SUCCESS] Sent problem to support group: ${group.name} (${group.groupNumber})`);
         
       } catch (error) {
         console.error(`[ERROR] Failed to send to group ${group.name}:`, error);

@@ -158,14 +158,24 @@ router.post('/send-problem/:groupId', authenticateToken, async (req, res) => {
 
 يرجى المتابعة مع العميل في أقرب وقت ممكن 🙏`;
 
-    // Here you would integrate with WhatsApp to send to the group
-    // For now, we'll just log it (you can implement the actual WhatsApp sending later)
-    console.log('Sending to support group:', group.groupNumber);
-    console.log('Message:', problemMessage);
+    // Send to WhatsApp group
+    try {
+      const sock = global.whatsappSocket;
+      if (!sock) {
+        console.log('[ERROR] WhatsApp socket not available');
+        return res.status(503).json({ 
+          success: false, 
+          error: 'خدمة WhatsApp غير متاحة حالياً' 
+        });
+      }
 
-    // TODO: Implement actual WhatsApp group message sending
-    // const botManager = require('../bot/botManager');
-    // await botManager.sendMessageToGroup(group.groupNumber, problemMessage);
+      await sock.sendMessage(group.groupNumber, { text: problemMessage });
+      console.log(`[SUCCESS] Sent problem to support group: ${group.name}`);
+      
+    } catch (error) {
+      console.error(`[ERROR] Failed to send to group ${group.name}:`, error);
+      // Don't fail the whole request if one group fails
+    }
 
     res.json({ 
       success: true, 

@@ -10,6 +10,9 @@ const { handleMessage } = require("./messageHandler");
 
 const SESSION_DIR = process.env.BOT_SESSION_DIR || "./sessions";
 
+// Store socket globally for access by API routes
+global.whatsappSocket = null;
+
 async function initBot() {
   const { state, saveCreds } = await useMultiFileAuthState(
     path.resolve(SESSION_DIR)
@@ -45,6 +48,7 @@ const sock = makeWASocket({
       }
     } else if (connection === "open") {
       console.log("📱 WhatsApp connected successfully!");
+      global.whatsappSocket = sock;
     }
   });
 

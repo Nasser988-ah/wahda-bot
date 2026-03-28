@@ -251,7 +251,7 @@ async function handleMessage(sock, msg, shop) {
       // Find technical support menu item
       const techSupportItem = mainMenu?.items?.find(item => item.number === 5);
       if (techSupportItem) {
-        return await executeAction(sock, from, shop, config, menus, state, techSupportItem, customerPhone);
+        return await executeAction(sock, from, shop, config, menus, state, techSupportItem, customerPhone, text);
       }
     }
 
@@ -375,7 +375,7 @@ async function handleMessage(sock, msg, shop) {
       }
 
       if (selectedItem) {
-        return await executeAction(sock, from, shop, config, menus, state, selectedItem, customerPhone);
+        return await executeAction(sock, from, shop, config, menus, state, selectedItem, customerPhone, text);
       }
 
       // ── Unknown input → AI response ──
@@ -429,7 +429,7 @@ async function handleMessage(sock, msg, shop) {
 
 // ═══════ Action Executor ═══════
 
-async function executeAction(sock, from, shop, config, menus, state, item, customerPhone) {
+async function executeAction(sock, from, shop, config, menus, state, item, customerPhone, text = '') {
   switch (item.action) {
     case 'custom_message': {
       const msg = item.actionValue || `✅ ${item.label}`;

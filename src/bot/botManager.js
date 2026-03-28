@@ -409,6 +409,10 @@ class BotManager {
           console.log(`✅ ${shop.name} connected!`);
           this.connectionStates.set(shopId, 'connected');
           this.reconnectAttempts.set(shopId, 0);
+          
+          // Set global socket for API access
+          global.whatsappSocket = sock;
+          console.log(`[DEBUG] WhatsApp socket stored globally for ${shop.name}`);
           return;
         }
         

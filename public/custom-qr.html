@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ربط واتساب - دلتا واي ماكس</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg: #0f0f13;
+            --card: #1a1a22;
+            --border: #2a2a35;
+            --text: #ffffff;
+            --muted: #9ca3af;
+            --gold: #f5c842;
+            --gold-dim: rgba(245, 200, 66, 0.1);
+            --danger: #ef4444;
+            --success: #22c55e;
+        }
+
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--gold), #d4a017);
+            padding: 1.5rem 2rem;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(245, 200, 66, 0.3);
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .qr-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2.5rem;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .qr-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--gold);
+        }
+
+        .qr-description {
+            color: var(--muted);
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+
+        .qr-code {
+            background: white;
+            padding: 1rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            min-height: 256px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .qr-code canvas {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .qr-placeholder {
+            color: #666;
+            font-size: 1.1rem;
+            text-align: center;
+        }
+
+        .status {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            font-weight: 500;
+        }
+
+        .status.connected {
+            background: var(--success);
+            color: white;
+        }
+
+        .status.connecting {
+            background: var(--gold);
+            color: var(--bg);
+        }
+
+        .status.disconnected {
+            background: var(--danger);
+            color: white;
+        }
+
+        .bot-info {
+            background: var(--gold-dim);
+            border: 1px solid var(--gold);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .bot-info h3 {
+            color: var(--gold);
+            margin-bottom: 0.5rem;
+        }
+
+        .bot-number {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--text);
+            font-family: monospace;
+        }
+
+        .instructions {
+            text-align: right;
+            color: var(--muted);
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        .instructions ol {
+            margin-right: 1.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .instructions li {
+            margin-bottom: 0.5rem;
+        }
+
+        .back-btn {
+            display: inline-block;
+            background: var(--gold);
+            color: var(--bg);
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            margin-top: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            background: #d4a017;
+            transform: translateY(-2px);
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-left: 0.5rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 640px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .qr-card {
+                padding: 1.5rem;
+            }
+            
+            .header h1 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1>📱 ربط واتساب</h1>
+        <p>دلتا واي ماكس الرقمي لخدمات الإنترنت</p>
+    </header>
+
+    <div class="container">
+        <div class="qr-card">
+            <h2 class="qr-title">اتصل بوت WhatsApp</h2>
+            <p class="qr-description">
+                امسح رمز QR باستخدام تطبيق WhatsApp للهاتف لتوصيل البوت الخاص بك
+            </p>
+
+            <div id="status" class="status disconnected">
+                🔴 غير متصل
+            </div>
+
+            <div id="botInfo" class="bot-info" style="display: none;">
+                <h3>رقم البوت:</h3>
+                <div id="botNumber" class="bot-number">...</div>
+            </div>
+
+            <div id="qrCode" class="qr-code">
+                <div class="qr-placeholder">
+                    جاري تحميل رمز QR...
+                    <div class="loading"></div>
+                </div>
+            </div>
+
+            <div class="instructions">
+                <h3>📋 التعليمات:</h3>
+                <ol>
+                    <li>افتح تطبيق WhatsApp على هاتفك</li>
+                    <li>اذهب إلى الإعدادات → الأجهزة المرتبطة</li>
+                    <li>اضغط على "ربط جهاز"</li>
+                    <li>امسح رمز QR المعروض أعلاه</li>
+                    <li>انتظر حتى يتم الاتصال</li>
+                </ol>
+            </div>
+
+            <a href="custom-dashboard.html" class="back-btn">← العودة للوحة التحكم</a>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin + '/api';
+        let refreshInterval = null;
+        let currentShop = null;
+
+        // Global API fetch helper with 401 handling
+        async function apiFetch(url, options = {}) {
+            const token = localStorage.getItem('token');
+            
+            const res = await fetch(url, {
+                ...options,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                    ...options.headers
+                }
+            });
+            
+            if (res.status === 401) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('shop');
+                window.location.href = 'login.html';
+                return;
+            }
+            
+            return res;
+        }
+
+        // Check connection status
+        async function checkConnectionStatus() {
+            try {
+                const token = localStorage.getItem('token');
+                const shop = JSON.parse(localStorage.getItem('shop') || '{}');
+                
+                if (!shop.id) {
+                    console.error('No shop ID found');
+                    updateConnectionStatus(false);
+                    return;
+                }
+                
+                // Check real connection status via API
+                const response = await apiFetch(`${API_BASE}/shop/qr?shopId=${shop.id}`);
+                if (!response) return;
+
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    if (data.status === 'expired') {
+                        updateQRDisplay(data);
+                        return;
+                    }
+                    
+                    const isConnected = data.connected || false;
+                    updateConnectionStatus(isConnected);
+                    
+                    if (!isConnected && !data.qrGenerated) {
+                        await generateQR();
+                    } else if (data.qr && !isConnected) {
+                        // Display existing QR
+                        displayQR(data.qr);
+                    }
+                } else {
+                    console.error('Status check failed:', response.status);
+                    updateConnectionStatus(false);
+                    await generateQR();
+                }
+            } catch (error) {
+                console.error('Error checking connection status:', error);
+                updateConnectionStatus(false);
+            }
+        }
+
+        // Update connection status display
+        function updateConnectionStatus(isConnected) {
+            const statusEl = document.getElementById('status');
+            const botInfoEl = document.getElementById('botInfo');
+            const qrCodeEl = document.getElementById('qrCode');
+            
+            if (isConnected) {
+                statusEl.className = 'status connected';
+                statusEl.innerHTML = '🟢 متصل';
+                botInfoEl.style.display = 'block';
+                
+                // Get bot number from the shop data
+                const shop = JSON.parse(localStorage.getItem('shop') || '{}');
+                const botNumberEl = document.getElementById('botNumber');
+                botNumberEl.textContent = shop.whatsappNumber || 'غير متوفر';
+                
+                qrCodeEl.innerHTML = '<div class="qr-placeholder">البوت متصل بالفعل ✅</div>';
+            } else {
+                statusEl.className = 'status disconnected';
+                statusEl.innerHTML = '🔴 غير متصل';
+                botInfoEl.style.display = 'none';
+            }
+        }
+
+        // Generate QR code
+        async function generateQR() {
+            try {
+                const token = localStorage.getItem('token');
+                const shop = JSON.parse(localStorage.getItem('shop') || '{}');
+                
+                if (!shop.id) {
+                    console.error('No shop ID found');
+                    return;
+                }
+                
+                const qrCodeEl = document.getElementById('qrCode');
+                
+                // Show loading state
+                qrCodeEl.innerHTML = `
+                    <div class="qr-placeholder">
+                        جاري إنشاء رمز QR...
+                        <div class="loading"></div>
+                        <div style="font-size: 12px; margin-top: 10px;">متجر: ${shop.name}</div>
+                    </div>
+                `;
+
+                // Call API to get QR code
+                const response = await apiFetch(`${API_BASE}/shop/qr`, {
+                    method: 'POST',
+                    body: JSON.stringify({ shopId: shop.id })
+                });
+                
+                if (!response) return;
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.qr) {
+                        displayQR(data.qr);
+                    } else {
+                        // Wait for QR to be generated
+                        setTimeout(() => pollForQR(), 3000);
+                    }
+                } else {
+                    const error = await response.json();
+                    console.error('QR generation failed:', error);
+                    qrCodeEl.innerHTML = '<div class="qr-placeholder">فشل إنشاء رمز QR</div>';
+                }
+            } catch (error) {
+                console.error('Error generating QR:', error);
+                document.getElementById('qrCode').innerHTML = '<div class="qr-placeholder">فشل تحميل رمز QR</div>';
+            }
+        }
+
+        // Display QR code
+        function displayQR(base64QR) {
+            const qrCodeEl = document.getElementById('qrCode');
+            qrCodeEl.innerHTML = `
+                <img src="data:image/png;base64,${base64QR}" alt="WhatsApp QR Code" style="max-width: 100%; height: auto;">
+                <div style="margin-top: 15px; font-size: 12px; color: var(--muted);">
+                    ⏰ امسح الكود بواتساب الآن
+                </div>
+            `;
+            startConnectionCheck();
+        }
+
+        // Poll for QR code
+        async function pollForQR() {
+            const shop = JSON.parse(localStorage.getItem('shop') || '{}');
+            if (!shop.id) return;
+            
+            try {
+                const response = await apiFetch(`${API_BASE}/shop/qr?shopId=${shop.id}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.qr) {
+                        displayQR(data.qr);
+                    } else {
+                        setTimeout(() => pollForQR(), 3000);
+                    }
+                }
+            } catch (error) {
+                console.error('QR polling error:', error);
+                setTimeout(() => pollForQR(), 3000);
+            }
+        }
+
+        // Check connection after QR is displayed
+        function startConnectionCheck() {
+            let checkCount = 0;
+            const maxChecks = 20; // Check for 60 seconds (20 * 3 seconds)
+            
+            // Check every 3 seconds for connection
+            const checkInterval = setInterval(async () => {
+                try {
+                    checkCount++;
+                    const shop = JSON.parse(localStorage.getItem('shop') || '{}');
+                    const response = await apiFetch(`${API_BASE}/shop/qr?shopId=${shop.id}`);
+                    if (!response) return;
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.connected) {
+                            clearInterval(checkInterval);
+                            updateConnectionStatus(true);
+                            showMessage('تم الاتصال بواتساب بنجاح!', 'success');
+                        } else if (checkCount >= maxChecks) {
+                            clearInterval(checkInterval);
+                            showMessage('انتهت مدة الانتظار. يرجى إعادة محاولة مسح كود QR.', 'error');
+                            updateConnectionStatus(false);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error checking connection:', error);
+                    if (checkCount >= maxChecks) {
+                        clearInterval(checkInterval);
+                        showMessage('حدث خطأ في التحقق من الاتصال. يرجى المحاولة مرة أخرى.', 'error');
+                    }
+                }
+            }, 3000);
+        }
+
+        // Show message
+        function showMessage(message, type) {
+            const statusEl = document.getElementById('status');
+            const originalContent = statusEl.innerHTML;
+            const originalClass = statusEl.className;
+            
+            statusEl.className = type === 'error' ? 'status disconnected' : 'status connected';
+            statusEl.textContent = message;
+            
+            // Restore after 5 seconds
+            setTimeout(() => {
+                checkConnectionStatus();
+            }, 5000);
+        }
+
+        // Initialize page
+        window.addEventListener('load', async () => {
+            const token = localStorage.getItem('token');
+            const shop = localStorage.getItem('shop');
+
+            if (!token || !shop) {
+                window.location.href = 'login.html';
+                return;
+            }
+            
+            try { currentShop = JSON.parse(shop); } catch(e) { window.location.href = 'login.html'; return; }
+            
+            await checkConnectionStatus();
+        });
+    </script>
+</body>
+</html>

@@ -27,23 +27,23 @@ router.use(authenticateToken);
 const createProductSchema = z.object({
   name: z.string().min(1, "Product name is required"),
   price: z.number().positive("Price must be positive"),
-  description: z.string().optional(),
-  category: z.string().optional(),
+  description: z.string().nullable().optional(),
+  category: z.string().nullable().optional(),
   isAvailable: z.boolean().default(true),
   stock: z.number().int().min(0).nullable().optional(),
-  variants: z.string().optional(),
-  variantImages: z.string().optional(),
+  variants: z.string().nullable().optional(),
+  variantImages: z.string().nullable().optional(),
 });
 
 const updateProductSchema = z.object({
   name: z.string().min(1, "Product name is required").optional(),
   price: z.number().positive("Price must be positive").optional(),
-  description: z.string().optional(),
-  category: z.string().optional(),
+  description: z.string().nullable().optional(),
+  category: z.string().nullable().optional(),
   isAvailable: z.boolean().optional(),
   stock: z.number().int().min(0).nullable().optional(),
-  variants: z.string().optional(),
-  variantImages: z.string().optional(),
+  variants: z.string().nullable().optional(),
+  variantImages: z.string().nullable().optional(),
 });
 
 // Get all products for the shop

@@ -401,9 +401,8 @@ async function handleMessage(sock, msg, shop) {
         }
       );
 
-      const reply = aiResponse + '\n\n💡 أرسل رقم من القائمة أو اكتب *قائمة* للعودة';
-      await safeSend(sock, from, reply);
-      await addHistory(shop.id, customerPhone, 'bot', reply);
+      await safeSend(sock, from, aiResponse);
+      await addHistory(shop.id, customerPhone, 'bot', aiResponse);
       return;
     }
 

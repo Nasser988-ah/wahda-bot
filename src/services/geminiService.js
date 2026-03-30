@@ -45,23 +45,37 @@ class AIService {
     const temperature = options.temperature ?? 0.7;
     const maxTokens = options.maxTokens ?? 300;
 
-    // Build context string
+    // Build context string (exclude session history - it goes as chat messages)
     let contextStr = '';
     if (context.shopName) contextStr += `اسم المتجر/الشركة: ${context.shopName}\n`;
     if (context.currentMenu) contextStr += `القائمة الحالية: ${context.currentMenu}\n`;
-    if (context.menuItems) contextStr += `عناصر القائمة:\n${context.menuItems}\n`;
-    if (context.sessionHistory) contextStr += `سجل المحادثة:\n${context.sessionHistory}\n`;
+    if (context.menuItems) contextStr += `عناصر القائمة المتاحة:\n${context.menuItems}\n`;
     if (context.itemContext) contextStr += `سياق العنصر: ${context.itemContext}\n`;
 
     const fullSystemPrompt = contextStr ? `${systemPrompt}\n\n${contextStr}` : systemPrompt;
 
+    // Build multi-turn messages from session history
+    const messages = [{ role: 'system', content: fullSystemPrompt }];
+
+    // Add conversation history as proper chat turns for better context
+    if (context.sessionHistory) {
+      const historyLines = context.sessionHistory.split('\n').filter(l => l.trim());
+      for (const line of historyLines) {
+        if (line.startsWith('العميل:')) {
+          messages.push({ role: 'user', content: line.replace('العميل:', '').trim() });
+        } else if (line.startsWith('البوت:')) {
+          messages.push({ role: 'assistant', content: line.replace('البوت:', '').trim() });
+        }
+      }
+    }
+
+    // Add current message
+    messages.push({ role: 'user', content: customerMessage });
+
     try {
       const chatCompletion = await groqClient.chat.completions.create({
-        messages: [
-          { role: 'system', content: fullSystemPrompt },
-          { role: 'user', content: customerMessage },
-        ],
-        model: options.model || 'llama-3.1-8b-instant',
+        messages,
+        model: options.model || 'llama-3.3-70b-versatile',
         temperature,
         max_tokens: maxTokens,
         top_p: 0.9,
@@ -73,6 +87,23 @@ class AIService {
       return 'عذراً، لم أتمكن من فهم طلبك. يرجى المحاولة مرة أخرى.';
     } catch (error) {
       console.error('❌ AI service error:', error.message);
+      // Fallback to smaller model if 70b fails
+      if (options.model !== 'llama-3.1-8b-instant') {
+        try {
+          console.log('⚠️ Falling back to smaller AI model...');
+          const fallback = await groqClient.chat.completions.create({
+            messages,
+            model: 'llama-3.1-8b-instant',
+            temperature,
+            max_tokens: maxTokens,
+            top_p: 0.9,
+          });
+          const fallbackText = fallback.choices[0]?.message?.content?.trim();
+          if (fallbackText) return fallbackText;
+        } catch (e2) {
+          console.error('❌ AI fallback error:', e2.message);
+        }
+      }
       return 'عذراً، حدث خطأ في معالجة طلبك. يرجى المحاولة لاحقاً.';
     }
   }

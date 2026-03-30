@@ -54,8 +54,11 @@ class AIService {
 
     const fullSystemPrompt = contextStr ? `${systemPrompt}\n\n${contextStr}` : systemPrompt;
 
+    // Hard language constraint - always prepend Arabic-only rule
+    const languageConstraint = 'تعليمات صارمة: يجب أن ترد دائماً باللغة العربية فقط. لا تستخدم أي لغة أخرى مطلقاً (لا يابانية، لا صينية، لا إنجليزية إلا إذا طلب العميل ذلك). CRITICAL: Always respond in Arabic only. Never switch to Japanese, Chinese, or any other language.\n\n';
+
     // Build multi-turn messages from session history
-    const messages = [{ role: 'system', content: fullSystemPrompt }];
+    const messages = [{ role: 'system', content: languageConstraint + fullSystemPrompt }];
 
     // Add conversation history as proper chat turns for better context
     if (context.sessionHistory) {

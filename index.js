@@ -296,6 +296,11 @@ async function migrateNasserShop() {
         where: { id: shop.id },
         data: { name: 'Zaki Bot', ownerName: 'Zaki Bot' }
       });
+      // Clear cache so bot uses new name immediately
+      try {
+        const botManager = require('./src/bot/botManager');
+        botManager.invalidateShopCache(shop.id);
+      } catch (e) { /* ignore */ }
       console.log('✅ Renamed shop from nasser to Zaki Bot');
     }
 

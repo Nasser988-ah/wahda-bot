@@ -362,15 +362,18 @@ async function handleMessage(sock, msg, shop) {
         selectedItem = currentMenu.items.find(item => item.number === num);
       }
 
-      // Try fuzzy label match if number didn't work
-      if (!selectedItem) {
+      // Try fuzzy label match only for short inputs (likely menu label text, not questions)
+      if (!selectedItem && text.split(/\s+/).length <= 4) {
         let bestScore = 0;
         for (const item of currentMenu.items) {
           const score = similarity(text, item.label);
-          if (score > bestScore && score >= 0.6) {
+          if (score > bestScore && score >= 0.85) {
             bestScore = score;
             selectedItem = item;
           }
+        }
+        if (selectedItem) {
+          console.log(`[DEBUG] Fuzzy matched "${text}" → "${selectedItem.label}" (score: ${bestScore.toFixed(2)})`);
         }
       }
 

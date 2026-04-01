@@ -379,30 +379,38 @@ async function handleMessage(sock, msg, shop) {
       }
 
       // ── Unknown input → AI response ──
+      console.log(`🤖 [AI] Generating response for "${text.slice(0, 50)}" (shop: ${shop.name})`);
       const history = await getHistory(shop.id, customerPhone);
       const historyText = history.map(h => `${h.role === 'customer' ? 'العميل' : 'البوت'}: ${h.text}`).join('\n');
 
       const menuItemsList = currentMenu.items.map(i => `${i.number}. ${i.label}`).join('\n');
 
-      const aiResponse = await geminiService.getResponse(
-        config.aiSystemPrompt,
-        text,
-        {
-          shopId: shop.id,
-          shopName: shop.name,
-          currentMenu: currentMenu.name,
-          menuItems: menuItemsList,
-          sessionHistory: historyText,
-        },
-        {
-          temperature: config.aiTemperature,
-          maxTokens: config.aiMaxTokens,
-          model: config.aiModel,
-        }
-      );
+      try {
+        const aiResponse = await geminiService.getResponse(
+          config.aiSystemPrompt,
+          text,
+          {
+            shopId: shop.id,
+            shopName: shop.name,
+            currentMenu: currentMenu.name,
+            menuItems: menuItemsList,
+            sessionHistory: historyText,
+          },
+          {
+            temperature: config.aiTemperature,
+            maxTokens: config.aiMaxTokens,
+            model: config.aiModel,
+          }
+        );
 
-      await safeSend(sock, from, aiResponse);
-      await addHistory(shop.id, customerPhone, 'bot', aiResponse);
+        console.log(`✅ [AI] Response (${aiResponse.length} chars): "${aiResponse.slice(0, 80)}..."`);
+        await safeSend(sock, from, aiResponse);
+        await addHistory(shop.id, customerPhone, 'bot', aiResponse);
+      } catch (aiErr) {
+        console.error(`❌ [AI] Error for "${text.slice(0, 50)}":`, aiErr.message);
+        const fallbackMsg = 'عذراً، حصل مشكلة بسيطة. جرب تاني أو تواصل معنا على 01128511900 📱';
+        await safeSend(sock, from, fallbackMsg);
+      }
       return;
     }
 

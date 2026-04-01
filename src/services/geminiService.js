@@ -1,10 +1,18 @@
 const Groq = require('groq-sdk');
 
+// Models ranked by intelligence (first = smartest)
+const MODELS = [
+  'llama-3.3-70b-versatile',
+  'llama-3.1-8b-instant',
+];
+
 class AIService {
   constructor() {
     this.groq = null;
-    this.customGroq = new Map(); // Store custom Groq instances per shop
+    this.customGroq = new Map();
     this.initialized = false;
+    this.requestCount = 0;
+    this.lastReset = Date.now();
   }
 
   initialize() {
@@ -28,42 +36,71 @@ class AIService {
     return false;
   }
 
+  // Track usage to avoid rate limits
+  _trackUsage() {
+    const now = Date.now();
+    // Reset counter every minute
+    if (now - this.lastReset > 60000) {
+      this.requestCount = 0;
+      this.lastReset = now;
+    }
+    this.requestCount++;
+    return this.requestCount;
+  }
+
+  // Pick best model based on usage
+  _pickModel(preferredModel) {
+    const count = this._trackUsage();
+    // If making too many requests per minute, use faster model to avoid rate limits
+    if (count > 25) {
+      console.log(`⚠️ High request rate (${count}/min), using fast model`);
+      return 'llama-3.1-8b-instant';
+    }
+    return preferredModel || MODELS[0];
+  }
+
   async getResponse(systemPrompt, customerMessage, context = {}, options = {}) {
+    const startTime = Date.now();
     let groqClient = this.groq;
-    
+
     // Use custom API key if shopId is provided
     if (context.shopId && this.customGroq.has(context.shopId)) {
       groqClient = this.customGroq.get(context.shopId);
     } else if (!this.initialized) {
       this.initialize();
     }
-    
+
     if (!groqClient) {
+      console.error('❌ AI: No Groq client available');
       return 'عذراً، خدمة الذكاء الاصطناعي غير متاحة حالياً.';
     }
 
+    // Cap tokens to save quota
     const temperature = options.temperature ?? 0.7;
-    const maxTokens = options.maxTokens ?? 300;
+    const maxTokens = Math.min(options.maxTokens ?? 300, 400);
 
-    // Build context string (exclude session history - it goes as chat messages)
+    // Build context (compact)
     let contextStr = '';
-    if (context.shopName) contextStr += `اسم المتجر/الشركة: ${context.shopName}\n`;
-    if (context.currentMenu) contextStr += `القائمة الحالية: ${context.currentMenu}\n`;
-    if (context.menuItems) contextStr += `عناصر القائمة المتاحة:\n${context.menuItems}\n`;
-    if (context.itemContext) contextStr += `سياق العنصر: ${context.itemContext}\n`;
+    if (context.shopName) contextStr += `الشركة: ${context.shopName}\n`;
+    if (context.currentMenu) contextStr += `القائمة: ${context.currentMenu}\n`;
+    if (context.menuItems) contextStr += `الخيارات:\n${context.menuItems}\n`;
+    if (context.itemContext) contextStr += `السياق: ${context.itemContext}\n`;
 
-    const fullSystemPrompt = contextStr ? `${systemPrompt}\n\n${contextStr}` : systemPrompt;
+    const fullSystemPrompt = contextStr
+      ? `${systemPrompt}\n\n${contextStr}`
+      : systemPrompt;
 
-    // Hard language constraint - always prepend Arabic-only rule
-    const languageConstraint = 'تعليمات صارمة: يجب أن ترد دائماً باللغة العربية فقط. لا تستخدم أي لغة أخرى مطلقاً (لا يابانية، لا صينية، لا إنجليزية إلا إذا طلب العميل ذلك). CRITICAL: Always respond in Arabic only. Never switch to Japanese, Chinese, or any other language.\n\n';
+    // Arabic-only constraint (bilingual to anchor the model)
+    const langRule = 'أجب بالعربية فقط. ALWAYS respond in Arabic. Never use Japanese, Chinese, Korean, or any non-Arabic language.\n\n';
 
-    // Build multi-turn messages from session history
-    const messages = [{ role: 'system', content: languageConstraint + fullSystemPrompt }];
+    // Build messages
+    const messages = [{ role: 'system', content: langRule + fullSystemPrompt }];
 
-    // Add conversation history as proper chat turns for better context
+    // Add conversation history as chat turns (keep last 6 turns max)
     if (context.sessionHistory) {
-      const historyLines = context.sessionHistory.split('\n').filter(l => l.trim());
-      for (const line of historyLines) {
+      const lines = context.sessionHistory.split('\n').filter(l => l.trim());
+      const recentLines = lines.slice(-6);
+      for (const line of recentLines) {
         if (line.startsWith('العميل:')) {
           messages.push({ role: 'user', content: line.replace('العميل:', '').trim() });
         } else if (line.startsWith('البوت:')) {
@@ -72,43 +109,49 @@ class AIService {
       }
     }
 
-    // Add current message
     messages.push({ role: 'user', content: customerMessage });
 
-    try {
-      const chatCompletion = await groqClient.chat.completions.create({
-        messages,
-        model: options.model || 'llama-3.3-70b-versatile',
-        temperature,
-        max_tokens: maxTokens,
-        top_p: 0.9,
-      });
+    const selectedModel = this._pickModel(options.model);
+    console.log(`🤖 AI call: model=${selectedModel}, tokens=${maxTokens}, msg="${customerMessage.slice(0, 50)}"`);
 
-      const text = chatCompletion.choices[0]?.message?.content?.trim();
-      if (text) return text;
-
-      return 'عذراً، لم أتمكن من فهم طلبك. يرجى المحاولة مرة أخرى.';
-    } catch (error) {
-      console.error('❌ AI service error:', error.message);
-      // Fallback to smaller model if 70b fails
-      if (options.model !== 'llama-3.1-8b-instant') {
-        try {
-          console.log('⚠️ Falling back to smaller AI model...');
-          const fallback = await groqClient.chat.completions.create({
+    // Try with timeout
+    for (const model of [selectedModel, ...MODELS.filter(m => m !== selectedModel)]) {
+      try {
+        const result = await Promise.race([
+          groqClient.chat.completions.create({
             messages,
-            model: 'llama-3.1-8b-instant',
+            model,
             temperature,
             max_tokens: maxTokens,
             top_p: 0.9,
-          });
-          const fallbackText = fallback.choices[0]?.message?.content?.trim();
-          if (fallbackText) return fallbackText;
-        } catch (e2) {
-          console.error('❌ AI fallback error:', e2.message);
+          }),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('AI_TIMEOUT')), 15000)
+          ),
+        ]);
+
+        const text = result.choices[0]?.message?.content?.trim();
+        const elapsed = Date.now() - startTime;
+        console.log(`✅ AI responded: model=${model}, time=${elapsed}ms, len=${text?.length || 0}`);
+
+        if (text) return text;
+      } catch (error) {
+        const elapsed = Date.now() - startTime;
+        console.error(`❌ AI error (model=${model}, time=${elapsed}ms): ${error.message}`);
+
+        // If timeout or rate limit, try next model
+        if (error.message === 'AI_TIMEOUT' || error.status === 429) {
+          console.log(`⚠️ Trying next model...`);
+          continue;
         }
+        // Other error, still try next model
+        continue;
       }
-      return 'عذراً، حدث خطأ في معالجة طلبك. يرجى المحاولة لاحقاً.';
     }
+
+    // All models failed
+    console.error('❌ All AI models failed');
+    return 'عذراً، الخدمة مشغولة حالياً. حاول مرة تانية بعد شوية أو تواصل معنا على 01128511900 📱';
   }
 }
 

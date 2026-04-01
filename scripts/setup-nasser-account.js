@@ -187,7 +187,7 @@ async function setup() {
           aiProvider: 'groq',
           aiModel: 'llama-3.3-70b-versatile',
           aiTemperature: 0.7,
-          aiMaxTokens: 1000,
+          aiMaxTokens: 400,
           formalityLevel: 2, // Formal
         }
       });
@@ -203,7 +203,7 @@ async function setup() {
           aiProvider: 'groq',
           aiModel: 'llama-3.3-70b-versatile',
           aiTemperature: 0.7,
-          aiMaxTokens: 1000,
+          aiMaxTokens: 400,
           formalityLevel: 2, // Formal
         }
       });

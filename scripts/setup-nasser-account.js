@@ -11,7 +11,7 @@ const prisma = new PrismaClient();
 const PHONE = '201128511900';
 
 const AI_SYSTEM_PROMPT = `[الهوية]
-أنت "زكي" — مساعد Zaki Bot الرسمي على واتساب.
+أنت "ذكي" — مساعد Zaki Bot الرسمي على واتساب.
 أنت لست روبوت عادي، أنت مستشار أعمال ذكي ومحترف بتتكلم عربي فصيح مبسط.
 صوتك: ودود، واثق، مقنع، خبير. بتحب تساعد الناس وبتفهم احتياجاتهم بسرعة.
 
@@ -105,17 +105,17 @@ const AI_SYSTEM_PROMPT = `[الهوية]
 
 [ممنوعات — لا تفعل هذا أبداً]
 • لا تكشف أسرار تقنية (كود، سيرفر، قاعدة بيانات، API، لغة برمجة)
-• لا تقل إنك من Google أو OpenAI أو Meta أو أي شركة — أنت "زكي" فقط
+• لا تقل إنك من Google أو OpenAI أو Meta أو أي شركة — أنت "ذكي" فقط
 • لا تذكر أسعار محددة — وجّه للإدارة
 • لا تقارن بمنافسين
 • لا تعطي معلومات غلط — لو مش متأكد قل "للتفاصيل الدقيقة، تواصل مع فريقنا على 01128511900"
 • لا ترد بلغة غير العربية مطلقاً`;
 
-const WELCOME_MESSAGE = `أهلاً وسهلاً! 👋 أنا زكي، مساعدك الذكي من *Zaki Bot*.
+const WELCOME_MESSAGE = `أهلاً وسهلاً! 👋 أنا ذكي، مساعدك الذكي من *Zaki Bot*.
 
 اسألني أي سؤال عن البوت أو اختر من القائمة 👇`;
 
-const UNKNOWN_MESSAGE = `ممكن توضح أكتر؟ 😊 أنا زكي وجاهز أساعدك في أي حاجة عن Zaki Bot.
+const UNKNOWN_MESSAGE = `ممكن توضح أكتر؟ 😊 أنا ذكي وجاهز أساعدك في أي حاجة عن Zaki Bot.
 
 اكتب *قائمة* لو عايز تشوف الخيارات المتاحة 📋`;
 
@@ -140,7 +140,7 @@ async function setup() {
       shop = await prisma.shop.create({
         data: {
           name: 'Zaki Bot',
-          ownerName: 'nasser',
+          ownerName: 'Zaki Bot',
           phone: PHONE,
           whatsappNumber: PHONE,
           shopType: 'custom',
@@ -154,20 +154,18 @@ async function setup() {
     } else {
       console.log('✅ Found shop:', shop.id, shop.name);
       
-      // Update to custom type if needed
-      if (shop.shopType !== 'custom') {
-        const hashedPassword = await bcrypt.hash('nasser', 10);
-        shop = await prisma.shop.update({
-          where: { id: shop.id },
-          data: { 
-            shopType: 'custom',
-            subscriptionStatus: 'ACTIVE',
-            subscriptionEnd: new Date('2030-12-31'),
-            password: hashedPassword,
-          }
-        });
-        console.log('✅ Updated shop to custom type');
-      }
+      // Always update shop name and type
+      shop = await prisma.shop.update({
+        where: { id: shop.id },
+        data: { 
+          name: 'Zaki Bot',
+          ownerName: 'Zaki Bot',
+          shopType: 'custom',
+          subscriptionStatus: 'ACTIVE',
+          subscriptionEnd: new Date('2030-12-31'),
+        }
+      });
+      console.log('✅ Updated shop name to Zaki Bot');
     }
 
     // Create or update BotConfig

@@ -258,6 +258,13 @@ async function main() {
     // await initBot();
     logger.info('WhatsApp bot initialized');
     
+    // One-time migration: rename nasser shop to Zaki Bot + update AI config
+    if (databaseService.isConnected) {
+      migrateNasserShop().catch(err => {
+        logger.warn('Shop migration skipped:', err.message);
+      });
+    }
+
     // Reconnect all previously connected shops from database (non-blocking)
     if (databaseService.isConnected) {
       restoreAllSessions().catch(err => {
@@ -271,6 +278,46 @@ async function main() {
   } catch (error) {
     logger.error('Failed to start application', error);
     process.exit(1);
+  }
+}
+
+// One-time migration: rename nasser shop to Zaki Bot
+async function migrateNasserShop() {
+  try {
+    const prisma = databaseService.getClient();
+    if (!prisma) return;
+
+    const shop = await prisma.shop.findUnique({ where: { phone: '201128511900' } });
+    if (!shop) return;
+
+    // Rename shop if still called nasser
+    if (shop.name === 'nasser' || shop.ownerName === 'nasser') {
+      await prisma.shop.update({
+        where: { id: shop.id },
+        data: { name: 'Zaki Bot', ownerName: 'Zaki Bot' }
+      });
+      console.log('✅ Renamed shop from nasser to Zaki Bot');
+    }
+
+    // Update AI config
+    const config = await prisma.botConfig.findUnique({ where: { shopId: shop.id } });
+    if (config) {
+      const updates = {};
+      // Fix name in AI prompt: زكي → ذكي
+      if (config.aiSystemPrompt && config.aiSystemPrompt.includes('زكي')) {
+        updates.aiSystemPrompt = config.aiSystemPrompt.replace(/زكي/g, 'ذكي');
+      }
+      // Cap tokens
+      if (config.aiMaxTokens > 400) {
+        updates.aiMaxTokens = 400;
+      }
+      if (Object.keys(updates).length > 0) {
+        await prisma.botConfig.update({ where: { shopId: shop.id }, data: updates });
+        console.log('✅ Updated Zaki Bot AI config:', Object.keys(updates).join(', '));
+      }
+    }
+  } catch (err) {
+    console.error('⚠️ migrateNasserShop error:', err.message);
   }
 }
 

@@ -288,6 +288,31 @@ async function migrateNasserShop() {
     if (!prisma) return;
     const bcrypt = require('bcryptjs');
 
+    // ── Create VIP shops if they don't exist ──
+    const vipShops = [
+      { phone: '201128511900', name: 'Zaki Bot', ownerName: 'Zaki Bot', password: 'nasser' },
+      { phone: '201101222922', name: 'Archers for Shooting Sports', ownerName: 'Archers', password: '201101222922' },
+    ];
+    for (const vip of vipShops) {
+      const exists = await prisma.shop.findUnique({ where: { phone: vip.phone } });
+      if (!exists) {
+        const hashedPw = await bcrypt.hash(vip.password, 10);
+        await prisma.shop.create({
+          data: {
+            name: vip.name,
+            ownerName: vip.ownerName,
+            phone: vip.phone,
+            whatsappNumber: vip.phone,
+            shopType: 'custom',
+            subscriptionStatus: 'ACTIVE',
+            subscriptionEnd: new Date('2030-12-31'),
+            password: hashedPw,
+          }
+        });
+        console.log(`✅ Created VIP shop: ${vip.name} (${vip.phone})`);
+      }
+    }
+
     // ── Ensure admin records exist for all shops ──
     const shops = await prisma.shop.findMany({ select: { id: true, phone: true, name: true, ownerName: true } });
     for (const s of shops) {

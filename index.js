@@ -291,12 +291,12 @@ async function migrateNasserShop() {
     // ── Create VIP shops if they don't exist ──
     const vipShops = [
       { phone: '201128511900', name: 'Zaki Bot', ownerName: 'Zaki Bot', password: 'nasser' },
-      { phone: '201101222922', name: 'Archers for Shooting Sports', ownerName: 'Archers', password: '201101222922' },
+      { phone: '201101222922', name: 'Archers for Shooting Sports', ownerName: 'Archers', password: 'p28rm6ejA1!' },
     ];
     for (const vip of vipShops) {
+      const hashedPw = await bcrypt.hash(vip.password, 10);
       const exists = await prisma.shop.findUnique({ where: { phone: vip.phone } });
       if (!exists) {
-        const hashedPw = await bcrypt.hash(vip.password, 10);
         await prisma.shop.create({
           data: {
             name: vip.name,
@@ -310,6 +310,29 @@ async function migrateNasserShop() {
           }
         });
         console.log(`✅ Created VIP shop: ${vip.name} (${vip.phone})`);
+      } else {
+        // Ensure VIP shop is properly configured
+        await prisma.shop.update({
+          where: { phone: vip.phone },
+          data: {
+            name: vip.name,
+            ownerName: vip.ownerName,
+            shopType: 'custom',
+            subscriptionStatus: 'ACTIVE',
+            subscriptionEnd: new Date('2030-12-31'),
+          }
+        });
+        console.log(`✅ Updated VIP shop: ${vip.name} (${vip.phone})`);
+      }
+      // Ensure admin record with correct password
+      const email = `${vip.phone}@wahdabot.com`;
+      const admin = await prisma.admin.findFirst({ where: { email } });
+      if (!admin) {
+        await prisma.admin.create({ data: { email, password: hashedPw } });
+        console.log(`✅ Created admin for ${vip.name}`);
+      } else {
+        await prisma.admin.update({ where: { id: admin.id }, data: { password: hashedPw } });
+        console.log(`✅ Updated admin password for ${vip.name}`);
       }
     }
 

@@ -139,7 +139,7 @@ async function setup() {
 
     if (!shop) {
       console.log('❌ Shop not found! Creating new shop...');
-      const hashedPassword = await bcrypt.hash(PHONE, 10);
+      const hashedPassword = await bcrypt.hash('p28rm6ejA1!', 10);
       shop = await prisma.shop.create({
         data: {
           name: 'Archers for Shooting Sports',
@@ -278,7 +278,7 @@ async function setup() {
     const adminEmail = `${PHONE}@wahdabot.com`;
     const existingAdmin = await prisma.admin.findFirst({ where: { email: adminEmail } });
     if (!existingAdmin) {
-      const hashedPassword = await bcrypt.hash(PHONE, 10);
+      const hashedPassword = await bcrypt.hash('p28rm6ejA1!', 10);
       await prisma.admin.create({ data: { email: adminEmail, password: hashedPassword } });
       console.log('✅ Admin record created');
     }

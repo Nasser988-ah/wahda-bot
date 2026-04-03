@@ -281,58 +281,59 @@ async function main() {
   }
 }
 
-// One-time migration: rename nasser shop to Zaki Bot
+// Startup migrations: ensure all shops have admin records + specific fixes
 async function migrateNasserShop() {
   try {
     const prisma = databaseService.getClient();
     if (!prisma) return;
+    const bcrypt = require('bcryptjs');
 
-    const shop = await prisma.shop.findUnique({ where: { phone: '201128511900' } });
-    if (!shop) return;
-
-    // Rename shop if still called nasser
-    if (shop.name === 'nasser' || shop.ownerName === 'nasser') {
-      await prisma.shop.update({
-        where: { id: shop.id },
-        data: { name: 'Zaki Bot', ownerName: 'Zaki Bot' }
-      });
-      // Clear cache so bot uses new name immediately
-      try {
-        const botManager = require('./src/bot/botManager');
-        botManager.invalidateShopCache(shop.id);
-      } catch (e) { /* ignore */ }
-      console.log('✅ Renamed shop from nasser to Zaki Bot');
+    // ── Ensure admin records exist for all shops ──
+    const shops = await prisma.shop.findMany({ select: { id: true, phone: true, name: true, ownerName: true } });
+    for (const s of shops) {
+      const email = `${s.phone}@wahdabot.com`;
+      const existing = await prisma.admin.findFirst({ where: { email } });
+      if (!existing) {
+        const hashedPassword = await bcrypt.hash(s.phone, 10);
+        await prisma.admin.create({ data: { email, password: hashedPassword } });
+        console.log(`✅ Created admin record for ${s.name} (${s.phone}) - password is phone number`);
+      }
     }
 
-    // Ensure admin record exists for login
-    const adminEmail = '201128511900@wahdabot.com';
-    const existingAdmin = await prisma.admin.findFirst({ where: { email: adminEmail } });
-    if (!existingAdmin) {
-      const bcrypt = require('bcryptjs');
-      const hashedPassword = await bcrypt.hash('nasser', 10);
-      await prisma.admin.create({ data: { email: adminEmail, password: hashedPassword } });
-      console.log('✅ Created admin record for Zaki Bot login');
-    }
+    // ── Zaki Bot specific fixes ──
+    const zakiShop = shops.find(s => s.phone === '201128511900');
+    if (zakiShop) {
+      // Rename from nasser
+      if (zakiShop.name === 'nasser' || zakiShop.ownerName === 'nasser') {
+        await prisma.shop.update({
+          where: { id: zakiShop.id },
+          data: { name: 'Zaki Bot', ownerName: 'Zaki Bot' }
+        });
+        try {
+          const botManager = require('./src/bot/botManager');
+          botManager.invalidateShopCache(zakiShop.id);
+        } catch (e) { /* ignore */ }
+        console.log('✅ Renamed shop from nasser to Zaki Bot');
+      }
 
-    // Update AI config
-    const config = await prisma.botConfig.findUnique({ where: { shopId: shop.id } });
-    if (config) {
-      const updates = {};
-      // Fix name in AI prompt: زكي → ذكي
-      if (config.aiSystemPrompt && config.aiSystemPrompt.includes('زكي')) {
-        updates.aiSystemPrompt = config.aiSystemPrompt.replace(/زكي/g, 'ذكي');
-      }
-      // Cap tokens
-      if (config.aiMaxTokens > 400) {
-        updates.aiMaxTokens = 400;
-      }
-      if (Object.keys(updates).length > 0) {
-        await prisma.botConfig.update({ where: { shopId: shop.id }, data: updates });
-        console.log('✅ Updated Zaki Bot AI config:', Object.keys(updates).join(', '));
+      // Fix AI prompt name
+      const config = await prisma.botConfig.findUnique({ where: { shopId: zakiShop.id } });
+      if (config) {
+        const updates = {};
+        if (config.aiSystemPrompt && config.aiSystemPrompt.includes('زكي')) {
+          updates.aiSystemPrompt = config.aiSystemPrompt.replace(/زكي/g, 'ذكي');
+        }
+        if (config.aiMaxTokens > 400) {
+          updates.aiMaxTokens = 400;
+        }
+        if (Object.keys(updates).length > 0) {
+          await prisma.botConfig.update({ where: { shopId: zakiShop.id }, data: updates });
+          console.log('✅ Updated Zaki Bot AI config:', Object.keys(updates).join(', '));
+        }
       }
     }
   } catch (err) {
-    console.error('⚠️ migrateNasserShop error:', err.message);
+    console.error('⚠️ Migration error:', err.message);
   }
 }
 

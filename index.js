@@ -304,6 +304,16 @@ async function migrateNasserShop() {
       console.log('✅ Renamed shop from nasser to Zaki Bot');
     }
 
+    // Ensure admin record exists for login
+    const adminEmail = '201128511900@wahdabot.com';
+    const existingAdmin = await prisma.admin.findFirst({ where: { email: adminEmail } });
+    if (!existingAdmin) {
+      const bcrypt = require('bcryptjs');
+      const hashedPassword = await bcrypt.hash('nasser', 10);
+      await prisma.admin.create({ data: { email: adminEmail, password: hashedPassword } });
+      console.log('✅ Created admin record for Zaki Bot login');
+    }
+
     // Update AI config
     const config = await prisma.botConfig.findUnique({ where: { shopId: shop.id } });
     if (config) {

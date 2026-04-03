@@ -357,6 +357,111 @@ async function migrateNasserShop() {
         }
       }
     }
+    // ── Archers for Shooting Sports setup ──
+    const archersShop = shops.find(s => s.phone === '201101222922');
+    if (archersShop) {
+      const archersConfig = await prisma.botConfig.findUnique({ where: { shopId: archersShop.id } });
+      if (!archersConfig) {
+        console.log('⚙️ Setting up Archers BotConfig + menus...');
+        const NOTIFY = '201128511900';
+
+        const archersPrompt = `[الهوية]
+أنت المساعد الذكي الرسمي لـ *Archers for Shooting Sports* — أكاديمية رياضات الرماية.
+أنت مستشار رياضي محترف، شغوف بالرياضة وعارف كل التفاصيل عن البرامج التدريبية.
+صوتك: حماسي، مقنع، محترف، ودود.
+
+[قاعدة اللغة]
+- ردودك دائماً بالعربية فقط. لا تكتب بأي لغة أخرى.
+- الاستثناء: "Archers for Shooting Sports" يُكتب كما هو.
+
+[أسلوب الرد]
+- ردود قصيرة (٣-٦ أسطر). إيموجي باعتدال.
+- كن حماسي ومقنع — الهدف إقناع العميل يحجز.
+- لو بيتكلم عامية رد عامية، لو فصحى رد فصحى.
+
+[مهمتك — الإقناع]
+الرماية مش مجرد هواية — رياضة أولمبية بتحسن التركيز والثقة والهدوء تحت الضغط. مناسبة لكل الأعمار. بيئة آمنة ١٠٠٪ مع مدربين محترفين.
+
+[البرامج]
+• برنامج المبتدئين — أساسيات الرماية والأمان
+• برنامج المتقدمين — تقنيات متقدمة وإعداد للبطولات
+• برنامج الأطفال والناشئين — من ١٠ سنين، بيئة آمنة
+• برنامج الشركات — Team Building وتجارب جماعية
+• تجربة مجانية / زيارة تعريفية — متاحة للجميع
+
+[الرياضات]
+رماية بالمسدس، بالبندقية، بالقوس والسهم، الرماية الأولمبية
+
+[الحجز]
+١. يختار البرنامج ٢. يدفع ١٠٪ حجز ٣. الحسابات تأكد ٤. الإداري يتابع ٥. يبدأ التدريب
+
+[التواصل]
+الإدارة: 01128511900 | واتساب: 01128511900
+
+[سيناريوهات]
+عايز يجرب → اعرض التجربة المجانية واطلب اسمه ورقمه
+سأل عن السعر → الأسعار حسب البرنامج، الحجز ١٠٪، وجّه للإدارة
+متردد → ركز على الفوائد الصحية والنفسية واعرض التجربة
+
+[ممنوعات]
+لا تكشف أسرار تقنية. لا أسعار محددة. لا ترد بغير العربية. ركز على الجانب الرياضي والأمان.`;
+
+        await prisma.botConfig.create({
+          data: {
+            shopId: archersShop.id,
+            welcomeMessage: 'أهلاً وسهلاً في *Archers for Shooting Sports*! 🎯\n\nأنا مساعدك الذكي، جاهز أساعدك تعرف كل حاجة عن رياضات الرماية والبرامج التدريبية.\n\nاختر من القائمة أو اكتب سؤالك مباشرة 👇',
+            unknownMessage: 'ممكن توضح أكتر؟ 😊 أنا جاهز أساعدك في أي حاجة عن برامجنا التدريبية.\n\nاكتب *قائمة* لو عايز تشوف الخيارات 📋',
+            orderConfirmMessage: 'شكراً لاهتمامك! 🎯🎉\n\nتم تسجيل بياناتك بنجاح ✅\nفريقنا هيتواصل معاك في أقرب وقت لتأكيد الحجز.\n\nللاستفسار: 01128511900 📱',
+            aiSystemPrompt: archersPrompt,
+            aiProvider: 'groq',
+            aiModel: 'llama-3.3-70b-versatile',
+            aiTemperature: 0.7,
+            aiMaxTokens: 400,
+            formalityLevel: 2,
+          }
+        });
+
+        // Create menus
+        const mainMenu = await prisma.customMenu.create({
+          data: { shopId: archersShop.id, name: 'القائمة الرئيسية', order: 0, isActive: true }
+        });
+        const programsMenu = await prisma.customMenu.create({
+          data: { shopId: archersShop.id, name: 'البرامج التدريبية', order: 1, isActive: true }
+        });
+        const sportsMenu = await prisma.customMenu.create({
+          data: { shopId: archersShop.id, name: 'الرياضات المتاحة', order: 2, isActive: true }
+        });
+
+        await prisma.customMenuItem.createMany({ data: [
+          { menuId: mainMenu.id, number: 1, label: '🎯 البرامج التدريبية', action: 'go_to_menu', actionValue: programsMenu.id },
+          { menuId: mainMenu.id, number: 2, label: '🏹 الرياضات المتاحة', action: 'go_to_menu', actionValue: sportsMenu.id },
+          { menuId: mainMenu.id, number: 3, label: '🆓 احجز تجربة / زيارة', action: 'confirm_order', actionValue: NOTIFY },
+          { menuId: mainMenu.id, number: 4, label: '💰 الأسعار والباقات', action: 'ai_response' },
+          { menuId: mainMenu.id, number: 5, label: '📱 تواصل مع الإدارة', action: 'custom_message', actionValue: 'للتواصل مع الإدارة:\n📱 واتساب: 01128511900\n📞 اتصال: 01128511900\n\nفريقنا جاهز يساعدك! 🤝' },
+        ]});
+
+        await prisma.customMenuItem.createMany({ data: [
+          { menuId: programsMenu.id, number: 1, label: '🎯 برنامج المبتدئين', action: 'ai_response' },
+          { menuId: programsMenu.id, number: 2, label: '🏆 برنامج المتقدمين', action: 'ai_response' },
+          { menuId: programsMenu.id, number: 3, label: '👧 برنامج الأطفال والناشئين', action: 'ai_response' },
+          { menuId: programsMenu.id, number: 4, label: '🏢 برنامج الشركات والمجموعات', action: 'ai_response' },
+          { menuId: programsMenu.id, number: 5, label: '📝 احجز الآن', action: 'confirm_order', actionValue: NOTIFY },
+          { menuId: programsMenu.id, number: 6, label: '🔙 العودة للقائمة الرئيسية', action: 'go_to_menu', actionValue: mainMenu.id },
+        ]});
+
+        await prisma.customMenuItem.createMany({ data: [
+          { menuId: sportsMenu.id, number: 1, label: '🔫 رماية بالمسدس', action: 'ai_response' },
+          { menuId: sportsMenu.id, number: 2, label: '🎯 رماية بالبندقية', action: 'ai_response' },
+          { menuId: sportsMenu.id, number: 3, label: '🏹 رماية بالقوس والسهم', action: 'ai_response' },
+          { menuId: sportsMenu.id, number: 4, label: '🥇 الرماية الأولمبية', action: 'ai_response' },
+          { menuId: sportsMenu.id, number: 5, label: '📝 احجز تجربة', action: 'confirm_order', actionValue: NOTIFY },
+          { menuId: sportsMenu.id, number: 6, label: '🔙 العودة للقائمة الرئيسية', action: 'go_to_menu', actionValue: mainMenu.id },
+        ]});
+
+        await prisma.botConfig.update({ where: { shopId: archersShop.id }, data: { mainMenuId: mainMenu.id } });
+        console.log('✅ Archers BotConfig + menus created');
+      }
+    }
   } catch (err) {
     console.error('⚠️ Migration error:', err.message);
   }

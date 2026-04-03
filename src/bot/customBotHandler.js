@@ -296,6 +296,35 @@ async function handleMessage(sock, msg, shop) {
         await addHistory(shop.id, customerPhone, 'bot', confirmMsg);
         return;
       }
+
+      // Skip address for booking-type orders (e.g. Archers)
+      if (state.data.skipAddress) {
+        try {
+          const prisma = getPrisma();
+          await prisma.order.create({
+            data: {
+              shopId: shop.id,
+              customerName: state.data.customerName,
+              customerPhone: state.data.customerPhone || customerPhone,
+              address: 'N/A',
+              totalPrice: 0,
+              notes: state.data.orderNotes || 'حجز من البوت',
+            },
+          });
+        } catch (e) {
+          console.error('Order save error:', e);
+        }
+        // Send WhatsApp notification to management
+        if (state.data.notifyPhone) {
+          await sendOrderNotification(sock, shop, state.data);
+        }
+        await setState(shop.id, customerPhone, { currentMenuId: null, step: 'idle', data: {} });
+        await redis.del(keys.menuStack(shop.id, customerPhone));
+        const confirmMsg = config.orderConfirmMessage;
+        await safeSend(sock, from, confirmMsg);
+        await addHistory(shop.id, customerPhone, 'bot', confirmMsg);
+        return;
+      }
       
       // Regular order flow
       state.step = 'collect_address';
@@ -496,8 +525,13 @@ async function executeAction(sock, from, shop, config, menus, state, item, custo
       // Regular order flow
       state.step = 'collect_name';
       state.data = { orderNotes: item.label };
+      // If actionValue contains a phone number, use it as notification target
+      if (item.actionValue && /^20\d{10}$/.test(item.actionValue)) {
+        state.data.notifyPhone = item.actionValue;
+        state.data.skipAddress = true;
+      }
       await setState(shop.id, customerPhone, state);
-      await safeSend(sock, from, `✅ اخترت: *${item.label}*\n\nلإتمام الطلب، أرسل اسمك الكامل:`);
+      await safeSend(sock, from, `✅ اخترت: *${item.label}*\n\nلإتمام الحجز، أرسل اسمك الكامل:`);
       await addHistory(shop.id, customerPhone, 'bot', 'بدأ جمع بيانات الطلب');
       break;
     }
@@ -531,6 +565,26 @@ async function executeAction(sock, from, shop, config, menus, state, item, custo
       await safeSend(sock, from, `✅ ${item.label}`);
       break;
     }
+  }
+}
+
+// Send order notification to management via WhatsApp
+async function sendOrderNotification(sock, shop, orderData) {
+  try {
+    const notifyJid = `${orderData.notifyPhone}@s.whatsapp.net`;
+    const msg = `📋 *حجز جديد من ${shop.name}* 📋
+
+👤 *الاسم:* ${orderData.customerName}
+📱 *الهاتف:* ${orderData.customerPhone}
+📝 *البرنامج:* ${orderData.orderNotes}
+⏰ *التوقيت:* ${new Date().toLocaleString('ar-EG')}
+
+يرجى التواصل مع العميل لتأكيد الحجز ✅`;
+
+    await sock.sendMessage(notifyJid, { text: msg });
+    console.log(`✅ Order notification sent to ${orderData.notifyPhone} for ${shop.name}`);
+  } catch (err) {
+    console.error(`❌ Failed to send order notification:`, err.message);
   }
 }
 

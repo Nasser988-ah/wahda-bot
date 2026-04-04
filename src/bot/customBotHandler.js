@@ -469,6 +469,7 @@ async function handleMessage(sock, msg, shop) {
 // ═══════ Action Executor ═══════
 
 async function executeAction(sock, from, shop, config, menus, state, item, customerPhone, text = '') {
+  console.log(`[DEBUG] executeAction: item="${item.label}" action="${item.action}" actionValue="${item.actionValue || 'none'}"`);
   switch (item.action) {
     case 'custom_message': {
       const msg = item.actionValue || `✅ ${item.label}`;

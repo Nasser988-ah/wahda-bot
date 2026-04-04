@@ -450,8 +450,13 @@ async function migrateNasserShop() {
       }
 
       // Delete old menus and recreate
-      await prisma.customMenuItem.deleteMany({ where: { menu: { shopId: archersShop.id } } });
-      await prisma.customMenu.deleteMany({ where: { shopId: archersShop.id } });
+      const oldMenus = await prisma.customMenu.findMany({ where: { shopId: archersShop.id }, select: { id: true } });
+      if (oldMenus.length > 0) {
+        const oldIds = oldMenus.map(m => m.id);
+        await prisma.customMenuItem.deleteMany({ where: { menuId: { in: oldIds } } });
+        await prisma.customMenu.deleteMany({ where: { id: { in: oldIds } } });
+        console.log(`🗑️ Deleted ${oldMenus.length} old Archers menus`);
+      }
 
       // Create menus
       const mainMenu = await prisma.customMenu.create({
@@ -491,7 +496,15 @@ async function migrateNasserShop() {
       ]});
 
       await prisma.botConfig.update({ where: { shopId: archersShop.id }, data: { mainMenuId: mainMenu.id } });
-      console.log('✅ Archers BotConfig + menus created');
+      // Verify items were created correctly
+      const verifyItems = await prisma.customMenuItem.findMany({
+        where: { menuId: { in: [mainMenu.id, programsMenu.id, sportsMenu.id] } },
+        select: { number: true, label: true, action: true, actionValue: true },
+        orderBy: { number: 'asc' },
+      });
+      const confirmItems = verifyItems.filter(i => i.action === 'confirm_order');
+      console.log(`✅ Archers menus created: ${verifyItems.length} items total, ${confirmItems.length} confirm_order items`);
+      confirmItems.forEach(i => console.log(`   📝 confirm_order: "${i.label}" → notify ${i.actionValue}`));
     }
   } catch (err) {
     console.error('⚠️ Migration error:', err.message);

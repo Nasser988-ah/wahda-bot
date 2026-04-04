@@ -88,10 +88,19 @@ app.use(morgan("dev"));
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: false, limit: '1mb' }));
 
+const publicChatLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  message: { error: 'طلبات كثيرة، حاول بعد دقيقة' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // Apply rate limiting
 app.use('/api/auth/login', loginLimiter);
 app.use('/api/auth/register', registerLimiter);
 app.use('/api/admin/login', loginLimiter);
+app.use('/api/public', publicChatLimiter);
 app.use('/api/', apiLimiter);
 
 // Block access to sensitive directories

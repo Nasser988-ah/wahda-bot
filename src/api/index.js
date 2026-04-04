@@ -14,6 +14,7 @@ const orderRoutes = require("./routes/order.routes");
 const adminRoutes = require("./routes/admin.routes");
 const customBotRoutes = require("./routes/customBot.routes");
 const supportGroupsRoutes = require("./routes/supportGroups.routes");
+const publicChatRoutes = require("./routes/publicChat.routes");
 
 // PUBLIC STORE API - No authentication required
 // This must be before auth middleware
@@ -79,5 +80,8 @@ router.use("/custom-bot", requireDatabase, customBotRoutes);
 
 // Support groups routes
 router.use("/support-groups", requireDatabase, supportGroupsRoutes);
+
+// Public chat routes (no auth)
+router.use("/public", requireDatabase, publicChatRoutes);
 
 module.exports = router;

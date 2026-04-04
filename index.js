@@ -383,12 +383,10 @@ async function migrateNasserShop() {
     // ── Archers for Shooting Sports setup ──
     const archersShop = shops.find(s => s.phone === '201101222922');
     if (archersShop) {
-      const archersConfig = await prisma.botConfig.findUnique({ where: { shopId: archersShop.id } });
-      if (!archersConfig) {
-        console.log('⚙️ Setting up Archers BotConfig + menus...');
-        const NOTIFY = '201128511900';
+      console.log('⚙️ Setting up Archers BotConfig + menus...');
+      const NOTIFY = '201128511900';
 
-        const archersPrompt = `[الهوية]
+      const archersPrompt = `[الهوية]
 أنت المساعد الذكي الرسمي لـ *Archers for Shooting Sports* — أكاديمية رياضات الرماية.
 أنت مستشار رياضي محترف، شغوف بالرياضة وعارف كل التفاصيل عن البرامج التدريبية.
 صوتك: حماسي، مقنع، محترف، ودود.
@@ -429,61 +427,71 @@ async function migrateNasserShop() {
 [ممنوعات]
 لا تكشف أسرار تقنية. لا أسعار محددة. لا ترد بغير العربية. ركز على الجانب الرياضي والأمان.`;
 
-        await prisma.botConfig.create({
-          data: {
-            shopId: archersShop.id,
-            welcomeMessage: 'أهلاً وسهلاً في *Archers for Shooting Sports*! 🎯\n\nأنا مساعدك الذكي، جاهز أساعدك تعرف كل حاجة عن رياضات الرماية والبرامج التدريبية.\n\nاختر من القائمة أو اكتب سؤالك مباشرة 👇',
-            unknownMessage: 'ممكن توضح أكتر؟ 😊 أنا جاهز أساعدك في أي حاجة عن برامجنا التدريبية.\n\nاكتب *قائمة* لو عايز تشوف الخيارات 📋',
-            orderConfirmMessage: 'شكراً لاهتمامك! 🎯🎉\n\nتم تسجيل بياناتك بنجاح ✅\nفريقنا هيتواصل معاك في أقرب وقت لتأكيد الحجز.\n\nللاستفسار: 01128511900 📱',
-            aiSystemPrompt: archersPrompt,
-            aiProvider: 'groq',
-            aiModel: 'llama-3.3-70b-versatile',
-            aiTemperature: 0.7,
-            aiMaxTokens: 400,
-            formalityLevel: 2,
-          }
-        });
+      const configData = {
+        welcomeMessage: 'أهلاً وسهلاً في *Archers for Shooting Sports*! 🎯\n\nأنا مساعدك الذكي، جاهز أساعدك تعرف كل حاجة عن رياضات الرماية والبرامج التدريبية.\n\nاختر من القائمة أو اكتب سؤالك مباشرة 👇',
+        unknownMessage: 'ممكن توضح أكتر؟ 😊 أنا جاهز أساعدك في أي حاجة عن برامجنا التدريبية.\n\nاكتب *قائمة* لو عايز تشوف الخيارات 📋',
+        orderConfirmMessage: 'شكراً لاهتمامك! 🎯🎉\n\nتم تسجيل بياناتك بنجاح ✅\nفريقنا هيتواصل معاك في أقرب وقت لتأكيد الحجز.\n\nللاستفسار: 01128511900 📱',
+        aiSystemPrompt: archersPrompt,
+        aiProvider: 'groq',
+        aiModel: 'llama-3.3-70b-versatile',
+        aiTemperature: 0.7,
+        aiMaxTokens: 400,
+        formalityLevel: 2,
+      };
 
-        // Create menus
-        const mainMenu = await prisma.customMenu.create({
-          data: { shopId: archersShop.id, name: 'القائمة الرئيسية', order: 0, isActive: true }
-        });
-        const programsMenu = await prisma.customMenu.create({
-          data: { shopId: archersShop.id, name: 'البرامج التدريبية', order: 1, isActive: true }
-        });
-        const sportsMenu = await prisma.customMenu.create({
-          data: { shopId: archersShop.id, name: 'الرياضات المتاحة', order: 2, isActive: true }
-        });
-
-        await prisma.customMenuItem.createMany({ data: [
-          { menuId: mainMenu.id, number: 1, label: '🎯 البرامج التدريبية', action: 'go_to_menu', actionValue: programsMenu.id },
-          { menuId: mainMenu.id, number: 2, label: '🏹 الرياضات المتاحة', action: 'go_to_menu', actionValue: sportsMenu.id },
-          { menuId: mainMenu.id, number: 3, label: '🆓 احجز تجربة / زيارة', action: 'confirm_order', actionValue: NOTIFY },
-          { menuId: mainMenu.id, number: 4, label: '💰 الأسعار والباقات', action: 'ai_response' },
-          { menuId: mainMenu.id, number: 5, label: '📱 تواصل مع الإدارة', action: 'custom_message', actionValue: 'للتواصل مع الإدارة:\n📱 واتساب: 01128511900\n📞 اتصال: 01128511900\n\nفريقنا جاهز يساعدك! 🤝' },
-        ]});
-
-        await prisma.customMenuItem.createMany({ data: [
-          { menuId: programsMenu.id, number: 1, label: '🎯 برنامج المبتدئين', action: 'ai_response' },
-          { menuId: programsMenu.id, number: 2, label: '🏆 برنامج المتقدمين', action: 'ai_response' },
-          { menuId: programsMenu.id, number: 3, label: '👧 برنامج الأطفال والناشئين', action: 'ai_response' },
-          { menuId: programsMenu.id, number: 4, label: '🏢 برنامج الشركات والمجموعات', action: 'ai_response' },
-          { menuId: programsMenu.id, number: 5, label: '📝 احجز الآن', action: 'confirm_order', actionValue: NOTIFY },
-          { menuId: programsMenu.id, number: 6, label: '🔙 العودة للقائمة الرئيسية', action: 'go_to_menu', actionValue: mainMenu.id },
-        ]});
-
-        await prisma.customMenuItem.createMany({ data: [
-          { menuId: sportsMenu.id, number: 1, label: '🔫 رماية بالمسدس', action: 'ai_response' },
-          { menuId: sportsMenu.id, number: 2, label: '🎯 رماية بالبندقية', action: 'ai_response' },
-          { menuId: sportsMenu.id, number: 3, label: '🏹 رماية بالقوس والسهم', action: 'ai_response' },
-          { menuId: sportsMenu.id, number: 4, label: '🥇 الرماية الأولمبية', action: 'ai_response' },
-          { menuId: sportsMenu.id, number: 5, label: '📝 احجز تجربة', action: 'confirm_order', actionValue: NOTIFY },
-          { menuId: sportsMenu.id, number: 6, label: '🔙 العودة للقائمة الرئيسية', action: 'go_to_menu', actionValue: mainMenu.id },
-        ]});
-
-        await prisma.botConfig.update({ where: { shopId: archersShop.id }, data: { mainMenuId: mainMenu.id } });
-        console.log('✅ Archers BotConfig + menus created');
+      // Upsert BotConfig (update if exists, create if not)
+      const existingConfig = await prisma.botConfig.findUnique({ where: { shopId: archersShop.id } });
+      if (existingConfig) {
+        await prisma.botConfig.update({ where: { shopId: archersShop.id }, data: configData });
+        console.log('✅ Archers BotConfig updated');
+      } else {
+        await prisma.botConfig.create({ data: { shopId: archersShop.id, ...configData } });
+        console.log('✅ Archers BotConfig created');
       }
+
+      // Delete old menus and recreate
+      await prisma.customMenuItem.deleteMany({ where: { menu: { shopId: archersShop.id } } });
+      await prisma.customMenu.deleteMany({ where: { shopId: archersShop.id } });
+
+      // Create menus
+      const mainMenu = await prisma.customMenu.create({
+        data: { shopId: archersShop.id, name: 'القائمة الرئيسية', order: 0, isActive: true }
+      });
+      const programsMenu = await prisma.customMenu.create({
+        data: { shopId: archersShop.id, name: 'البرامج التدريبية', order: 1, isActive: true }
+      });
+      const sportsMenu = await prisma.customMenu.create({
+        data: { shopId: archersShop.id, name: 'الرياضات المتاحة', order: 2, isActive: true }
+      });
+
+      await prisma.customMenuItem.createMany({ data: [
+        { menuId: mainMenu.id, number: 1, label: '🎯 البرامج التدريبية', action: 'go_to_menu', actionValue: programsMenu.id },
+        { menuId: mainMenu.id, number: 2, label: '🏹 الرياضات المتاحة', action: 'go_to_menu', actionValue: sportsMenu.id },
+        { menuId: mainMenu.id, number: 3, label: '🆓 احجز تجربة / زيارة', action: 'confirm_order', actionValue: NOTIFY },
+        { menuId: mainMenu.id, number: 4, label: '💰 الأسعار والباقات', action: 'ai_response' },
+        { menuId: mainMenu.id, number: 5, label: '📱 تواصل مع الإدارة', action: 'custom_message', actionValue: 'للتواصل مع الإدارة:\n📱 واتساب: 01128511900\n📞 اتصال: 01128511900\n\nفريقنا جاهز يساعدك! 🤝' },
+      ]});
+
+      await prisma.customMenuItem.createMany({ data: [
+        { menuId: programsMenu.id, number: 1, label: '🎯 برنامج المبتدئين', action: 'ai_response' },
+        { menuId: programsMenu.id, number: 2, label: '🏆 برنامج المتقدمين', action: 'ai_response' },
+        { menuId: programsMenu.id, number: 3, label: '👧 برنامج الأطفال والناشئين', action: 'ai_response' },
+        { menuId: programsMenu.id, number: 4, label: '🏢 برنامج الشركات والمجموعات', action: 'ai_response' },
+        { menuId: programsMenu.id, number: 5, label: '📝 احجز الآن', action: 'confirm_order', actionValue: NOTIFY },
+        { menuId: programsMenu.id, number: 6, label: '🔙 العودة للقائمة الرئيسية', action: 'go_to_menu', actionValue: mainMenu.id },
+      ]});
+
+      await prisma.customMenuItem.createMany({ data: [
+        { menuId: sportsMenu.id, number: 1, label: '🔫 رماية بالمسدس', action: 'ai_response' },
+        { menuId: sportsMenu.id, number: 2, label: '🎯 رماية بالبندقية', action: 'ai_response' },
+        { menuId: sportsMenu.id, number: 3, label: '🏹 رماية بالقوس والسهم', action: 'ai_response' },
+        { menuId: sportsMenu.id, number: 4, label: '🥇 الرماية الأولمبية', action: 'ai_response' },
+        { menuId: sportsMenu.id, number: 5, label: '📝 احجز تجربة', action: 'confirm_order', actionValue: NOTIFY },
+        { menuId: sportsMenu.id, number: 6, label: '🔙 العودة للقائمة الرئيسية', action: 'go_to_menu', actionValue: mainMenu.id },
+      ]});
+
+      await prisma.botConfig.update({ where: { shopId: archersShop.id }, data: { mainMenuId: mainMenu.id } });
+      console.log('✅ Archers BotConfig + menus created');
     }
   } catch (err) {
     console.error('⚠️ Migration error:', err.message);

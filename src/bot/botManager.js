@@ -1940,9 +1940,24 @@ class BotManager {
     const products = shop.products?.filter(p => p.isAvailable) || [];
     if (products.length === 0) return 'لا توجد منتجات متاحة حالياً.';
 
-    return products.map((p, i) => {
+    // Cap the catalog size to keep the prompt within Groq's TPM limit.
+    // Rough budget: ~6000 chars of catalog (~2k tokens), leaves room for
+    // the rest of the system prompt, conversation history, and response.
+    const MAX_CATALOG_CHARS = 6000;
+    const MAX_DESC_CHARS = 80;
+    let totalChars = 0;
+
+    const lines = [];
+    for (let i = 0; i < products.length; i++) {
+      const p = products[i];
       let line = `${i + 1}. ${p.name} - ${p.price} جنيه`;
-      if (p.description) line += ` | الوصف: ${p.description}`;
+      if (p.description) {
+        const shortDesc = String(p.description)
+          .replace(/\s+/g, ' ')
+          .trim()
+          .slice(0, MAX_DESC_CHARS);
+        if (shortDesc) line += ` | ${shortDesc}`;
+      }
       if (p.stock !== null && p.stock !== undefined) line += ` | المخزون: ${p.stock > 0 ? p.stock + ' قطعة' : 'نفذ'}`;
 
       // Parse variants (colors, sizes, etc.)
@@ -1970,8 +1985,17 @@ class BotManager {
           });
         }
       }
-      return line;
-    }).join('\n');
+
+      // If catalog is getting too large, fall back to compact entries (name + price only)
+      // for the remaining products to keep the prompt under the TPM limit.
+      if (totalChars + line.length > MAX_CATALOG_CHARS) {
+        line = `${i + 1}. ${p.name} - ${p.price} جنيه`;
+      }
+      lines.push(line);
+      totalChars += line.length + 1;
+    }
+
+    return lines.join('\n');
   }
 
   // Validate AI response

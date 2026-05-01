@@ -961,7 +961,7 @@
         async function loadProducts() {
             try {
                 console.log('[DEBUG] Starting to load products...');
-                const response = await apiFetch(`${API_BASE}/products`);
+                const response = await apiFetch(`${API_BASE}/products?limit=1000`);
                 
                 if (!response) {
                     console.error('[ERROR] No response from API');

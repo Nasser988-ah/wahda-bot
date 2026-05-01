@@ -82,56 +82,21 @@ router.post("/qr", authenticateTokenWithPending, async (req, res) => {
     const { shopId } = req.body;
     
     if (!shopId) {
-      return res.status(400).json({ 
-        error: "Shop ID is required",
-        message: "Please provide shopId in request body"
-      });
+      return res.status(400).json({ error: "Shop ID is required" });
     }
 
-    // Ownership check
     if (req.shop && req.shop.id !== shopId) {
       return res.status(403).json({ error: "Access denied" });
     }
 
     console.log(`🔄 Generating QR for shop: ${shopId}`);
     
-    // Check if already connected
-    const status = await qrService.getConnectionStatus(shopId);
-    if (status.connected) {
-      return res.json({
-        connected: true,
-        status: 'already_connected',
-        shopId,
-        message: "WhatsApp is already connected"
-      });
-    }
-    
-    // Check if connection is already in progress
-    // But if stuck for more than 30 seconds, allow reset
-    if (status.status === 'connecting') {
-      console.log(`⚠️ Connection stuck in connecting state for ${shopId}, resetting...`);
-      // Reset the connection state to allow new QR generation
-      qrService.botManager.connectionStates.set(shopId, 'not_started');
-    }
-    
-    // Check if QR already exists and not expired - don't regenerate
-    if (status.qrGenerated && status.status !== 'expired' && status.status !== 'not_started') {
-      console.log(`ℹ️ QR already exists for ${shopId}, returning existing QR`);
-      return res.json({
-        ...status,
-        message: "QR code already available - scan with WhatsApp"
-      });
-    }
-    
-    // Only generate new QR if needed
-    const qrResult = await qrService.generateQR(shopId, false); // Don't force
-    
-    console.log(`✅ QR generated for shop: ${shopId}`);
+    // generateQR handles all states: connected, connecting, fresh
+    const qrResult = await qrService.generateQR(shopId);
     
     res.json({
       ...qrResult,
-      message: "QR code generated successfully",
-      instructions: "Scan this QR code with WhatsApp to connect"
+      message: qrResult.connected ? "WhatsApp is already connected" : "QR code generated successfully"
     });
 
   } catch (error) {
@@ -144,53 +109,63 @@ router.post("/qr", authenticateTokenWithPending, async (req, res) => {
   }
 });
 
-
+// Force refresh: cleanup old connection and start fresh
 router.post("/qr/refresh", authenticateTokenWithPending, async (req, res) => {
   try {
     const shopId = req.query.shopId || req.body.shopId;
     
     if (!shopId) {
-      return res.status(400).json({ 
-        error: "Shop ID is required",
-        message: "Please provide shopId as query parameter or in request body"
-      });
+      return res.status(400).json({ error: "Shop ID is required" });
     }
 
-    // Ownership check
     if (req.shop && req.shop.id !== shopId) {
       return res.status(403).json({ error: "Access denied" });
     }
 
     console.log(`🔄 QR Refresh requested for shop: ${shopId}`);
     
-    // Disconnect existing connection
-    await botManager.disconnectShop(shopId);
-    console.log(`🔌 Disconnected shop ${shopId}`);
-    
-    // Clear current QR
-    botManager.clearCurrentQr(shopId);
-    botManager.qrReceived.set(shopId, false);
-    
-    // Reset connection state
+    // Full cleanup
+    await qrService.cleanupShop(shopId);
     botManager.connectionStates.set(shopId, 'not_started');
     
-    // Wait a moment for cleanup
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Small delay for cleanup to settle
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
-    // Start fresh connection
-    botManager.connectShop(shopId, (qr) => {
-      botManager.setCurrentQr(shopId, qr);
-    });
+    // Generate fresh QR
+    const qrResult = await qrService.generateQR(shopId);
     
-    res.json({ 
-      success: true, 
-      message: 'جارٍ إنشاء رمز QR جديد',
-      shopId: shopId
+    res.json({
+      ...qrResult,
+      message: qrResult.connected ? "WhatsApp connected" : "QR code refreshed"
     });
     
   } catch (err) {
     console.error('QR Refresh error:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "فشل تحديث كود QR، يرجى المحاولة مرة أخرى" });
+  }
+});
+
+// Disconnect WhatsApp
+router.post("/qr/disconnect", authenticateTokenWithPending, async (req, res) => {
+  try {
+    const shopId = req.query.shopId || req.body.shopId;
+    
+    if (!shopId) {
+      return res.status(400).json({ error: "Shop ID is required" });
+    }
+
+    if (req.shop && req.shop.id !== shopId) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    console.log(`� Disconnect requested for shop: ${shopId}`);
+    await qrService.cleanupShop(shopId);
+    botManager.connectionStates.set(shopId, 'not_started');
+    
+    res.json({ success: true, message: "تم قطع الاتصال بنجاح" });
+  } catch (err) {
+    console.error('Disconnect error:', err);
+    res.status(500).json({ error: "فشل قطع الاتصال" });
   }
 });
 

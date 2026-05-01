@@ -562,13 +562,13 @@
 
     <script>
         const API_BASE = window.location.origin + '/api';
-        let refreshInterval = null;
+        let pollTimer = null;
         let currentShop = null;
+        let isGenerating = false; // Guard against concurrent generateQR calls
 
         // Global API fetch helper with 401 handling
         async function apiFetch(url, options = {}) {
             const token = localStorage.getItem('token');
-            
             const res = await fetch(url, {
                 ...options,
                 headers: {
@@ -577,14 +577,12 @@
                     ...options.headers
                 }
             });
-            
             if (res.status === 401) {
                 localStorage.removeItem('token');
                 localStorage.removeItem('shop');
                 window.location.href = 'login.html';
-                return;
+                return null;
             }
-            
             return res;
         }
 
@@ -592,429 +590,261 @@
         window.addEventListener('load', async () => {
             const token = localStorage.getItem('token');
             const shop = localStorage.getItem('shop');
-
-            if (!token || !shop) {
-                window.location.href = 'login.html';
-                return;
-            }
-
+            if (!token || !shop) { window.location.href = 'login.html'; return; }
             try { currentShop = JSON.parse(shop); } catch(e) { window.location.href = 'login.html'; return; }
             
-            await checkConnectionStatus();
-            startAutoRefresh();
+            // Initial check then start single poll loop
+            await pollStatus();
+            startPolling();
         });
 
-        // Check connection status
-        async function checkConnectionStatus() {
+        // ── Single polling loop (replaces dual overlapping intervals) ──
+        function startPolling() {
+            stopPolling();
+            pollTimer = setInterval(pollStatus, 4000);
+        }
+
+        function stopPolling() {
+            if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+        }
+
+        // ── Core: check status via GET /qr ──
+        async function pollStatus() {
             try {
-                const token = localStorage.getItem('token');
-                const shop = JSON.parse(localStorage.getItem('shop') || '{}');
-                
-                if (!shop.id) {
-                    console.error('No shop ID found');
-                    updateConnectionStatus(false);
+                if (!currentShop?.id) return;
+                const response = await apiFetch(`${API_BASE}/shop/qr?shopId=${currentShop.id}`);
+                if (!response) return;
+                if (!response.ok) { console.error('Status check failed:', response.status); return; }
+
+                const data = await response.json();
+                updateLastRefresh();
+
+                // Connected
+                if (data.connected) {
+                    showConnected();
                     return;
                 }
-                
-                // Check real connection status via API
-                const response = await apiFetch(`${API_BASE}/shop/qr?shopId=${shop.id}`);
-                if (!response) return;
 
-                if (response.ok) {
-                    const data = await response.json();
-                    
-                    if (data.status === 'expired') {
-                        updateQRDisplay(data);
-                        return;
-                    }
-                    
-                    const isConnected = data.connected || false;
-                    updateConnectionStatus(isConnected);
-                    
-                    if (!isConnected && !data.qrGenerated) {
-                        await generateQR();
-                    } else if (data.qr && !isConnected) {
-                        // Display existing QR
-                        displayQR(data.qr);
-                    }
-                } else {
-                    console.error('Status check failed:', response.status);
-                    updateConnectionStatus(false);
-                    await generateQR();
+                // Has QR ready → display it
+                if (data.qr) {
+                    showWaitingForScan(data.qr, data.age);
+                    return;
                 }
 
-                updateLastRefresh();
+                // Expired
+                if (data.status === 'expired') {
+                    showExpired();
+                    return;
+                }
+
+                // Connecting (no QR yet)
+                if (data.status === 'connecting') {
+                    showConnecting();
+                    return;
+                }
+
+                // Not started → auto-generate
+                if (data.status === 'not_started') {
+                    await generateQR();
+                    return;
+                }
             } catch (error) {
-                console.error('Error checking connection status:', error);
-                updateConnectionStatus(false);
-                await generateQR();
+                console.error('Poll error:', error);
             }
         }
 
-        // Update connection status UI
-        function updateConnectionStatus(isConnected) {
-            const statusIndicator = document.getElementById('statusIndicator');
-            const statusText = document.getElementById('statusText');
-            const qrContainer = document.getElementById('qrContainer');
-            const actionButtons = document.getElementById('actionButtons');
+        // ── UI State Functions ──
 
-            if (isConnected) {
-                statusIndicator.className = 'status-indicator status-connected';
-                statusText.textContent = 'متصل';
-                
-                qrContainer.innerHTML = `
-                    <div class="qr-placeholder">
-                        <div class="qr-placeholder-icon">✅</div>
-                        <div>تم الاتصال بنجاح!</div>
-                        <div style="font-size: 14px; margin-top: 10px;">
-                            البوت جاهز لاستقبال الرسائل
-                        </div>
-                    </div>
-                `;
-                
-                actionButtons.innerHTML = `
-                    <button class="btn btn-secondary" onclick="disconnect()">قطع الاتصال</button>
-                    <button class="btn" onclick="refreshStatus()">تحديث الحالة</button>
-                `;
-            } else {
-                statusIndicator.className = 'status-indicator status-disconnected';
-                statusText.textContent = 'غير متصل';
-                
-                // QR container will be updated by generateQR()
-                
-                actionButtons.innerHTML = `
-                    <button class="btn" id="refreshBtn" onclick="refreshQR()">تحديث كود QR</button>
-                    <button class="btn btn-secondary" onclick="refreshStatus()">تحديث الحالة</button>
-                `;
-            }
-        }
-
-        // Update QR display based on status
-        function updateQRDisplay(data) {
-            const qrContainer = document.getElementById('qrContainer');
-            
-            if (data.status === 'expired') {
-                qrContainer.innerHTML = `
-                    <div class="qr-placeholder">
-                        <div class="qr-placeholder-icon">⏰️</div>
-                        <div>كود QR منتهي الصلاحية</div>
-                        <div style="font-size: 12px; margin-top: 10px;">
-                            <button class="btn" onclick="refreshQR()">إنشاء كود جديد</button>
-                        </div>
-                    </div>
-                `;
-                document.getElementById('refreshBtn').textContent = 'إعادة المحاولة';
-            }
-        }
-
-        // Display QR code
-        function displayQR(base64QR) {
-            const qrContainer = document.getElementById('qrContainer');
-            qrContainer.innerHTML = `
-                <img src="data:image/png;base64,${base64QR}" alt="WhatsApp QR Code" class="qr-image">
-                <div style="margin-top: 15px; font-size: 12px; color: var(--text-muted);">
-                    ⏰ امسح الكود بواتساب الآن
+        function showConnected() {
+            setStatus('connected', 'متصل');
+            document.getElementById('qrContainer').innerHTML = `
+                <div class="qr-placeholder">
+                    <div class="qr-placeholder-icon">✅</div>
+                    <div>تم الاتصال بنجاح!</div>
+                    <div style="font-size: 14px; margin-top: 10px;">البوت جاهز لاستقبال الرسائل</div>
                 </div>
             `;
-            startConnectionCheck();
+            document.getElementById('actionButtons').innerHTML = `
+                <button class="btn btn-secondary" onclick="disconnect()">قطع الاتصال</button>
+                <button class="btn" onclick="pollStatus()">تحديث الحالة</button>
+            `;
         }
 
-        // Generate QR code
-        async function generateQR() {
-            try {
-                const token = localStorage.getItem('token');
-                const shop = JSON.parse(localStorage.getItem('shop') || '{}');
-                
-                if (!shop.id) {
-                    console.error('No shop ID found');
-                    return;
-                }
-                
-                const qrContainer = document.getElementById('qrContainer');
-                
-                // Show loading state
+        function showWaitingForScan(base64QR, age) {
+            setStatus('connecting', 'في انتظار المسح');
+            const qrContainer = document.getElementById('qrContainer');
+            // Only update image if it changed (avoid flicker)
+            const existingImg = qrContainer.querySelector('.qr-image');
+            const newSrc = 'data:image/png;base64,' + base64QR;
+            if (!existingImg || existingImg.src !== newSrc) {
                 qrContainer.innerHTML = `
-                    <div class="qr-placeholder">
-                        <div class="qr-placeholder-icon">⏳</div>
-                        <div>جاري إنشاء كود QR...</div>
-                        <div style="font-size: 12px; margin-top: 10px;">متجر: ${shop.name}</div>
+                    <div style="text-align:center;">
+                        <img src="${newSrc}" alt="WhatsApp QR Code" class="qr-image">
+                        <div style="margin-top: 12px; font-size: 13px; color: var(--text-muted);">📱 امسح الكود بواتساب الآن</div>
                     </div>
                 `;
+            }
+            document.getElementById('actionButtons').innerHTML = `
+                <button class="btn" id="refreshBtn" onclick="refreshQR()">تحديث كود QR</button>
+            `;
+        }
 
-                // Call API to get QR code
+        function showConnecting() {
+            setStatus('connecting', 'جارٍ الاتصال...');
+            document.getElementById('qrContainer').innerHTML = `
+                <div class="qr-placeholder">
+                    <div class="qr-placeholder-icon">⏳</div>
+                    <div>جارٍ إنشاء كود QR...</div>
+                    <div style="font-size: 12px; margin-top: 10px; color: var(--text-muted);">يرجى الانتظار بضع ثوانٍ</div>
+                </div>
+            `;
+        }
+
+        function showExpired() {
+            setStatus('disconnected', 'كود QR منتهي');
+            document.getElementById('qrContainer').innerHTML = `
+                <div class="qr-placeholder">
+                    <div class="qr-placeholder-icon">⏰</div>
+                    <div>كود QR منتهي الصلاحية</div>
+                    <div style="margin-top: 12px;">
+                        <button class="btn" onclick="refreshQR()">إنشاء كود جديد</button>
+                    </div>
+                </div>
+            `;
+            document.getElementById('actionButtons').innerHTML = `
+                <button class="btn" id="refreshBtn" onclick="refreshQR()">إنشاء كود جديد</button>
+            `;
+        }
+
+        function showError(msg) {
+            setStatus('disconnected', 'خطأ');
+            document.getElementById('qrContainer').innerHTML = `
+                <div class="qr-placeholder">
+                    <div class="qr-placeholder-icon">❌</div>
+                    <div>${msg || 'حدث خطأ'}</div>
+                    <div style="margin-top: 12px;">
+                        <button class="btn" onclick="refreshQR()">إعادة المحاولة</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function setStatus(type, text) {
+            const el = document.getElementById('statusIndicator');
+            const txt = document.getElementById('statusText');
+            el.className = 'status-indicator status-' + (type === 'connecting' ? 'connecting' : type === 'connected' ? 'connected' : 'disconnected');
+            txt.textContent = text;
+        }
+
+        // ── Generate QR (with concurrency guard) ──
+        async function generateQR() {
+            if (isGenerating) return;
+            isGenerating = true;
+            try {
+                if (!currentShop?.id) return;
+                showConnecting();
                 const response = await apiFetch(`${API_BASE}/shop/qr`, {
                     method: 'POST',
-                    body: JSON.stringify({ shopId: shop.id })
+                    body: JSON.stringify({ shopId: currentShop.id })
                 });
-                
                 if (!response) return;
-
                 if (response.ok) {
                     const data = await response.json();
-                    
-                    if (data.qr) {
-                        // Display real QR code
-                        displayQR(data.qr);
-                        console.log('✅ QR code generated successfully');
-                    } else {
-                        qrContainer.innerHTML = `
-                            <div class="qr-placeholder">
-                                <div class="qr-placeholder-icon">❌</div>
-                                <div>فشل إنشاء كود QR</div>
-                                <div style="font-size: 12px; margin-top: 10px;">${data.error || 'يرجى المحاولة مرة أخرى'}</div>
-                            </div>
-                        `;
-                    }
+                    if (data.connected) { showConnected(); return; }
+                    if (data.qr) { showWaitingForScan(data.qr); return; }
+                    showError('فشل إنشاء كود QR');
                 } else {
-                    const error = await response.json();
-                    qrContainer.innerHTML = `
-                        <div class="qr-placeholder">
-                            <div class="qr-placeholder-icon">❌</div>
-                            <div>${error.error || 'فشل إنشاء كود QR'}</div>
-                        </div>
-                    `;
+                    showError('فشل إنشاء كود QR، يرجى المحاولة');
                 }
-                
-            } catch (error) {
-                console.error('Error generating QR:', error);
-                const qrContainer = document.getElementById('qrContainer');
-                qrContainer.innerHTML = `
-                    <div class="qr-placeholder">
-                        <div class="qr-placeholder-icon">❌</div>
-                        <div>حدث خطأ في الاتصال</div>
-                        <div style="font-size: 12px; margin-top: 10px;">يرجى المحاولة مرة أخرى</div>
-                    </div>
-                `;
+            } catch (err) {
+                console.error('Generate QR error:', err);
+                showError('حدث خطأ في الاتصال');
+            } finally {
+                isGenerating = false;
             }
         }
 
-        // Start connection status checking
-        function startConnectionCheck() {
-            const shop = JSON.parse(localStorage.getItem('shop') || '{}');
-            
-            if (!shop.id) {
-                console.error('No shop ID for connection check');
-                return;
-            }
-            
-            let checkCount = 0;
-            const maxChecks = 20; // Check for 60 seconds (20 * 3 seconds)
-            
-            // Check every 3 seconds for connection
-            const checkInterval = setInterval(async () => {
-                try {
-                    checkCount++;
-                    const response = await apiFetch(`${API_BASE}/shop/qr?shopId=${shop.id}`);
-                    if (!response) return;
-
-                    if (response.ok) {
-                        const data = await response.json();
-                        if (data.connected) {
-                            clearInterval(checkInterval);
-                            updateConnectionStatus(true);
-                            showMessage('تم الاتصال بواتساب بنجاح!', 'success');
-                        } else if (checkCount >= maxChecks) {
-                            clearInterval(checkInterval);
-                            showMessage('انتهت مدة الانتظار. يرجى إعادة محاولة مسح كود QR.', 'error');
-                            updateConnectionStatus(false);
-                        }
-                    }
-                } catch (error) {
-                    console.error('Error checking connection:', error);
-                    if (checkCount >= maxChecks) {
-                        clearInterval(checkInterval);
-                        showMessage('حدث خطأ في التحقق من الاتصال. يرجى المحاولة مرة أخرى.', 'error');
-                    }
-                }
-            }, 3000);
-        }
-
-        // Refresh QR code - calls backend to generate new QR
+        // ── Refresh QR: full cleanup + new connection ──
         async function refreshQR() {
-          const btn = document.getElementById('refreshBtn');
-          if (btn) {
-            btn.disabled = true;
-            btn.textContent = 'جارٍ التحديث...';
-          }
-          
-          try {
-            const shop = JSON.parse(localStorage.getItem('shop') || '{}');
-            if (!shop.id) {
-              console.error('No shop ID found');
-              return;
-            }
-            
-            // Call refresh endpoint
-            const response = await apiFetch(`${API_BASE}/shop/qr/refresh?shopId=${shop.id}`, { 
-              method: 'POST'
-            });
-            
-            if (!response) return;
-            
-            if (response.ok) {
-              const data = await response.json();
-              console.log('✅ QR refresh initiated:', data.message);
-              
-              // Show loading state
-              const qrContainer = document.getElementById('qrContainer');
-              qrContainer.innerHTML = `
-                <div class="qr-placeholder">
-                  <div class="qr-placeholder-icon">⏳</div>
-                  <div>جارٍ إنشاء كود QR جديد...</div>
-                </div>
-              `;
-              
-              // Wait 3 seconds then start polling
-              await new Promise(resolve => setTimeout(resolve, 3000));
-              
-              // Start polling for new QR
-              startQRPolling();
-            } else {
-              const error = await response.json();
-              showMessage(error.error || 'فشل تحديث كود QR', 'error');
-            }
-          } catch (err) {
-            console.error('Refresh failed:', err);
-            showMessage('فشل التحديث، يرجى المحاولة مرة أخرى', 'error');
-          } finally {
-            if (btn) {
-              btn.disabled = false;
-              btn.textContent = 'تحديث كود QR';
-            }
-          }
-        }
+            const btn = document.getElementById('refreshBtn');
+            if (btn) { btn.disabled = true; btn.textContent = 'جارٍ التحديث...'; }
+            stopPolling();
 
-        // QR polling function - polls for new QR code
-        function startQRPolling() {
-          let attempts = 0;
-          const maxAttempts = 60; // 5 minutes max (60 * 5 seconds)
-          
-          const shop = JSON.parse(localStorage.getItem('shop') || '{}');
-          if (!shop.id) {
-            console.error('No shop ID for QR polling');
-            return;
-          }
-          
-          // Clear any existing interval
-          if (refreshInterval) {
-            clearInterval(refreshInterval);
-          }
-          
-          const interval = setInterval(async () => {
-            attempts++;
-            
-            if (attempts > maxAttempts) {
-              clearInterval(interval);
-              showMessage('انتهت مدة الانتظار. يرجى المحاولة مرة أخرى.', 'error');
-              return;
-            }
-            
             try {
-              const response = await apiFetch(`${API_BASE}/shop/qr?shopId=${shop.id}`);
-              if (!response) return;
-              
-              const data = await response.json();
-              
-              if (data.connected) {
-                clearInterval(interval);
-                updateConnectionStatus(true);
-                showMessage('تم الاتصال بواتساب بنجاح!', 'success');
-                // Restart normal auto-refresh
-                startAutoRefresh();
-                return;
-              }
-              
-              if (data.qr) {
-                // New QR received
-                displayQR(data.qr);
-              }
-            } catch (error) {
-              console.error('QR polling error:', error);
+                if (!currentShop?.id) return;
+                showConnecting();
+
+                const response = await apiFetch(`${API_BASE}/shop/qr/refresh?shopId=${currentShop.id}`, {
+                    method: 'POST'
+                });
+                if (!response) return;
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.connected) { showConnected(); }
+                    else if (data.qr) { showWaitingForScan(data.qr); }
+                    else { showConnecting(); }
+                } else {
+                    showMessage('فشل تحديث كود QR', 'error');
+                }
+            } catch (err) {
+                console.error('Refresh failed:', err);
+                showMessage('فشل التحديث، يرجى المحاولة مرة أخرى', 'error');
+            } finally {
+                if (btn) { btn.disabled = false; btn.textContent = 'تحديث كود QR'; }
+                startPolling();
             }
-          }, 5000); // Poll every 5 seconds
-          
-          // Store interval so we can clear it later
-          refreshInterval = interval;
         }
 
-        
-        // Disconnect - actually calls the API to disconnect the bot
+        // ── Disconnect: calls proper disconnect endpoint ──
         async function disconnect() {
             if (!confirm('هل أنت متأكد من قطع الاتصال بواتساب؟')) return;
+            stopPolling();
             try {
-                const shop = JSON.parse(localStorage.getItem('shop') || '{}');
-                if (shop.id) {
-                    const res = await apiFetch(`${API_BASE}/shop/qr/refresh?shopId=${shop.id}`, { method: 'POST' });
-                    if (res && !res.ok) console.warn('Disconnect API failed');
+                if (currentShop?.id) {
+                    await apiFetch(`${API_BASE}/shop/qr/disconnect?shopId=${currentShop.id}`, { method: 'POST' });
                 }
             } catch(e) { console.error('Disconnect error:', e); }
-            localStorage.setItem('whatsappConnected', 'false');
-            updateConnectionStatus(false);
+            setStatus('disconnected', 'غير متصل');
+            document.getElementById('qrContainer').innerHTML = `
+                <div class="qr-placeholder">
+                    <div class="qr-placeholder-icon">📱</div>
+                    <div>تم قطع الاتصال</div>
+                </div>
+            `;
+            document.getElementById('actionButtons').innerHTML = `
+                <button class="btn" id="refreshBtn" onclick="refreshQR()">إعادة الاتصال</button>
+            `;
             showMessage('تم قطع الاتصال بنجاح', 'success');
+            startPolling();
         }
 
-        // Refresh status
-        async function refreshStatus() {
-            await checkConnectionStatus();
-        }
+        // ── Helpers ──
 
-        // Start auto refresh
-        function startAutoRefresh() {
-            if (refreshInterval) {
-                clearInterval(refreshInterval);
-            }
-            
-            refreshInterval = setInterval(async () => {
-                await checkConnectionStatus();
-            }, 5000); // Refresh every 5 seconds
-        }
-
-        // Update last refresh time
         function updateLastRefresh() {
-            const lastUpdate = document.getElementById('lastUpdate');
-            lastUpdate.textContent = `آخر تحديث: ${new Date().toLocaleTimeString('ar-EG')}`;
+            document.getElementById('lastUpdate').textContent = `آخر تحديث: ${new Date().toLocaleTimeString('ar-EG')}`;
         }
 
-        // Show message
         function showMessage(message, type) {
-            // Remove existing messages
-            const existingMessage = document.querySelector('.error-message, .success-message');
-            if (existingMessage) {
-                existingMessage.remove();
-            }
-
-            const messageDiv = document.createElement('div');
-            messageDiv.className = type === 'error' ? 'error-message' : 'success-message';
-            messageDiv.textContent = message;
-            
-            const connectionCard = document.querySelector('.connection-card');
-            connectionCard.insertBefore(messageDiv, document.getElementById('connectionContent'));
-            
-            // Auto remove after 5 seconds
-            setTimeout(() => {
-                messageDiv.remove();
-            }, 5000);
+            const existing = document.querySelector('.error-message, .success-message');
+            if (existing) existing.remove();
+            const div = document.createElement('div');
+            div.className = type === 'error' ? 'error-message' : 'success-message';
+            div.textContent = message;
+            const card = document.querySelector('.connection-card');
+            card.insertBefore(div, document.getElementById('connectionContent'));
+            setTimeout(() => div.remove(), 5000);
         }
 
-        // Logout
         async function logout() {
             if (confirm('هل أنت متأكد من تسجيل الخروج؟')) {
-                try {
-                    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
-                } catch {}
+                try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }); } catch {}
                 localStorage.removeItem('token');
                 localStorage.removeItem('shop');
-                localStorage.removeItem('whatsappConnected');
                 window.location.href = '/login.html';
             }
         }
 
-        // Cleanup on page unload
-        window.addEventListener('beforeunload', () => {
-            if (refreshInterval) {
-                clearInterval(refreshInterval);
-            }
-        });
+        window.addEventListener('beforeunload', stopPolling);
     </script>
 </body>
 </html>

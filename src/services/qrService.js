@@ -1,281 +1,214 @@
 const QRCode = require('qrcode');
 const botManager = require('../bot/botManager');
-const fs = require('fs');
-const path = require('path');
 
 class QRService {
   constructor() {
     this.botManager = botManager;
-    this.activeConnections = new Map(); // shopId -> connection info
-    this.qrCallbacks = new Map(); // shopId -> callback function
+    this.activeConnections = new Map(); // shopId -> { qrString, qrImage, createdAt, status }
+    this.connectingTimers = new Map(); // shopId -> timeout for stuck-state recovery
   }
 
-  async generateQR(shopId, force = false) {
+  async generateQR(shopId) {
     try {
-      console.log(`🔄 Generating QR for shop: ${shopId} (force: ${force})`);
+      console.log(`🔄 [QR] Generating for shop: ${shopId}`);
 
-      // Check current connection state
       const connectionState = this.botManager.getConnectionState(shopId);
-      
-      // If connected, return already connected
+
+      // Already connected
       if (connectionState === 'connected') {
-        return {
-          connected: true,
-          status: 'already_connected',
-          shopId,
-          message: 'WhatsApp is already connected'
-        };
+        return { connected: true, status: 'already_connected', shopId };
       }
 
-      // If already connecting, wait for it instead of creating new connection
-      if (connectionState === 'connecting') {
-        console.log(`⏳ Already connecting shop ${shopId}, waiting for existing connection...`);
-        
-        // Return existing promise if available
-        const existingConnection = this.activeConnections.get(shopId);
-        if (existingConnection && existingConnection.qrImage) {
+      // If we already have a fresh QR stored, return it
+      const existing = this.activeConnections.get(shopId);
+      if (existing && existing.qrImage) {
+        const age = Date.now() - existing.createdAt.getTime();
+        if (age < 45000) { // QR valid for ~45s
+          console.log(`📱 [QR] Returning cached QR for ${shopId} (${Math.round(age/1000)}s old)`);
           return {
-            qr: existingConnection.qrImage.split(',')[1],
-            qrString: existingConnection.qrString,
+            qr: existing.qrImage.split(',')[1],
             shopId,
             status: 'waiting_for_scan'
           };
         }
-        
-        // Wait up to 30 seconds for connection to complete
-        return new Promise((resolve, reject) => {
-          let waitTime = 0;
-          const checkInterval = setInterval(() => {
-            waitTime += 1000;
-            const conn = this.activeConnections.get(shopId);
-            
-            if (conn && conn.qrImage) {
-              clearInterval(checkInterval);
-              resolve({
-                qr: conn.qrImage.split(',')[1],
-                qrString: conn.qrString,
-                shopId,
-                status: 'waiting_for_scan'
-              });
-            }
-            
-            if (waitTime > 30000) {
-              clearInterval(checkInterval);
-              reject(new Error('Timeout waiting for existing connection'));
-            }
-          }, 1000);
-        });
       }
 
-      // Initialize WhatsApp connection for this shop
-      const qrPromise = new Promise((resolve, reject) => {
-        let qrReceived = false;
-        let retryCount = 0;
-        const maxRetries = 5;
-        
-        let timeout = setTimeout(() => {
-          if (!qrReceived) {
-            console.log(`⏰ QR generation timeout for shop ${shopId} after 120 seconds`);
-            reject(new Error('QR generation timeout - WhatsApp not responding'));
-          }
-        }, 120000); // 2 minute timeout
+      // If already connecting/waiting for QR, wait for it (max 30s)
+      if (connectionState === 'connecting' || connectionState === 'qr') {
+        console.log(`⏳ [QR] Already connecting ${shopId}, waiting for QR...`);
+        return await this._waitForQR(shopId, 30000);
+      }
 
-        const qrCallback = async (qrString) => {
-          if (qrReceived) return; // Prevent multiple callbacks
-          qrReceived = true;
-          clearTimeout(timeout);
-          
-          console.log(`📱 QR callback triggered for shop ${shopId}`);
-          
-          try {
-            console.log(`📱 QR received for shop ${shopId}`);
-            
-            // Generate QR code image
-            const qrImage = await QRCode.toDataURL(qrString, {
-              width: 200,
-              margin: 2,
-              color: {
-                dark: '#000000',
-                light: '#FFFFFF'
-              },
-              errorCorrectionLevel: 'M'
-            });
-
-            // Store connection info
-            this.activeConnections.set(shopId, {
-              qrString,
-              qrImage,
-              createdAt: new Date(),
-              status: 'waiting_for_scan'
-            });
-
-            resolve({
-              qr: qrImage.split(',')[1], // Remove data:image/png;base64, prefix
-              qrString: qrString,
-              shopId,
-              status: 'waiting_for_scan'
-            });
-          } catch (error) {
-            console.error(`❌ Error processing QR for shop ${shopId}:`, error);
-            reject(error);
-          }
-        };
-
-        // Store callback for this shop
-        this.qrCallbacks.set(shopId, qrCallback);
-
-        // Start bot connection with retry logic
-        const startConnection = () => {
-          if (retryCount >= maxRetries) {
-            console.log(`❌ Max retries (${maxRetries}) reached for shop ${shopId}`);
-            clearTimeout(timeout);
-            reject(new Error('Max connection retries reached'));
-            return;
-          }
-          
-          retryCount++;
-          console.log(`🤖 Starting connection attempt ${retryCount}/${maxRetries} for shop ${shopId}`);
-          
-          this.botManager.connectShop(shopId, qrCallback).then(() => {
-            console.log(`✅ Bot connection initiated for shop ${shopId} (attempt ${retryCount})`);
-          }).catch(error => {
-            console.error(`❌ Bot connection failed for shop ${shopId} (attempt ${retryCount}):`, error.message);
-            
-            // Retry after delay if QR not yet received
-            if (!qrReceived && retryCount < maxRetries) {
-              console.log(`🔄 Retrying connection for shop ${shopId} in 5 seconds...`);
-              setTimeout(startConnection, 5000);
-            }
-          });
-        };
-        
-        // Start first connection attempt
-        startConnection();
-      });
-
-      return await qrPromise;
+      // Start fresh connection
+      return await this._startConnection(shopId);
 
     } catch (error) {
-      console.error(`❌ QR generation failed for shop ${shopId}:`, error);
+      console.error(`❌ [QR] Generation failed for ${shopId}:`, error.message);
+      // Reset stuck state so next attempt can proceed
+      this.botManager.connectionStates.set(shopId, 'not_started');
       throw error;
     }
   }
 
+  async _startConnection(shopId) {
+    return new Promise((resolve, reject) => {
+      let resolved = false;
+
+      // Timeout: 60s to get the first QR
+      const timeout = setTimeout(() => {
+        if (!resolved) {
+          resolved = true;
+          this.botManager.connectionStates.set(shopId, 'not_started');
+          reject(new Error('QR generation timeout'));
+        }
+      }, 60000);
+
+      // QR callback — called EVERY time WhatsApp generates a new QR
+      const qrCallback = async (qrString) => {
+        try {
+          const qrImage = await QRCode.toDataURL(qrString, {
+            width: 256, margin: 2,
+            color: { dark: '#000000', light: '#FFFFFF' },
+            errorCorrectionLevel: 'M'
+          });
+
+          // Always store the latest QR
+          this.activeConnections.set(shopId, {
+            qrString, qrImage,
+            createdAt: new Date(),
+            status: 'waiting_for_scan'
+          });
+
+          console.log(`📱 [QR] New QR stored for ${shopId}`);
+
+          // Resolve promise on the first QR only
+          if (!resolved) {
+            resolved = true;
+            clearTimeout(timeout);
+            resolve({
+              qr: qrImage.split(',')[1],
+              shopId,
+              status: 'waiting_for_scan'
+            });
+          }
+        } catch (err) {
+          console.error(`❌ [QR] Image generation error:`, err.message);
+          if (!resolved) { resolved = true; clearTimeout(timeout); reject(err); }
+        }
+      };
+
+      // Set a stuck-state recovery timer (90s)
+      this._setConnectingTimeout(shopId, 90000);
+
+      this.botManager.connectShop(shopId, qrCallback).catch(err => {
+        if (!resolved) { resolved = true; clearTimeout(timeout); reject(err); }
+      });
+    });
+  }
+
+  async _waitForQR(shopId, maxWait) {
+    const start = Date.now();
+    while (Date.now() - start < maxWait) {
+      const conn = this.activeConnections.get(shopId);
+      if (conn && conn.qrImage) {
+        return {
+          qr: conn.qrImage.split(',')[1],
+          shopId,
+          status: 'waiting_for_scan'
+        };
+      }
+      // Check if connected while we waited
+      if (this.botManager.getConnectionState(shopId) === 'connected') {
+        return { connected: true, status: 'already_connected', shopId };
+      }
+      await new Promise(r => setTimeout(r, 1000));
+    }
+    throw new Error('Timeout waiting for QR');
+  }
+
+  // Auto-recover from stuck 'connecting' state
+  _setConnectingTimeout(shopId, ms) {
+    if (this.connectingTimers.has(shopId)) clearTimeout(this.connectingTimers.get(shopId));
+    this.connectingTimers.set(shopId, setTimeout(() => {
+      const state = this.botManager.getConnectionState(shopId);
+      if (state === 'connecting' || state === 'qr') {
+        console.log(`⏰ [QR] Resetting stuck state for ${shopId} (was: ${state})`);
+        this.botManager.connectionStates.set(shopId, 'not_started');
+        this.activeConnections.delete(shopId);
+      }
+      this.connectingTimers.delete(shopId);
+    }, ms));
+  }
+
   async cleanupShop(shopId) {
     try {
-      // Disconnect existing connection if any
       if (this.botManager.connections.has(shopId)) {
-        try {
-          await this.botManager.disconnectShop(shopId);
-        } catch (disconnectError) {
-          console.log(`⚠️ Disconnect warning for shop ${shopId}:`, disconnectError.message);
-          // Continue cleanup even if disconnect fails
-        }
+        try { await this.botManager.disconnectShop(shopId); } catch (e) { /* ignore */ }
       }
-      
-      // Clean up local data only - DON'T delete session folder
       this.activeConnections.delete(shopId);
-      this.qrCallbacks.delete(shopId);
-      
-      console.log(`🧹 Cleaned up connection for shop ${shopId}`);
+      if (this.connectingTimers.has(shopId)) {
+        clearTimeout(this.connectingTimers.get(shopId));
+        this.connectingTimers.delete(shopId);
+      }
+      console.log(`🧹 [QR] Cleaned up ${shopId}`);
     } catch (error) {
-      console.error(`❌ Failed to cleanup shop ${shopId}:`, error);
+      console.error(`❌ [QR] Cleanup failed for ${shopId}:`, error.message);
     }
   }
 
+  // Returns current status + QR image if available
   async getConnectionStatus(shopId) {
     try {
-      // First check if actually connected via BotManager
-      const isConnected = this.botManager.isShopConnected(shopId);
       const connectionState = this.botManager.getConnectionState(shopId);
-      
-      console.log(`📊 Status check for ${shopId}: connected=${isConnected}, state=${connectionState}`);
-      
-      if (isConnected) {
-        const connection = this.activeConnections.get(shopId);
-        if (connection) {
-          connection.status = 'connected';
-          connection.connectedAt = connection.connectedAt || new Date();
-        }
-        return {
-          connected: true,
-          status: 'connected',
-          shopId,
-          connectedAt: connection?.connectedAt || new Date()
-        };
-      }
+      const isConnected = connectionState === 'connected';
 
-      // Check if connecting
-      const isConnecting = this.botManager.isConnecting(shopId);
-      if (isConnecting) {
-        return {
-          connected: false,
-          status: 'connecting',
-          shopId,
-          message: 'Connecting to WhatsApp...'
-        };
+      if (isConnected) {
+        this.activeConnections.delete(shopId); // Clean up QR data
+        return { connected: true, status: 'connected', shopId };
       }
 
       const connection = this.activeConnections.get(shopId);
-      
-      if (!connection) {
-        return {
-          connected: false,
-          status: 'not_started',
-          shopId
-        };
-      }
 
-      // Check if QR is too old (regenerate after 5 minutes)
-      const age = Date.now() - connection.createdAt.getTime();
-      const isExpired = age > 300000; // 5 minutes
-      
-      if (isExpired) {
-        await this.cleanupShop(shopId);
+      // Has a QR ready
+      if (connection && connection.qrImage) {
+        const age = Date.now() - connection.createdAt.getTime();
+        if (age > 120000) { // QR older than 2 min → expired
+          this.activeConnections.delete(shopId);
+          return { connected: false, status: 'expired', shopId, message: 'QR code expired' };
+        }
         return {
           connected: false,
-          status: 'expired',
+          status: 'waiting_for_scan',
           shopId,
-          message: 'QR code expired. Please generate a new one.'
+          qr: connection.qrImage.split(',')[1],
+          qrGenerated: true,
+          age: Math.floor(age / 1000)
         };
       }
 
-      return {
-        connected: false,
-        status: connection.status || 'waiting_for_scan',
-        shopId,
-        qrGenerated: !!connection.qrImage,
-        createdAt: connection.createdAt,
-        message: 'QR code ready - scan with WhatsApp to connect',
-        age: Math.floor(age / 1000) // Age in seconds
-      };
+      // Connecting but no QR yet
+      if (connectionState === 'connecting') {
+        return { connected: false, status: 'connecting', shopId };
+      }
 
+      return { connected: false, status: 'not_started', shopId };
     } catch (error) {
-      console.error(`❌ Status check failed for shop ${shopId}:`, error);
-      return {
-        connected: false,
-        status: 'error',
-        shopId,
-        error: error.message
-      };
+      console.error(`❌ [QR] Status check failed for ${shopId}:`, error.message);
+      return { connected: false, status: 'error', shopId, error: error.message };
     }
   }
 
   async disconnectShop(shopId) {
     try {
-      // Disconnect from BotManager
       await this.botManager.disconnectShop(shopId);
-      
-      // Clean up local data
       this.activeConnections.delete(shopId);
-      this.qrCallbacks.delete(shopId);
-      
-      return {
-        success: true,
-        message: 'Shop disconnected successfully'
-      };
+      if (this.connectingTimers.has(shopId)) {
+        clearTimeout(this.connectingTimers.get(shopId));
+        this.connectingTimers.delete(shopId);
+      }
+      return { success: true, message: 'Disconnected' };
     } catch (error) {
-      console.error(`❌ Disconnect failed for shop ${shopId}:`, error);
+      console.error(`❌ [QR] Disconnect failed for ${shopId}:`, error.message);
       throw error;
     }
   }

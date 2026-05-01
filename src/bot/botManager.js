@@ -1473,6 +1473,13 @@ class BotManager {
 
   async safeSendMessage(sock, to, message, shopName, shopId, customerPhone) {
     try {
+      // Guard: skip send if socket is not connected (prevents Baileys timeout
+      // errors and unhandled rejections from getUSyncDevices when WS is closed).
+      if (!sock || !sock.user || sock?.ws?.readyState !== 1) {
+        console.log(`⚠️ Skipping send to ${to}: socket not connected (readyState=${sock?.ws?.readyState})`);
+        return { duplicate: false, sent: false, error: new Error('Socket not connected') };
+      }
+
       // Rate limit: prevent rapid-fire identical messages (3 second cooldown)
       if (shopId && customerPhone) {
         const lastMsgKey = `lastmsg:${shopId}:${customerPhone}`;

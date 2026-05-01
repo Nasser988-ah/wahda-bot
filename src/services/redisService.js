@@ -43,25 +43,63 @@ class RedisService {
     try {
       if (!this.redis) {
         this.isConnected = false;
+        this._scheduleReconnect();
         return;
       }
 
       await this.redis.ping();
       this.isConnected = true;
       this.failureCount = 0;
+      if (this._reconnectTimer) {
+        clearInterval(this._reconnectTimer);
+        this._reconnectTimer = null;
+      }
       console.log('✅ Redis connected successfully');
     } catch (error) {
       console.warn('⚠️  Redis connection test failed:', error.message);
       this.isConnected = false;
+      this._scheduleReconnect();
     }
+  }
+
+  _scheduleReconnect() {
+    if (this._reconnectTimer) return; // Already scheduled
+    this._reconnectTimer = setInterval(async () => {
+      if (this.isConnected) {
+        clearInterval(this._reconnectTimer);
+        this._reconnectTimer = null;
+        return;
+      }
+      try {
+        if (!this.redis) return;
+        await this.redis.ping();
+        this.isConnected = true;
+        this.failureCount = 0;
+        clearInterval(this._reconnectTimer);
+        this._reconnectTimer = null;
+        console.log('✅ Redis reconnected successfully');
+      } catch (e) {
+        // Still failing, will retry
+      }
+    }, 30000); // Retry every 30 seconds
   }
 
   /**
    * Get value from Redis with fallback
    */
   async get(key) {
-    if (!this.isConnected || !this.redis) {
-      return null;
+    if (!this.redis) return null;
+
+    // If marked disconnected, try a quick reconnect on the fly
+    if (!this.isConnected) {
+      try {
+        await this.redis.ping();
+        this.isConnected = true;
+        this.failureCount = 0;
+        console.log('✅ Redis reconnected (on-demand)');
+      } catch (e) {
+        return null;
+      }
     }
 
     try {
@@ -69,8 +107,9 @@ class RedisService {
     } catch (error) {
       this.failureCount++;
       if (this.failureCount >= this.maxFailures) {
-        console.warn('⚠️  Redis failing consistently, disabling cache');
+        console.warn('⚠️  Redis failing consistently, scheduling reconnect');
         this.isConnected = false;
+        this._scheduleReconnect();
       }
       return null;
     }
@@ -89,8 +128,9 @@ class RedisService {
     } catch (error) {
       this.failureCount++;
       if (this.failureCount >= this.maxFailures) {
-        console.warn('⚠️  Redis failing consistently, disabling cache');
+        console.warn('⚠️  Redis failing consistently, scheduling reconnect');
         this.isConnected = false;
+        this._scheduleReconnect();
       }
       return null;
     }

@@ -727,7 +727,9 @@ class BotManager {
       const context = await this.getConversationContext(shop.id, customerPhone);
       
       // IMPORTANT: Send welcome message immediately for first-time users
-      if (context.messageCount === 0) {
+      // BUT only if Redis is available (messageCount is reliable).
+      // If Redis is down, context.redisAvailable will be false — skip welcome to avoid repeating.
+      if (context.messageCount === 0 && context.redisAvailable !== false) {
         await this.sendStoreLink(sock, from, shop, customerPhone);
         
         // Update history to mark welcome sent
@@ -1378,6 +1380,11 @@ class BotManager {
   // Get conversation context for smarter responses
   async getConversationContext(shopId, customerPhone) {
     try {
+      // Check if Redis is actually available before querying
+      if (typeof redis.isAvailable === 'function' ? !redis.isAvailable() : !redis.isConnected) {
+        return { hasItems: false, itemCount: 0, totalValue: 0, messageCount: 0, isReturningCustomer: false, redisAvailable: false };
+      }
+
       const historyKey = `chat_history:${shopId}:${customerPhone}`;
       const cartKey = `cart:${shopId}:${customerPhone}`;
       const nameKey = `customer_name:${shopId}:${customerPhone}`;
@@ -1419,10 +1426,11 @@ class BotManager {
         messageCount: messages.length,
         lastMessageTime: lastMessage?.time || null,
         isReturningCustomer: messages.length > 3,
-        lastIntent: lastMessage?.intent || null
+        lastIntent: lastMessage?.intent || null,
+        redisAvailable: true
       };
     } catch (error) {
-      return { hasItems: false, itemCount: 0, totalValue: 0, messageCount: 0, isReturningCustomer: false };
+      return { hasItems: false, itemCount: 0, totalValue: 0, messageCount: 0, isReturningCustomer: false, redisAvailable: false };
     }
   }
 

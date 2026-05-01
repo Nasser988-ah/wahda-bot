@@ -42,6 +42,7 @@ class RedisService {
   async testConnection() {
     try {
       if (!this.redis) {
+        console.warn('⚠️ Redis client not initialized');
         this.isConnected = false;
         this._scheduleReconnect();
         return;
@@ -57,6 +58,9 @@ class RedisService {
       console.log('✅ Redis connected successfully');
     } catch (error) {
       console.warn('⚠️  Redis connection test failed:', error.message);
+      console.warn('   Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+      console.warn('   Redis URL present:', !!process.env.UPSTASH_REDIS_REST_URL);
+      console.warn('   Redis Token present:', !!process.env.UPSTASH_REDIS_REST_TOKEN);
       this.isConnected = false;
       this._scheduleReconnect();
     }

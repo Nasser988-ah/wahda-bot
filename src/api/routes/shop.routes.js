@@ -59,7 +59,8 @@ router.get("/qr", authenticateTokenWithPending, async (req, res) => {
       return res.status(403).json({ error: "Access denied" });
     }
 
-    const status = await qrService.getConnectionStatus(shopId);
+    const includeQr = req.query.includeQr === '1' || req.query.includeQr === 'true';
+    const status = await qrService.getConnectionStatus(shopId, includeQr);
     
     // Prevent caching to ensure fresh status updates
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');

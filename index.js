@@ -53,6 +53,8 @@ const apiLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 100,
   message: { error: 'طلبات كثيرة، حاول لاحقاً' },
+  // Skip QR status polling (auth-required, meant to be polled by dashboard)
+  skip: (req) => req.method === 'GET' && req.path === '/shop/qr',
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -122,6 +124,9 @@ const protectedPages = [
 ];
 protectedPages.forEach(page => {
   app.get(page, pageAuth, (req, res) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     res.sendFile(path.join(__dirname, 'public', page));
   });
 });
@@ -132,10 +137,17 @@ app.use('/landing', express.static(path.join(__dirname, 'public', 'landing'), {
   maxAge: '1h'
 }));
 
-// Serve static files (HTML dashboard)
+// Serve static files (HTML dashboard) - no cache for HTML so users always get fresh code
 app.use(express.static("public", {
   dotfiles: 'deny',
-  index: false
+  index: false,
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    }
+  }
 }));
 app.use("/uploads", express.static("src/public/uploads", {
   dotfiles: 'deny',

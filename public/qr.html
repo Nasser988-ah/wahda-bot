@@ -565,6 +565,9 @@
         let pollTimer = null;
         let currentShop = null;
         let isGenerating = false; // Guard against concurrent generateQR calls
+        let knownQrVersion = null; // Track which QR version we already displayed
+        let isConnectedNow = false; // Current connection state
+        let pollFailures = 0; // Consecutive poll failures
 
         // Global API fetch helper with 401 handling
         async function apiFetch(url, options = {}) {
@@ -598,53 +601,94 @@
             startPolling();
         });
 
-        // ── Single polling loop (replaces dual overlapping intervals) ──
+        // Pause polling when tab is hidden, resume when visible
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                stopPolling();
+            } else if (currentShop?.id) {
+                pollStatus();
+                startPolling();
+            }
+        });
+
+        // ── Single polling loop with adaptive interval ──
         function startPolling() {
             stopPolling();
-            pollTimer = setInterval(pollStatus, 4000);
+            // Connected: slow poll (15s). Otherwise: faster (5s) to detect scan quickly
+            const interval = isConnectedNow ? 15000 : 5000;
+            pollTimer = setInterval(pollStatus, interval);
         }
 
         function stopPolling() {
             if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
         }
 
-        // ── Core: check status via GET /qr ──
+        // ── Core: check status via GET /qr (lightweight - no QR image) ──
         async function pollStatus() {
             try {
                 if (!currentShop?.id) return;
                 const response = await apiFetch(`${API_BASE}/shop/qr?shopId=${currentShop.id}`);
                 if (!response) return;
-                if (!response.ok) { console.error('Status check failed:', response.status); return; }
+                if (!response.ok) {
+                    pollFailures++;
+                    console.error('Status check failed:', response.status);
+                    // Back off after 5 consecutive failures
+                    if (pollFailures > 5) { stopPolling(); setTimeout(startPolling, 30000); }
+                    return;
+                }
+                pollFailures = 0;
 
                 const data = await response.json();
                 updateLastRefresh();
 
+                // State transition: was disconnected → now connected (or vice versa)
+                const wasConnected = isConnectedNow;
+                isConnectedNow = !!data.connected;
+                if (wasConnected !== isConnectedNow) {
+                    startPolling(); // restart with new interval
+                }
+
                 // Connected
                 if (data.connected) {
+                    knownQrVersion = null;
                     showConnected();
                     return;
                 }
 
-                // Has QR ready → display it
-                if (data.qr) {
-                    showWaitingForScan(data.qr, data.age);
+                // Has QR ready → fetch image only if version changed
+                if (data.qrGenerated && data.qrVersion) {
+                    if (data.qrVersion !== knownQrVersion) {
+                        // QR changed → fetch full image
+                        const fullResp = await apiFetch(`${API_BASE}/shop/qr?shopId=${currentShop.id}&includeQr=1`);
+                        if (fullResp && fullResp.ok) {
+                            const full = await fullResp.json();
+                            if (full.qr) {
+                                knownQrVersion = full.qrVersion;
+                                showWaitingForScan(full.qr, full.age);
+                            }
+                        }
+                    }
+                    // Same version: no-op (already displayed)
                     return;
                 }
 
                 // Expired
                 if (data.status === 'expired') {
+                    knownQrVersion = null;
                     showExpired();
                     return;
                 }
 
                 // Connecting (no QR yet)
                 if (data.status === 'connecting') {
+                    knownQrVersion = null;
                     showConnecting();
                     return;
                 }
 
                 // Not started → auto-generate
                 if (data.status === 'not_started') {
+                    knownQrVersion = null;
                     await generateQR();
                     return;
                 }
@@ -751,7 +795,11 @@
                 if (response.ok) {
                     const data = await response.json();
                     if (data.connected) { showConnected(); return; }
-                    if (data.qr) { showWaitingForScan(data.qr); return; }
+                    if (data.qr) {
+                        knownQrVersion = data.qrVersion || Date.now();
+                        showWaitingForScan(data.qr);
+                        return;
+                    }
                     showError('فشل إنشاء كود QR');
                 } else {
                     showError('فشل إنشاء كود QR، يرجى المحاولة');
@@ -765,10 +813,16 @@
         }
 
         // ── Refresh QR: full cleanup + new connection ──
+        // WARNING: this logs out an existing session. Confirm if currently connected.
         async function refreshQR() {
+            if (isConnectedNow) {
+                if (!confirm('أنت متصل بالفعل. تحديث الكود سيقوم بقطع الاتصال الحالي. هل تريد المتابعة؟')) return;
+            }
+
             const btn = document.getElementById('refreshBtn');
             if (btn) { btn.disabled = true; btn.textContent = 'جارٍ التحديث...'; }
             stopPolling();
+            knownQrVersion = null;
 
             try {
                 if (!currentShop?.id) return;
@@ -781,7 +835,10 @@
                 if (response.ok) {
                     const data = await response.json();
                     if (data.connected) { showConnected(); }
-                    else if (data.qr) { showWaitingForScan(data.qr); }
+                    else if (data.qr) {
+                        knownQrVersion = data.qrVersion || Date.now();
+                        showWaitingForScan(data.qr);
+                    }
                     else { showConnecting(); }
                 } else {
                     showMessage('فشل تحديث كود QR', 'error');

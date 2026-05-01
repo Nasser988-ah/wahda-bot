@@ -72,10 +72,11 @@ class QRService {
             errorCorrectionLevel: 'M'
           });
 
-          // Always store the latest QR
+          // Always store the latest QR with a version stamp
           this.activeConnections.set(shopId, {
             qrString, qrImage,
             createdAt: new Date(),
+            qrVersion: Date.now(),
             status: 'waiting_for_scan'
           });
 
@@ -85,8 +86,10 @@ class QRService {
           if (!resolved) {
             resolved = true;
             clearTimeout(timeout);
+            const stored = this.activeConnections.get(shopId);
             resolve({
               qr: qrImage.split(',')[1],
+              qrVersion: stored?.qrVersion || Date.now(),
               shopId,
               status: 'waiting_for_scan'
             });
@@ -156,8 +159,9 @@ class QRService {
     }
   }
 
-  // Returns current status + QR image if available
-  async getConnectionStatus(shopId) {
+  // Returns current status. Pass includeQr=true to include the base64 QR image (~6KB).
+  // Otherwise returns just qrVersion so client can detect changes without downloading the image.
+  async getConnectionStatus(shopId, includeQr = false) {
     try {
       const connectionState = this.botManager.getConnectionState(shopId);
       const isConnected = connectionState === 'connected';
@@ -176,14 +180,18 @@ class QRService {
           this.activeConnections.delete(shopId);
           return { connected: false, status: 'expired', shopId, message: 'QR code expired' };
         }
-        return {
+        const result = {
           connected: false,
           status: 'waiting_for_scan',
           shopId,
-          qr: connection.qrImage.split(',')[1],
           qrGenerated: true,
+          qrVersion: connection.qrVersion || connection.createdAt.getTime(),
           age: Math.floor(age / 1000)
         };
+        if (includeQr) {
+          result.qr = connection.qrImage.split(',')[1];
+        }
+        return result;
       }
 
       // Connecting but no QR yet
